@@ -1,0 +1,106 @@
+name: ai_life_coach
+options:
+  bundleIdPrefix: com.ducdo
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "26.3"
+  createIntermediateGroups: true
+  defaultConfig: Debug
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+
+configs:
+  Debug: debug
+  Staging: release
+  Release: release
+
+configFiles:
+  Debug: ai_life_coach/Configuration/Debug.xcconfig
+  Staging: ai_life_coach/Configuration/Staging.xcconfig
+  Release: ai_life_coach/Configuration/Release.xcconfig
+
+packages:
+  GRDB:
+    url: https://github.com/groue/GRDB.swift.git
+    from: "7.10.0"
+
+targets:
+  ai_life_coach:
+    type: application
+    platform: iOS
+    sources:
+      - path: ai_life_coach
+        excludes:
+          - "**/*.xcconfig"
+    resources:
+      - path: ai_life_coach/Resources/Assets.xcassets
+    settings:
+      base:
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait"
+        PRODUCT_BUNDLE_IDENTIFIER: com.ducdo.ai-life-coach
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_ENTITLEMENTS: ai_life_coach/ai_life_coach.entitlements
+        COACH_API_URL: "http://localhost:8080"
+    dependencies:
+      - package: GRDB
+        product: GRDB
+
+
+  ai_life_coachTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ducdo.ai-life-coach-tests
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: ai_life_coach
+      - package: GRDB
+        product: GRDB
+
+schemes:
+  Debug:
+    build:
+      targets:
+        ai_life_coach: all
+        ai_life_coachTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - ai_life_coachTests
+    profile:
+      config: Debug
+
+  Staging:
+    build:
+      targets:
+        ai_life_coach: all
+        ai_life_coachTests: [test]
+    run:
+      config: Staging
+    test:
+      config: Staging
+      targets:
+        - ai_life_coachTests
+    profile:
+      config: Staging
+
+  Release:
+    build:
+      targets:
+        ai_life_coach: all
+    run:
+      config: Release
+    profile:
+      config: Release

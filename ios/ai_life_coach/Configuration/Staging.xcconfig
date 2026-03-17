@@ -1,0 +1,2 @@
+// Staging configuration
+COACH_API_URL = https:/$()/staging-api.example.com

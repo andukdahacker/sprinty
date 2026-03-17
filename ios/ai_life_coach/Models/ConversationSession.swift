@@ -1,0 +1,35 @@
+import Foundation
+import GRDB
+
+enum SessionType: String, Codable, Sendable, DatabaseValueConvertible {
+    case coaching
+}
+
+enum CoachingMode: String, Codable, Sendable, DatabaseValueConvertible {
+    case discovery
+    case directive
+}
+
+enum SafetyLevel: String, Codable, Sendable, DatabaseValueConvertible {
+    case green
+    case yellow
+    case red
+}
+
+struct ConversationSession: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable {
+    var id: UUID
+    var startedAt: Date
+    var endedAt: Date?
+    var type: SessionType
+    var mode: CoachingMode
+    var safetyLevel: SafetyLevel
+    var promptVersion: String?
+
+    static let databaseTableName = "ConversationSession"
+}
+
+extension ConversationSession {
+    static func recent(limit: Int = 10) -> QueryInterfaceRequest<ConversationSession> {
+        order(Column("startedAt").desc).limit(limit)
+    }
+}
