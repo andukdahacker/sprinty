@@ -1,0 +1,141 @@
+# generated: 2026-03-17
+# last_updated: 2026-03-17
+# project: ai_life_coach
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: "{project-root}/_bmad-output/implementation-artifacts"
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-03-17
+last_updated: 2026-03-17
+project: ai_life_coach
+project_key: NOKEY
+tracking_system: file-system
+story_location: "{project-root}/_bmad-output/implementation-artifacts"
+
+development_status:
+  # Epic 1: First Coaching Conversation
+  epic-1: in-progress
+  1-1-server-scaffold-and-auth-endpoints: done
+  1-2-ios-project-foundation-and-database: backlog
+  1-3-design-system-and-coaching-theme: backlog
+  1-4-conversation-view-with-mock-streaming: backlog
+  1-5-onboarding-flow: backlog
+  1-6-real-ai-coaching-integration: backlog
+  1-7-sqlite-vec-and-embedding-spike: backlog
+  1-8-ci-cd-pipeline-and-test-infrastructure: backlog
+  1-9-home-screen-foundation: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2: Coaching Intelligence & Modes
+  epic-2: backlog
+  2-1-discovery-mode-coaching: backlog
+  2-2-directive-mode-with-contingency-plans: backlog
+  2-3-natural-mode-transitions: backlog
+  2-4-challenger-capability: backlog
+  2-5-adaptive-coaching-tone: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: Memory, Continuity & Understanding
+  epic-3: backlog
+  3-1-conversation-summaries-and-key-moments: backlog
+  3-2-embedding-pipeline-and-vector-storage: backlog
+  3-3-user-profile-and-domain-state: backlog
+  3-4-rag-powered-contextual-coaching: backlog
+  3-5-conversation-history-browsing: backlog
+  3-6-in-conversation-search: backlog
+  3-7-memory-view-and-profile-editing: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Home Experience & Avatar
+  epic-4: backlog
+  4-1-full-avatar-state-system: backlog
+  4-2-home-scene-progressive-disclosure: backlog
+  4-3-daily-coaching-insight: backlog
+  4-4-sprint-progress-on-home-screen: backlog
+  4-5-avatar-customization: backlog
+  4-6-art-asset-commissioning-and-integration: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: Sprint Goal System
+  epic-5: backlog
+  5-1-sprint-creation-through-coaching: backlog
+  5-2-sprint-detail-view: backlog
+  5-3-sprint-step-completion: backlog
+  5-4-daily-check-ins: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: Safety & Clinical Boundaries
+  epic-6: backlog
+  6-1-on-device-safety-classification: backlog
+  6-2-safety-state-manager-and-theme-transformations: backlog
+  6-3-post-crisis-re-engagement: backlog
+  6-4-compliance-logging: backlog
+  6-5-safety-regression-suite: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7: Pause, Re-engagement & Autonomy
+  epic-7: backlog
+  7-1-pause-mode-activation-and-deactivation: backlog
+  7-2-drift-detection-and-re-engagement: backlog
+  7-3-autonomy-throttle-and-engagement-tracking: backlog
+  epic-7-retrospective: optional
+
+  # Epic 8: Premium Coaching & Monetization
+  epic-8: backlog
+  8-1-storekit-2-subscription-integration: backlog
+  8-2-tier-based-model-routing: backlog
+  8-3-soft-guardrails: backlog
+  epic-8-retrospective: optional
+
+  # Epic 9: Notifications & Nudges
+  epic-9: backlog
+  9-1-local-notification-infrastructure: backlog
+  9-2-check-in-and-sprint-milestone-notifications: backlog
+  9-3-notification-preferences: backlog
+  epic-9-retrospective: optional
+
+  # Epic 10: Resilience, Offline & Widgets
+  epic-10: backlog
+  10-1-multi-provider-failover: backlog
+  10-2-offline-mode: backlog
+  10-3-offline-sprint-step-completion: backlog
+  10-4-home-screen-widgets: backlog
+  10-5-usage-analytics-and-monitoring: backlog
+  epic-10-retrospective: optional
+
+  # Epic 11: Privacy, Settings & Data Control
+  epic-11: backlog
+  11-1-settings-view: backlog
+  11-2-conversation-history-export: backlog
+  11-3-data-deletion: backlog
+  11-4-apple-privacy-manifest-and-icloud-backup: backlog
+  epic-11-retrospective: optional

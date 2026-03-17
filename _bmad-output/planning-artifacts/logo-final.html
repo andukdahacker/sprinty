@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprinty — Final Logo Concept</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; background: #111; color: #e0e0e0; }
+
+  .header { text-align: center; padding: 40px 20px 8px; }
+  .header h1 { font-size: 28px; font-weight: 300; }
+  .header p { font-size: 13px; opacity: 0.5; margin-top: 8px; max-width: 550px; margin-left: auto; margin-right: auto; line-height: 1.6; }
+
+  .section-title { text-align: center; padding: 36px 20px 6px; font-size: 18px; font-weight: 500; color: #8B9B7A; }
+  .section-sub { text-align: center; font-size: 12px; opacity: 0.4; margin-bottom: 28px; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.6; }
+
+  .row { display: flex; justify-content: center; gap: 40px; padding: 0 24px 40px; flex-wrap: wrap; align-items: flex-start; }
+  .col { display: flex; flex-direction: column; align-items: center; }
+  .label { font-size: 13px; font-weight: 600; color: #B8C8A0; margin-bottom: 12px; }
+  .sublabel { font-size: 10px; opacity: 0.35; margin-top: 6px; }
+
+  .divider { width: 80%; max-width: 500px; height: 1px; background: rgba(255,255,255,0.06); margin: 0 auto; }
+
+  /* Icon base */
+  .icon { border-radius: 27px; overflow: hidden; position: relative; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+  .icon-120 { width: 120px; height: 120px; }
+  .icon-80 { width: 80px; height: 80px; border-radius: 18px; box-shadow: 0 6px 24px rgba(0,0,0,0.35); }
+  .icon-60 { width: 60px; height: 60px; border-radius: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+  .icon-44 { width: 44px; height: 44px; border-radius: 10px; box-shadow: 0 3px 12px rgba(0,0,0,0.25); }
+
+  .icon-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+
+  /* Light variant */
+  .light-bg { background: linear-gradient(140deg, #F0EBE2, #E4DDD2); }
+
+  /* Dark variant — warm glow */
+  .dark-bg { background: linear-gradient(140deg, #282E22, #1E2418); }
+  .glow-outer { position: absolute; width: 85%; height: 85%; border-radius: 50%; background: radial-gradient(circle, rgba(168,192,140,0.10) 0%, transparent 70%); }
+  .glow-mid { position: absolute; width: 72%; height: 72%; border-radius: 50%; background: radial-gradient(circle, rgba(168,192,140,0.06) 0%, transparent 60%); }
+
+  /* Face */
+  .face {
+    border-radius: 50%;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2;
+  }
+  .face-light {
+    background: linear-gradient(150deg, #A4B890, #839B70);
+  }
+  .face-dark {
+    background: linear-gradient(150deg, #96AC82, #7A9468);
+    box-shadow: 0 0 28px rgba(150,172,130,0.22), 0 0 56px rgba(150,172,130,0.08);
+  }
+  .face-120 { width: 72px; height: 72px; }
+  .face-80 { width: 48px; height: 48px; }
+  .face-60 { width: 36px; height: 36px; }
+  .face-44 { width: 26px; height: 26px; }
+
+  /* Shine */
+  .shine {
+    position: absolute;
+    width: 45%; height: 20%;
+    background: rgba(255,255,255,0.15);
+    border-radius: 50%;
+    top: 16%; left: 18%;
+  }
+
+  /* Eyes */
+  .eyes { display: flex; position: absolute; }
+  .eyes-120 { gap: 16px; top: 36%; }
+  .eyes-80 { gap: 11px; top: 36%; }
+  .eyes-60 { gap: 8px; top: 36%; }
+  .eyes-44 { gap: 6px; top: 36%; }
+
+  .eye { background: #2A3020; border-radius: 50%; position: relative; }
+  .eye-120 { width: 8px; height: 8px; }
+  .eye-80 { width: 6px; height: 6px; }
+  .eye-60 { width: 4px; height: 4px; }
+  .eye-44 { width: 3px; height: 3px; }
+
+  .eye-shine { position: absolute; background: rgba(255,255,255,0.45); border-radius: 50%; }
+  .eye-shine-120 { width: 3px; height: 3px; top: 1px; left: 2px; }
+  .eye-shine-80 { width: 2px; height: 2px; top: 1px; left: 1px; }
+  .eye-shine-60 { width: 1.5px; height: 1.5px; top: 0.5px; left: 1px; }
+  .eye-shine-44 { width: 1px; height: 1px; top: 0.5px; left: 0.5px; }
+
+  /* Mouth */
+  .mouth { position: absolute; border-bottom-style: solid; border-bottom-color: #2A3020; border-radius: 0 0 50% 50%; }
+  .mouth-120 { top: 55%; width: 15px; height: 8px; border-bottom-width: 2.5px; }
+  .mouth-80 { top: 55%; width: 10px; height: 5px; border-bottom-width: 2px; }
+  .mouth-60 { top: 55%; width: 8px; height: 4px; border-bottom-width: 1.5px; }
+  .mouth-44 { top: 55%; width: 6px; height: 3px; border-bottom-width: 1px; }
+
+  /* Cheeks */
+  .cheek { position: absolute; top: 49%; background: rgba(196,150,130,0.22); border-radius: 50%; }
+  .cheek-120 { width: 9px; height: 5px; }
+  .cheek-80 { width: 6px; height: 3px; }
+  .cheek-60 { width: 5px; height: 3px; }
+  .cheek-l-120 { left: 14%; }
+  .cheek-r-120 { right: 14%; }
+  .cheek-l-80 { left: 14%; }
+  .cheek-r-80 { right: 14%; }
+  .cheek-l-60 { left: 14%; }
+  .cheek-r-60 { right: 14%; }
+
+  /* Sprout */
+  .sprout { position: absolute; z-index: 3; display: flex; flex-direction: column; align-items: center; }
+  .sprout-120 { top: -16px; }
+  .sprout-80 { top: -12px; }
+  .sprout-60 { top: -9px; }
+  .sprout-44 { top: -7px; }
+
+  .stem { border-radius: 1px; margin: 0 auto; }
+  .stem-light { background: #6B7A5A; }
+  .stem-dark { background: #8BA878; }
+  .stem-120 { width: 2.5px; height: 14px; }
+  .stem-80 { width: 2px; height: 10px; }
+  .stem-60 { width: 1.5px; height: 8px; }
+  .stem-44 { width: 1px; height: 6px; }
+
+  .leaves { display: flex; gap: 0px; }
+  .leaf-l, .leaf-r { }
+  .leaf-l-light { background: #8B9B7A; }
+  .leaf-r-light { background: #7A8B6B; }
+  .leaf-l-dark { background: #96AC82; }
+  .leaf-r-dark { background: #82A06E; }
+
+  .leaf-l { border-radius: 50% 0 50% 50%; transform: rotate(-15deg); }
+  .leaf-r { border-radius: 0 50% 50% 50%; transform: rotate(15deg); }
+  .leaf-120 { width: 10px; height: 8px; }
+  .leaf-80 { width: 7px; height: 6px; }
+  .leaf-60 { width: 6px; height: 5px; }
+  .leaf-44 { width: 4px; height: 3px; }
+
+  /* Sprout glow in dark mode */
+  .sprout-glow {
+    position: absolute;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(150,172,130,0.15) 0%, transparent 70%);
+    top: -20px; left: 50%; transform: translateX(-50%);
+    z-index: 1;
+  }
+
+  /* Phone mockups */
+  .phone {
+    width: 220px; height: 420px;
+    border-radius: 28px;
+    border: 2.5px solid rgba(255,255,255,0.08);
+    box-shadow: 0 14px 48px rgba(0,0,0,0.35);
+    padding: 44px 16px 16px;
+    display: flex; flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  .phone-light { background: linear-gradient(180deg, #F4F2EC, #EDE8E0); }
+  .phone-dark { background: linear-gradient(180deg, #181A16, #141612); }
+
+  .ph-status { text-align: center; font-size: 9px; opacity: 0.3; margin-bottom: 14px; }
+  .phone-light .ph-status { color: #3A3A30; }
+  .phone-dark .ph-status { color: #6B7A5A; }
+
+  .ph-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .ph-icon-wrap { width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; overflow: hidden; position: relative; }
+  .ph-greeting { font-size: 9px; }
+  .phone-light .ph-greeting { color: #8B8B78; }
+  .phone-dark .ph-greeting { color: #6B7A5A; }
+  .ph-name { font-size: 14px; font-weight: 600; }
+  .phone-light .ph-name { color: #3A3A30; }
+  .phone-dark .ph-name { color: #D8D8C8; }
+
+  .ph-card {
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 10px;
+    font-size: 9px;
+    line-height: 1.6;
+  }
+  .phone-light .ph-card { background: rgba(139,155,122,0.10); color: #4A4A3C; }
+  .phone-dark .ph-card { background: rgba(139,155,122,0.06); color: #B0B0A0; }
+  .ph-card-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.5; margin-bottom: 4px; }
+
+  .ph-sprint { height: 4px; border-radius: 2px; margin-bottom: 4px; overflow: hidden; }
+  .phone-light .ph-sprint { background: rgba(139,155,122,0.12); }
+  .phone-dark .ph-sprint { background: rgba(139,155,122,0.08); }
+  .ph-sprint-fill { height: 100%; width: 65%; background: linear-gradient(90deg, #8B9B7A, #7A8B6B); border-radius: 2px; }
+  .ph-sprint-label { font-size: 8px; margin-bottom: 10px; }
+  .phone-light .ph-sprint-label { color: #8B8B78; }
+  .phone-dark .ph-sprint-label { color: #5A6850; }
+
+  .ph-btn {
+    margin-top: auto;
+    border-radius: 12px;
+    padding: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    border: none;
+    cursor: pointer;
+  }
+  .phone-light .ph-btn { background: linear-gradient(135deg, #7A8B6B, #6B7A5A); color: #fff; }
+  .phone-dark .ph-btn { background: linear-gradient(135deg, #4A5A3A, #3E4E30); color: #D0D8C0; }
+
+  /* Lockup */
+  .lockup-row { display: flex; justify-content: center; gap: 32px; padding: 0 20px 40px; flex-wrap: wrap; }
+  .lockup {
+    display: flex; align-items: center; gap: 14px;
+    padding: 20px 28px;
+    border-radius: 16px;
+  }
+  .lockup-light { background: rgba(244,242,236,0.08); }
+  .lockup-dark { background: rgba(0,0,0,0.3); }
+  .lockup-name { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  .lockup-light .lockup-name { color: #3A3A30; }
+  .lockup-dark .lockup-name { color: #D8D8C8; }
+  .lockup-tag { font-size: 12px; opacity: 0.5; margin-top: 2px; }
+
+  /* App Store */
+  .store-row { display: flex; justify-content: center; gap: 32px; padding: 0 20px 60px; flex-wrap: wrap; }
+  .store-card {
+    width: 260px; padding: 18px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .store-inner { display: flex; gap: 14px; align-items: center; }
+  .store-info { flex: 1; }
+  .store-name { font-size: 16px; font-weight: 600; }
+  .store-sub { font-size: 10px; opacity: 0.4; margin-top: 3px; line-height: 1.5; }
+  .store-btn { margin-top: 8px; display: inline-block; padding: 4px 16px; background: #007AFF; color: #fff; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .store-rating { font-size: 9px; opacity: 0.3; margin-top: 6px; }
+
+  /* Tagline exploration */
+  .tagline-card {
+    padding: 16px 24px;
+    background: rgba(139,155,122,0.06);
+    border-radius: 12px;
+    border: 1px solid rgba(139,155,122,0.1);
+    text-align: center;
+    max-width: 280px;
+  }
+  .tagline-text { font-size: 15px; font-weight: 500; color: #B8C8A0; line-height: 1.5; }
+  .tagline-note { font-size: 10px; opacity: 0.3; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Sprinty — Sprout Head + Warm Glow</h1>
+  <p>The final combined concept. A friendly face with a growing sprout, radiating warmth in dark mode. Growth that glows.</p>
+</div>
+
+<!-- ===== SIZES ===== -->
+<div class="section-title">Icon at All Sizes</div>
+<div class="section-sub">App Store (120pt), Spotlight (80pt), Home Screen (60pt), Settings (44pt)</div>
+
+<div class="row">
+  <!-- Light sizes -->
+  <div class="col">
+    <div class="label">Light Mode</div>
+    <div style="display: flex; gap: 20px; align-items: flex-end;">
+      <div>
+        <div class="icon icon-120 light-bg"><div class="icon-inner"><div class="face face-light face-120"><div class="shine"></div><div class="sprout sprout-120"><div class="leaves"><div class="leaf-l leaf-l-light leaf-120"></div><div class="leaf-r leaf-r-light leaf-120"></div></div><div class="stem stem-light stem-120"></div></div><div class="eyes eyes-120"><div class="eye eye-120"><div class="eye-shine eye-shine-120"></div></div><div class="eye eye-120"><div class="eye-shine eye-shine-120"></div></div></div><div class="mouth mouth-120"></div><div class="cheek cheek-120 cheek-l-120"></div><div class="cheek cheek-120 cheek-r-120"></div></div></div></div>
+        <div class="sublabel">120pt</div>
+      </div>
+      <div>
+        <div class="icon icon-80 light-bg"><div class="icon-inner"><div class="face face-light face-80"><div class="shine"></div><div class="sprout sprout-80"><div class="leaves"><div class="leaf-l leaf-l-light leaf-80"></div><div class="leaf-r leaf-r-light leaf-80"></div></div><div class="stem stem-light stem-80"></div></div><div class="eyes eyes-80"><div class="eye eye-80"><div class="eye-shine eye-shine-80"></div></div><div class="eye eye-80"><div class="eye-shine eye-shine-80"></div></div></div><div class="mouth mouth-80"></div><div class="cheek cheek-80 cheek-l-80"></div><div class="cheek cheek-80 cheek-r-80"></div></div></div></div>
+        <div class="sublabel">80pt</div>
+      </div>
+      <div>
+        <div class="icon icon-60 light-bg"><div class="icon-inner"><div class="face face-light face-60"><div class="sprout sprout-60"><div class="leaves"><div class="leaf-l leaf-l-light leaf-60"></div><div class="leaf-r leaf-r-light leaf-60"></div></div><div class="stem stem-light stem-60"></div></div><div class="eyes eyes-60"><div class="eye eye-60"><div class="eye-shine eye-shine-60"></div></div><div class="eye eye-60"><div class="eye-shine eye-shine-60"></div></div></div><div class="mouth mouth-60"></div></div></div></div>
+        <div class="sublabel">60pt</div>
+      </div>
+      <div>
+        <div class="icon icon-44 light-bg"><div class="icon-inner"><div class="face face-light face-44"><div class="sprout sprout-44"><div class="leaves"><div class="leaf-l leaf-l-light leaf-44"></div><div class="leaf-r leaf-r-light leaf-44"></div></div><div class="stem stem-light stem-44"></div></div><div class="eyes eyes-44"><div class="eye eye-44"></div><div class="eye eye-44"></div></div><div class="mouth mouth-44"></div></div></div></div>
+        <div class="sublabel">44pt</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dark sizes -->
+  <div class="col">
+    <div class="label">Dark Mode (Warm Glow)</div>
+    <div style="display: flex; gap: 20px; align-items: flex-end;">
+      <div>
+        <div class="icon icon-120 dark-bg"><div class="icon-inner"><div class="glow-outer"></div><div class="glow-mid"></div><div class="sprout-glow"></div><div class="face face-dark face-120"><div class="shine"></div><div class="sprout sprout-120"><div class="leaves"><div class="leaf-l leaf-l-dark leaf-120"></div><div class="leaf-r leaf-r-dark leaf-120"></div></div><div class="stem stem-dark stem-120"></div></div><div class="eyes eyes-120"><div class="eye eye-120"><div class="eye-shine eye-shine-120"></div></div><div class="eye eye-120"><div class="eye-shine eye-shine-120"></div></div></div><div class="mouth mouth-120"></div><div class="cheek cheek-120 cheek-l-120" style="background:rgba(196,160,140,0.15);"></div><div class="cheek cheek-120 cheek-r-120" style="background:rgba(196,160,140,0.15);"></div></div></div></div>
+        <div class="sublabel">120pt</div>
+      </div>
+      <div>
+        <div class="icon icon-80 dark-bg"><div class="icon-inner"><div class="glow-outer"></div><div class="face face-dark face-80"><div class="shine"></div><div class="sprout sprout-80"><div class="leaves"><div class="leaf-l leaf-l-dark leaf-80"></div><div class="leaf-r leaf-r-dark leaf-80"></div></div><div class="stem stem-dark stem-80"></div></div><div class="eyes eyes-80"><div class="eye eye-80"><div class="eye-shine eye-shine-80"></div></div><div class="eye eye-80"><div class="eye-shine eye-shine-80"></div></div></div><div class="mouth mouth-80"></div></div></div></div>
+        <div class="sublabel">80pt</div>
+      </div>
+      <div>
+        <div class="icon icon-60 dark-bg"><div class="icon-inner"><div class="glow-outer"></div><div class="face face-dark face-60"><div class="sprout sprout-60"><div class="leaves"><div class="leaf-l leaf-l-dark leaf-60"></div><div class="leaf-r leaf-r-dark leaf-60"></div></div><div class="stem stem-dark stem-60"></div></div><div class="eyes eyes-60"><div class="eye eye-60"></div><div class="eye eye-60"></div></div><div class="mouth mouth-60"></div></div></div></div>
+        <div class="sublabel">60pt</div>
+      </div>
+      <div>
+        <div class="icon icon-44 dark-bg"><div class="icon-inner"><div class="glow-outer"></div><div class="face face-dark face-44"><div class="sprout sprout-44"><div class="leaves"><div class="leaf-l leaf-l-dark leaf-44"></div><div class="leaf-r leaf-r-dark leaf-44"></div></div><div class="stem stem-dark stem-44"></div></div><div class="eyes eyes-44"><div class="eye eye-44"></div><div class="eye eye-44"></div></div><div class="mouth mouth-44"></div></div></div></div>
+        <div class="sublabel">44pt</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ===== IN CONTEXT ===== -->
+<div class="section-title">In Context — Home Scene</div>
+<div class="section-sub">How the icon looks beside your name on the home scene, with "Talk to Sprinty" as the action button.</div>
+
+<div class="row">
+  <div class="col">
+    <div class="phone phone-light">
+      <div class="ph-status">9:41</div>
+      <div class="ph-row">
+        <div class="ph-icon-wrap light-bg">
+          <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+            <div style="width:55%;height:55%;background:linear-gradient(150deg,#A4B890,#839B70);border-radius:50%;position:relative;">
+              <div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;"><div style="display:flex;"><div style="width:4px;height:3px;background:#8B9B7A;border-radius:50% 0 50% 50%;transform:rotate(-15deg);"></div><div style="width:4px;height:3px;background:#7A8B6B;border-radius:0 50% 50% 50%;transform:rotate(15deg);"></div></div><div style="width:1px;height:5px;background:#6B7A5A;border-radius:1px;"></div></div>
+              <div style="display:flex;gap:5px;position:absolute;top:36%;left:50%;transform:translateX(-50%);"><div style="width:3px;height:3px;background:#2A3020;border-radius:50%;"></div><div style="width:3px;height:3px;background:#2A3020;border-radius:50%;"></div></div>
+              <div style="position:absolute;top:54%;left:50%;transform:translateX(-50%);width:6px;height:3px;border-bottom:1px solid #2A3020;border-radius:0 0 50% 50%;"></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="ph-greeting">Good evening</div>
+          <div class="ph-name">Hey, Ducdo</div>
+        </div>
+      </div>
+      <div class="ph-card">
+        <div class="ph-card-label">Sprinty has been thinking</div>
+        You mentioned feeling energized after the creative workshop. That pattern keeps showing up — it's worth exploring together.
+      </div>
+      <div class="ph-sprint"><div class="ph-sprint-fill"></div></div>
+      <div class="ph-sprint-label">Career clarity sprint — day 9 of 14</div>
+      <div style="flex:1;"></div>
+      <div class="ph-btn">Talk to Sprinty</div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="phone phone-dark">
+      <div class="ph-status">11:23 PM</div>
+      <div class="ph-row">
+        <div class="ph-icon-wrap dark-bg" style="position:relative;">
+          <div style="position:absolute;width:80%;height:80%;border-radius:50%;background:radial-gradient(circle,rgba(150,172,130,0.10) 0%,transparent 70%);top:10%;left:10%;"></div>
+          <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+            <div style="width:55%;height:55%;background:linear-gradient(150deg,#96AC82,#7A9468);border-radius:50%;position:relative;box-shadow:0 0 14px rgba(150,172,130,0.18);z-index:1;">
+              <div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;"><div style="display:flex;"><div style="width:4px;height:3px;background:#96AC82;border-radius:50% 0 50% 50%;transform:rotate(-15deg);"></div><div style="width:4px;height:3px;background:#82A06E;border-radius:0 50% 50% 50%;transform:rotate(15deg);"></div></div><div style="width:1px;height:5px;background:#8BA878;border-radius:1px;"></div></div>
+              <div style="display:flex;gap:5px;position:absolute;top:36%;left:50%;transform:translateX(-50%);"><div style="width:3px;height:3px;background:#2A3020;border-radius:50%;"></div><div style="width:3px;height:3px;background:#2A3020;border-radius:50%;"></div></div>
+              <div style="position:absolute;top:54%;left:50%;transform:translateX(-50%);width:6px;height:3px;border-bottom:1px solid #2A3020;border-radius:0 0 50% 50%;"></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="ph-greeting">Good evening</div>
+          <div class="ph-name">Hey, Ducdo</div>
+        </div>
+      </div>
+      <div class="ph-card">
+        <div class="ph-card-label">Sprinty has been thinking</div>
+        You mentioned feeling energized after the creative workshop. That's worth exploring.
+      </div>
+      <div class="ph-sprint"><div class="ph-sprint-fill"></div></div>
+      <div class="ph-sprint-label">Career clarity sprint — day 9 of 14</div>
+      <div style="flex:1;"></div>
+      <div class="ph-btn">Talk to Sprinty</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ===== BRAND LOCKUPS ===== -->
+<div class="section-title">Brand Lockups</div>
+<div class="section-sub">Icon + wordmark for marketing, website, App Store listing.</div>
+
+<div class="lockup-row">
+  <div class="lockup lockup-light">
+    <div class="icon icon-60 light-bg"><div class="icon-inner"><div class="face face-light face-60"><div class="sprout sprout-60"><div class="leaves"><div class="leaf-l leaf-l-light leaf-60"></div><div class="leaf-r leaf-r-light leaf-60"></div></div><div class="stem stem-light stem-60"></div></div><div class="eyes eyes-60"><div class="eye eye-60"><div class="eye-shine eye-shine-60"></div></div><div class="eye eye-60"><div class="eye-shine eye-shine-60"></div></div></div><div class="mouth mouth-60"></div></div></div></div>
+    <div>
+      <div class="lockup-name" style="color: #3A3A30;">Sprinty</div>
+      <div class="lockup-tag" style="color: #8B8B78;">Your AI life coach</div>
+    </div>
+  </div>
+
+  <div class="lockup lockup-dark">
+    <div class="icon icon-60 dark-bg"><div class="icon-inner"><div class="glow-outer"></div><div class="face face-dark face-60"><div class="sprout sprout-60"><div class="leaves"><div class="leaf-l leaf-l-dark leaf-60"></div><div class="leaf-r leaf-r-dark leaf-60"></div></div><div class="stem stem-dark stem-60"></div></div><div class="eyes eyes-60"><div class="eye eye-60"></div><div class="eye eye-60"></div></div><div class="mouth mouth-60"></div></div></div></div>
+    <div>
+      <div class="lockup-name" style="color: #D8D8C8;">Sprinty</div>
+      <div class="lockup-tag" style="color: #8B8B78;">Your AI life coach</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ===== APP STORE ===== -->
+<div class="section-title">App Store Listing</div>
+
+<div class="store-row">
+  <div class="store-card">
+    <div class="store-inner">
+      <div class="icon icon-60 light-bg" style="flex-shrink:0;"><div class="icon-inner"><div class="face face-light face-60"><div class="sprout sprout-60"><div class="leaves"><div class="leaf-l leaf-l-light leaf-60"></div><div class="leaf-r leaf-r-light leaf-60"></div></div><div class="stem stem-light stem-60"></div></div><div class="eyes eyes-60"><div class="eye eye-60"><div class="eye-shine eye-shine-60"></div></div><div class="eye eye-60"><div class="eye-shine eye-shine-60"></div></div></div><div class="mouth mouth-60"></div></div></div></div>
+      <div class="store-info">
+        <div class="store-name">Sprinty</div>
+        <div class="store-sub">Your AI life coach. Growth in sprints.</div>
+        <div class="store-btn">GET</div>
+        <div class="store-rating">★★★★★ 4.8 (2.1K)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ===== TAGLINES ===== -->
+<div class="section-title">Tagline Options</div>
+<div class="section-sub">Short lines for the App Store subtitle, onboarding welcome, and marketing.</div>
+
+<div class="row" style="gap: 16px;">
+  <div class="tagline-card">
+    <div class="tagline-text">Your AI life coach.<br/>Growth in sprints.</div>
+    <div class="tagline-note">Direct. Communicates both AI coaching and the sprint methodology.</div>
+  </div>
+  <div class="tagline-card">
+    <div class="tagline-text">The coach who<br/>actually knows you.</div>
+    <div class="tagline-note">The defining experience as a tagline. Emotional, distinctive.</div>
+  </div>
+  <div class="tagline-card">
+    <div class="tagline-text">Your life.<br/>Your sprints.<br/>Your coach.</div>
+    <div class="tagline-note">Three pillars rhythm. Ownership-focused.</div>
+  </div>
+  <div class="tagline-card">
+    <div class="tagline-text">Sprint toward<br/>the life you want.</div>
+    <div class="tagline-note">Action-oriented. The sprint as a verb.</div>
+  </div>
+  <div class="tagline-card">
+    <div class="tagline-text">Talk to someone<br/>who remembers.</div>
+    <div class="tagline-note">The memory-as-UX promise. Emotionally resonant.</div>
+  </div>
+</div>
+
+</body>
+</html>

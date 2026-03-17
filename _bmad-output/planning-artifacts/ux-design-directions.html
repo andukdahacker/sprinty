@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Life Coach — Design Direction Mockups</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; background: #111; color: #e0e0e0; }
+
+  .header { text-align: center; padding: 40px 20px 16px; }
+  .header h1 { font-size: 26px; font-weight: 300; letter-spacing: -0.5px; }
+  .header p { font-size: 13px; opacity: 0.5; margin-top: 8px; max-width: 700px; margin-left: auto; margin-right: auto; line-height: 1.6; }
+
+  .controls { display: flex; justify-content: center; gap: 10px; padding: 16px; flex-wrap: wrap; }
+  .ctrl-btn { padding: 7px 18px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: #ccc; cursor: pointer; font-size: 13px; transition: all 0.3s; }
+  .ctrl-btn.active { background: rgba(139,155,122,0.25); border-color: rgba(139,155,122,0.5); color: #fff; }
+
+  .section-title { text-align: center; padding: 32px 20px 16px; font-size: 18px; font-weight: 500; color: #8B9B7A; }
+  .section-sub { text-align: center; font-size: 12px; opacity: 0.4; margin-bottom: 24px; }
+
+  .mockup-row { display: flex; justify-content: center; gap: 32px; padding: 0 20px 48px; flex-wrap: wrap; }
+
+  .mockup-card { display: flex; flex-direction: column; align-items: center; }
+  .mockup-label { font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #B8C8A0; }
+  .mockup-desc { font-size: 11px; opacity: 0.4; margin-bottom: 12px; max-width: 280px; text-align: center; line-height: 1.5; }
+
+  .phone { width: 280px; height: 580px; border-radius: 32px; overflow: hidden; border: 2.5px solid rgba(255,255,255,0.1); box-shadow: 0 16px 48px rgba(0,0,0,0.4); position: relative; }
+
+  /* Shared tokens */
+  :root {
+    --bg-home-l: linear-gradient(180deg, #F4F2EC, #EDE8E0);
+    --bg-home-d: linear-gradient(180deg, #181A16, #141612);
+    --bg-conv-l: linear-gradient(180deg, #F8F5EE, #F0ECE2);
+    --bg-conv-d: linear-gradient(180deg, #1C1E18, #181A14);
+    --text-l: #3A3A30;
+    --text-l2: #4A4A3C;
+    --text-l3: #8B8B78;
+    --text-d: #D8D8C8;
+    --text-d2: #B0B0A0;
+    --text-d3: #6B7A5A;
+    --accent: #8B9B7A;
+    --accent2: #7A8B6B;
+    --accent3: #6B7A5A;
+    --glow: rgba(139,155,122,0.25);
+    --card-l: rgba(139,155,122,0.10);
+    --card-d: rgba(139,155,122,0.06);
+    --border-l: rgba(120,130,100,0.12);
+    --border-d: rgba(120,130,100,0.08);
+  }
+
+  .scene { width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; }
+
+  /* ---- HOME VARIANTS ---- */
+  .home-a .avatar-area { text-align: center; padding: 12px 0 16px; }
+  .home-a .avatar-circle { width: 110px; height: 110px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 44px; position: relative; }
+  .home-a .avatar-shadow { position: absolute; inset: -6px; border-radius: 50%; filter: blur(10px); opacity: 0.3; }
+
+  .home-b .avatar-area { display: flex; align-items: center; gap: 14px; padding: 0 0 16px; }
+  .home-b .avatar-circle { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
+
+  .home-c .avatar-area { text-align: center; padding: 0 0 12px; }
+  .home-c .avatar-circle { width: 80px; height: 80px; border-radius: 24px; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 36px; }
+
+  .home-d .avatar-area { text-align: center; padding: 8px 0 16px; }
+  .home-d .avatar-circle { width: 140px; height: 140px; border-radius: 50%; margin: 0 auto 14px; display: flex; align-items: center; justify-content: center; font-size: 56px; position: relative; }
+  .home-d .avatar-ring { position: absolute; inset: -4px; border-radius: 50%; border: 2px solid; opacity: 0.3; }
+
+  .h-greeting { font-size: 13px; opacity: 0.45; }
+  .h-name { font-size: 19px; font-weight: 600; margin-bottom: 2px; letter-spacing: -0.3px; }
+  .h-insight { border-radius: 14px; padding: 14px; font-size: 12.5px; line-height: 1.55; margin-bottom: 12px; }
+  .h-insight-label { font-size: 9.5px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.45; margin-bottom: 5px; }
+  .h-sprint { height: 5px; border-radius: 3px; margin-bottom: 5px; overflow: hidden; }
+  .h-sprint-fill { height: 100%; border-radius: 3px; width: 65%; }
+  .h-sprint-label { font-size: 10.5px; opacity: 0.4; margin-bottom: 12px; }
+  .h-btn { width: 100%; padding: 14px; border-radius: 14px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: auto; }
+
+  /* ---- CONVERSATION VARIANTS ---- */
+  .coach-area { display: flex; flex-direction: column; align-items: center; padding: 36px 16px 12px; }
+  .coach-circle { width: 76px; height: 76px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 6px; }
+  .coach-nm { font-size: 12.5px; font-weight: 600; }
+  .coach-st { font-size: 10.5px; opacity: 0.45; margin-top: 1px; }
+
+  .conv-b .coach-area { flex-direction: row; gap: 10px; padding: 36px 16px 12px; align-items: center; }
+  .conv-b .coach-circle { width: 52px; height: 52px; font-size: 22px; margin-bottom: 0; flex-shrink: 0; }
+  .conv-b .coach-info { text-align: left; }
+
+  .conv-c .coach-area { padding: 36px 16px 8px; }
+  .conv-c .coach-circle { width: 56px; height: 56px; font-size: 24px; }
+
+  .conv-d .coach-area { padding: 36px 16px 12px; }
+  .conv-d .coach-circle { width: 96px; height: 96px; font-size: 40px; position: relative; }
+  .conv-d .coach-glow { position: absolute; inset: -10px; border-radius: 50%; filter: blur(16px); opacity: 0.2; }
+
+  .dlg { flex: 1; padding: 10px 18px; display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
+  .dlg-date { text-align: center; font-size: 10px; opacity: 0.3; }
+  .dlg-coach { font-size: 13.5px; line-height: 1.65; }
+  .dlg-user { font-size: 13.5px; line-height: 1.65; padding-left: 10px; border-left: 2px solid; }
+  .dlg-input { padding: 10px 18px 24px; display: flex; gap: 7px; align-items: center; }
+  .dlg-field { flex: 1; padding: 9px 14px; border-radius: 18px; border: 1px solid; font-size: 13px; background: transparent; }
+  .dlg-send { width: 32px; height: 32px; border-radius: 50%; border: none; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+  /* Dark mode toggle */
+  .dark .light-only { display: none; }
+  .dark .dark-only { display: block; }
+  .light-only { display: block; }
+  .dark-only { display: none; }
+
+  .divider { width: 80%; max-width: 600px; height: 1px; background: rgba(255,255,255,0.06); margin: 0 auto 0; }
+
+  .vote-bar { display: flex; justify-content: center; gap: 12px; padding: 20px; flex-wrap: wrap; }
+  .vote-btn { padding: 10px 28px; border-radius: 20px; border: 2px solid rgba(139,155,122,0.3); background: transparent; color: #B8C8A0; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s; }
+  .vote-btn:hover { background: rgba(139,155,122,0.15); border-color: rgba(139,155,122,0.6); }
+  .vote-btn.selected { background: rgba(139,155,122,0.3); border-color: #8B9B7A; color: #fff; }
+</style>
+</head>
+<body class="light">
+
+<div class="header">
+  <h1>AI Life Coach — Design Directions</h1>
+  <p>Four layout variations for the home scene and conversation view, all using the Earthy Warm palette. Toggle light/dark. Pick your favorites or mix and match elements.</p>
+</div>
+
+<div class="controls">
+  <button class="ctrl-btn active" onclick="setMode('light')">Light Mode</button>
+  <button class="ctrl-btn" onclick="setMode('dark')">Dark Mode</button>
+</div>
+
+<!-- ====== HOME SCENE VARIATIONS ====== -->
+<div class="section-title">Home Scene Variations</div>
+<div class="section-sub">Your space. The avatar, the insight, the sprint, the action. Four layout approaches.</div>
+
+<div class="mockup-row">
+
+  <!-- HOME A: Centered & Spacious -->
+  <div class="mockup-card">
+    <div class="mockup-label">A. Centered & Spacious</div>
+    <div class="mockup-desc">Avatar dominates the center. Maximum breathing room. The "calm sanctuary" approach. Most aligned with Headspace.</div>
+    <div class="phone">
+      <div class="scene home-a light-only" style="background: var(--bg-home-l); color: var(--text-l); padding: 44px 18px 18px;">
+        <div class="h-greeting" style="color: var(--text-l3);">Good evening</div>
+        <div class="h-name">Hey, Ducdo</div>
+        <div class="avatar-area">
+          <div class="avatar-circle" style="background: linear-gradient(135deg, #C4D4B0, #8B9B7A);">
+            <div class="avatar-shadow" style="background: var(--accent);"></div>🧘
+          </div>
+        </div>
+        <div class="h-insight" style="background: var(--card-l);">
+          <div class="h-insight-label" style="color: var(--text-l3);">Last insight</div>
+          <span>You mentioned feeling energized after the creative workshop. That's worth exploring.</span>
+        </div>
+        <div class="h-sprint" style="background: rgba(139,155,122,0.12);"><div class="h-sprint-fill" style="background: linear-gradient(90deg, var(--accent), var(--accent2));"></div></div>
+        <div class="h-sprint-label">Career clarity — day 9 of 14</div>
+        <div style="flex:1"></div>
+        <button class="h-btn" style="background: linear-gradient(135deg, var(--accent2), var(--accent3)); color: #fff;">Talk to your coach</button>
+      </div>
+      <div class="scene home-a dark-only" style="background: var(--bg-home-d); color: var(--text-d); padding: 44px 18px 18px;">
+        <div class="h-greeting" style="color: var(--text-d3);">Good evening</div>
+        <div class="h-name">Hey, Ducdo</div>
+        <div class="avatar-area">
+          <div class="avatar-circle" style="background: linear-gradient(135deg, #2A3020, #3A4830);">
+            <div class="avatar-shadow" style="background: var(--accent);"></div>🧘
+          </div>
+        </div>
+        <div class="h-insight" style="background: var(--card-d);">
+          <div class="h-insight-label" style="color: var(--text-d3);">Last insight</div>
+          <span style="color: #B0B0A0;">You mentioned feeling energized after the creative workshop.</span>
+        </div>
+        <div class="h-sprint" style="background: rgba(139,155,122,0.08);"><div class="h-sprint-fill" style="background: linear-gradient(90deg, var(--accent), var(--accent2));"></div></div>
+        <div class="h-sprint-label" style="color: #5A6850;">Career clarity — day 9 of 14</div>
+        <div style="flex:1"></div>
+        <button class="h-btn" style="background: linear-gradient(135deg, #4A5A3A, #3E4E30); color: #D0D8C0;">Talk to your coach</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOME B: Compact & Personal -->
+  <div class="mockup-card">
+    <div class="mockup-label">B. Compact & Personal</div>
+    <div class="mockup-desc">Avatar beside greeting. More intimate, conversational layout. Feels like a friend's profile, not a dashboard.</div>
+    <div class="phone">
+      <div class="scene home-b light-only" style="background: var(--bg-home-l); color: var(--text-l); padding: 44px 18px 18px;">
+        <div class="avatar-area">
+          <div class="avatar-circle" style="background: linear-gradient(135deg, #C4D4B0, #8B9B7A);">🧘</div>
+          <div>
+            <div class="h-greeting" style="color: var(--text-l3);">Good evening</div>
+            <div class="h-name">Hey, Ducdo</div>
+            <div style="font-size: 11px; color: var(--text-l3); margin-top: 2px;">Resting · Sprint day 9</div>
+          </div>
+        </div>
+        <div class="h-insight" style="background: var(--card-l);">
+          <div class="h-insight-label" style="color: var(--text-l3);">Your coach has been thinking</div>
+          <span>You mentioned feeling energized after the creative workshop. That pattern keeps coming up — creative work seems to be a thread worth pulling.</span>
+        </div>
+        <div class="h-sprint" style="background: rgba(139,155,122,0.12);"><div class="h-sprint-fill" style="background: linear-gradient(90deg, var(--accent), var(--accent2));"></div></div>
+        <div class="h-sprint-label">Career clarity sprint — 5 days left</div>
+        <div style="flex:1"></div>
+        <div class="h-insight" style="background: rgba(139,155,122,0.06); font-size: 11.5px;">
+          <div class="h-insight-label" style="color: var(--text-l3);">Yesterday's check-in</div>
+          <span style="opacity: 0.7;">"Felt stuck but talked it through. Coach suggested reframing the deadline."</span>
+        </div>
+        <button class="h-btn" style="background: linear-gradient(135deg, var(--accent2), var(--accent3)); color: #fff;">Talk to your coach</button>
+      </div>
+      <div class="scene home-b dark-only" style="background: var(--bg-home-d); color: var(--text-d); padding: 44px 18px 18px;">
+        <div class="avatar-area">
+          <div class="avatar-circle" style="background: linear-gradient(135deg, #2A3020, #3A4830);">🧘</div>
+          <div>
+            <div class="h-greeting" style="color: var(--text-d3);">Good evening</div>
+            <div class="h-name">Hey, Ducdo</div>
+            <div style="font-size: 11px; color: var(--text-d3); margin-top: 2px;">Resting · Sprint day 9</div>
+          </div>
+        </div>
+        <div class="h-insight" style="background: var(--card-d);">
+          <div class="h-insight-label" style="color: var(--text-d3);">Your coach has been thinking</div>
+          <span style="color: #B0B0A0;">You mentioned feeling energized after the creative workshop. That pattern keeps coming up.</span>
+        </div>
+        <div class="h-sprint" style="background: rgba(139,155,122,0.08);"><div class="h-sprint-fill" style="background: linear-gradient(90deg, var(--accent), var(--accent2));"></div></div>
+        <div class="h-sprint-label" style="color: #5A6850;">Career clarity sprint — 5 days left</div>
+        <div style="flex:1"></div>
+        <div class="h-insight" style="background: rgba(139,155,122,0.04); font-size: 11.5px;">
+          <div class="h-insight-label" style="color: var(--text-d3);">Yesterday's check-in</div>
+          <span style="color: #8A8A7A;">"Felt stuck but talked it through."</span>
+        </div>
+        <button class="h-btn" style="background: linear-gradient(135deg, #4A5A3A, #3E4E30); color: #D0D8C0;">Talk to your coach</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOME C: Card-Based -->
+  <div class="mockup-card">
+    <div class="mockup-label">C. Card-Based</div>
+    <div class="mockup-desc">Everything in cards. Organized, scannable, modular. Avatar as a rounded square for a different feel.</div>
+    <div class="phone">
+      <div class="scene home-c light-only" style="background: var(--bg-home-l); color: var(--text-l); padding: 44px 18px 18px;">
+        <div class="h-greeting" style="color: var(--text-l3);">Good evening</div>
+        <div class="h-name" style="margin-bottom: 16px;">Hey, Ducdo</div>
+        <div class="avatar-area">
+          <div class="avatar-circle" style="background: linear-gradient(135deg, #C4D4B0, #8B9B7A); border-radius: 24px;">🧘</div>
+          <div style="font-size: 11px; color: var(--text-l3);">Resting</div>
+        </div>
+        <div class="h-insight" style="background: var(--card-l);">
+          <div class="h-insight-label" style="color: var(--text-l3);">Coach's insight</div>
+          <span>Creative work keeps energizing you. Let's explore why.</span>
+        </div>
+        <div class="h-insight" style="background: var(--card-l);">
+          <div class="h-insight-label" style="color: var(--text-l3);">Sprint progress</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+            <span style="font-size: 12px;">Career clarity</span>
+            <span style="font-size: 12px; color: var(--accent); font-weight: 600;">65%</span>
+          </div>
+          <div class="h-sprint" style="background: rgba(139,155,122,0.12); margin-top: 8px;"><div class="h-sprint-fill" style="background: linear-gradient(90deg, var(--accent), var(--accent2));"></div></div>
+          <div style="font-size: 10px; color: var(--text-l3); margin-top: 4px;">Day 9 of 14 · 3 steps remaining</div>
+        </div>
+        <div style="flex:1"></div>
+        <button class="h-btn" style="background: linear-gradient(135deg, var(--accent2), var(--accent3)); color: #fff;">Talk to your coach</button>
+      </div>
+      <div class="scene home-c dark-only" style="background: var(--bg-home-d); color: var(--text-d); padding: 44px 18px 18px;">
+        <div class="h-greeting" style="color: var(--text-d3);">Good evening</div>
+        <div class="h-name" style="margin-bottom: 16px;">Hey, Ducdo</div>
+        <div class="avatar-area">
+          <div class="avatar-circle" style="background: linear-gradient(135deg, #2A3020, #3A4830); border-radius: 24px;">🧘</div>
+          <div style="font-size: 11px; color: var(--text-d3);">Resting</div>
+        </div>
+        <div class="h-insight" style="background: var(--card-d);">
+          <div class="h-insight-label" style="color: var(--text-d3);">Coach's insight</div>
+          <span style="color: #B0B0A0;">Creative work keeps energizing you. Let's explore why.</span>
+        </div>
+        <div class="h-insight" style="background: var(--card-d);">
+          <div class="h-insight-label" style="color: var(--text-d3);">Sprint progress</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+            <span style="font-size: 12px; color: #B0B0A0;">Career clarity</span>
+            <span style="font-size: 12px; color: var(--accent); font-weight: 600;">65%</span>
+          </div>
+          <div class="h-sprint" style="background: rgba(139,155,122,0.08); margin-top: 8px;"><div class="h-sprint-fill" style="background: linear-gradient(90deg, var(--accent), var(--accent2));"></div></div>
+          <div style="font-size: 10px; color: var(--text-d3); margin-top: 4px;">Day 9 of 14 · 3 steps remaining</div>
+        </div>
+        <div style="flex:1"></div>
+        <button class="h-btn" style="background: linear-gradient(135deg, #4A5A3A, #3E4E30); color: #D0D8C0;">Talk to your coach</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOME D: Avatar-Dominant -->
+  <div class="mockup-card">
+    <div class="mockup-label">D. Avatar-Dominant</div>
+    <div class="mockup-desc">Oversized avatar as the emotional center. Minimal information. Maximum "this is a place, not a dashboard." The boldest expression of calm.</div>
+    <div class="phone">
+      <div class="scene home-d light-only" style="background: var(--bg-home-l); color: var(--text-l); padding: 44px 18px 18px;">
+        <div class="h-greeting" style="color: var(--text-l3); text-align: center;">Good evening</div>
+        <div class="h-name" style="text-align: center;">Hey, Ducdo</div>
+        <div class="avatar-area">
+          <div class="avatar-circle" style="background: linear-gradient(135deg, #C4D4B0, #8B9B7A);">
+            <div class="avatar-ring" style="border-color: var(--accent);"></div>🧘
+          </div>
+          <div style="font-size: 11.5px; color: var(--text-l3); text-align: center;">Resting</div>
+        </div>
+        <div style="text-align: center; font-size: 13px; color: var(--text-l2); line-height: 1.6; padding: 0 12px; opacity: 0.8;">
+          "Creative work keeps energizing you. That's worth exploring."
+        </div>
+        <div style="flex:1"></div>
+        <div style="text-align: center; margin-bottom: 8px;">
+          <div class="h-sprint" style="background: rgba(139,155,122,0.12); width: 60%; margin: 0 auto;"><div class="h-sprint-fill" style="background: linear-gradient(90deg, var(--accent), var(--accent2));"></div></div>
+          <div class="h-sprint-label" style="margin-top: 5px;">Day 9 of 14</div>
+        </div>
+        <button class="h-btn" style="background: linear-gradient(135deg, var(--accent2), var(--accent3)); color: #fff;">Talk to your coach</button>
+      </div>
+      <div class="scene home-d dark-only" style="background: var(--bg-home-d); color: var(--text-d); padding: 44px 18px 18px;">
+        <div class="h-greeting" style="color: var(--text-d3); text-align: center;">Good evening</div>
+        <div class="h-name" style="text-align: center;">Hey, Ducdo</div>
+        <div class="avatar-area">
+          <div class="avatar-circle" style="background: linear-gradient(135deg, #2A3020, #3A4830);">
+            <div class="avatar-ring" style="border-color: rgba(139,155,122,0.3);"></div>
+            <div class="avatar-shadow" style="background: var(--accent); position: absolute; inset: -8px; border-radius: 50%; filter: blur(14px); opacity: 0.15;"></div>🧘
+          </div>
+          <div style="font-size: 11.5px; color: var(--text-d3); text-align: center;">Resting</div>
+        </div>
+        <div style="text-align: center; font-size: 13px; color: #A0A090; line-height: 1.6; padding: 0 12px;">
+          "Creative work keeps energizing you."
+        </div>
+        <div style="flex:1"></div>
+        <div style="text-align: center; margin-bottom: 8px;">
+          <div class="h-sprint" style="background: rgba(139,155,122,0.08); width: 60%; margin: 0 auto;"><div class="h-sprint-fill" style="background: linear-gradient(90deg, var(--accent), var(--accent2));"></div></div>
+          <div class="h-sprint-label" style="color: #5A6850; margin-top: 5px;">Day 9 of 14</div>
+        </div>
+        <button class="h-btn" style="background: linear-gradient(135deg, #4A5A3A, #3E4E30); color: #D0D8C0;">Talk to your coach</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ====== CONVERSATION VARIATIONS ====== -->
+<div class="section-title">Conversation View Variations</div>
+<div class="section-sub">The coaching space. Coach character, dialogue, input. Four approaches to the RPG dialogue paradigm.</div>
+
+<div class="mockup-row">
+
+  <!-- CONV A: Standard Portrait -->
+  <div class="mockup-card">
+    <div class="mockup-label">A. Centered Portrait</div>
+    <div class="mockup-desc">Coach character centered above dialogue. Classic RPG dialogue layout. Clear hierarchy: character → dialogue → input.</div>
+    <div class="phone">
+      <div class="scene light-only" style="background: var(--bg-conv-l); color: var(--text-l);">
+        <div class="coach-area" style="border-bottom: 1px solid var(--border-l);">
+          <div class="coach-circle" style="background: linear-gradient(135deg, #B8C8A0, var(--accent)); box-shadow: 0 4px 16px var(--glow);">🌿</div>
+          <div class="coach-nm">Your Coach</div>
+          <div class="coach-st">Thinking about what you said...</div>
+        </div>
+        <div class="dlg">
+          <div class="dlg-date">Today</div>
+          <div class="dlg-coach">Been thinking about yesterday's conversation. You said the project deadline feels more like a wall than a finish line. What would it feel like if it was something you were running toward?</div>
+          <div class="dlg-user" style="color: var(--text-l2); border-color: var(--accent);">I guess it would feel less heavy. Like I'm choosing it instead of being crushed by it.</div>
+          <div class="dlg-coach">That's a really important distinction — choosing versus being crushed. Let's sit with that.</div>
+        </div>
+        <div class="dlg-input" style="border-top: 1px solid var(--border-l);">
+          <div class="dlg-field" style="border-color: rgba(120,130,100,0.2); color: var(--text-l3);">What's on your mind...</div>
+          <div class="dlg-send" style="background: var(--accent2); color: #fff;">↑</div>
+        </div>
+      </div>
+      <div class="scene dark-only" style="background: var(--bg-conv-d); color: var(--text-d);">
+        <div class="coach-area" style="border-bottom: 1px solid var(--border-d);">
+          <div class="coach-circle" style="background: linear-gradient(135deg, #3A4830, #5A6B48); box-shadow: 0 4px 20px rgba(139,155,122,0.1);">🌿</div>
+          <div class="coach-nm" style="color: var(--text-d);">Your Coach</div>
+          <div class="coach-st" style="color: var(--text-d3);">Thinking about what you said...</div>
+        </div>
+        <div class="dlg">
+          <div class="dlg-date">Today</div>
+          <div class="dlg-coach" style="color: #C4C4B4;">Been thinking about yesterday's conversation. You said the project deadline feels more like a wall than a finish line.</div>
+          <div class="dlg-user" style="color: var(--text-d2); border-color: rgba(139,155,122,0.3);">I guess it would feel less heavy. Like I'm choosing it.</div>
+          <div class="dlg-coach" style="color: #C4C4B4;">That's a really important distinction. Let's sit with that.</div>
+        </div>
+        <div class="dlg-input" style="border-top: 1px solid var(--border-d);">
+          <div class="dlg-field" style="border-color: rgba(120,130,100,0.12); color: var(--text-d2);">What's on your mind...</div>
+          <div class="dlg-send" style="background: #4A5A3A; color: #D0D8C0;">↑</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONV B: Side Portrait -->
+  <div class="mockup-card">
+    <div class="mockup-label">B. Side Portrait</div>
+    <div class="mockup-desc">Coach character on the left, smaller. More dialogue space. Feels more conversational, less formal. Like talking to someone beside you.</div>
+    <div class="phone">
+      <div class="scene conv-b light-only" style="background: var(--bg-conv-l); color: var(--text-l);">
+        <div class="coach-area" style="border-bottom: 1px solid var(--border-l);">
+          <div class="coach-circle" style="background: linear-gradient(135deg, #B8C8A0, var(--accent)); box-shadow: 0 3px 12px var(--glow);">🌿</div>
+          <div class="coach-info">
+            <div class="coach-nm">Your Coach</div>
+            <div class="coach-st">Thinking...</div>
+          </div>
+        </div>
+        <div class="dlg">
+          <div class="dlg-date">Today</div>
+          <div class="dlg-coach">Been thinking about yesterday's conversation. You said the project deadline feels more like a wall than a finish line. What would it feel like if it was something you were running toward?</div>
+          <div class="dlg-user" style="color: var(--text-l2); border-color: var(--accent);">I guess it would feel less heavy. Like I'm choosing it instead of being crushed by it.</div>
+          <div class="dlg-coach">That's a really important distinction — choosing versus being crushed. Let's sit with that for a moment.</div>
+        </div>
+        <div class="dlg-input" style="border-top: 1px solid var(--border-l);">
+          <div class="dlg-field" style="border-color: rgba(120,130,100,0.2); color: var(--text-l3);">What's on your mind...</div>
+          <div class="dlg-send" style="background: var(--accent2); color: #fff;">↑</div>
+        </div>
+      </div>
+      <div class="scene conv-b dark-only" style="background: var(--bg-conv-d); color: var(--text-d);">
+        <div class="coach-area" style="border-bottom: 1px solid var(--border-d);">
+          <div class="coach-circle" style="background: linear-gradient(135deg, #3A4830, #5A6B48); box-shadow: 0 3px 12px rgba(139,155,122,0.08);">🌿</div>
+          <div class="coach-info">
+            <div class="coach-nm" style="color: var(--text-d);">Your Coach</div>
+            <div class="coach-st" style="color: var(--text-d3);">Thinking...</div>
+          </div>
+        </div>
+        <div class="dlg">
+          <div class="dlg-date">Today</div>
+          <div class="dlg-coach" style="color: #C4C4B4;">Been thinking about yesterday. You said the project deadline feels more like a wall.</div>
+          <div class="dlg-user" style="color: var(--text-d2); border-color: rgba(139,155,122,0.3);">I guess it would feel less heavy.</div>
+          <div class="dlg-coach" style="color: #C4C4B4;">That's a really important distinction. Let's sit with that.</div>
+        </div>
+        <div class="dlg-input" style="border-top: 1px solid var(--border-d);">
+          <div class="dlg-field" style="border-color: rgba(120,130,100,0.12); color: var(--text-d2);">What's on your mind...</div>
+          <div class="dlg-send" style="background: #4A5A3A; color: #D0D8C0;">↑</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONV C: Minimal Portrait -->
+  <div class="mockup-card">
+    <div class="mockup-label">C. Minimal Portrait</div>
+    <div class="mockup-desc">Small coach character, maximum dialogue space. The coach presence is subtle — the words dominate. Most "Bear-like" in its content-first approach.</div>
+    <div class="phone">
+      <div class="scene conv-c light-only" style="background: var(--bg-conv-l); color: var(--text-l);">
+        <div class="coach-area" style="border-bottom: 1px solid var(--border-l); padding-bottom: 8px;">
+          <div class="coach-circle" style="background: linear-gradient(135deg, #B8C8A0, var(--accent)); box-shadow: 0 2px 10px var(--glow);">🌿</div>
+          <div class="coach-st" style="margin-top: 3px;">Thinking about what you said...</div>
+        </div>
+        <div class="dlg">
+          <div class="dlg-date">Today</div>
+          <div class="dlg-coach">Been thinking about yesterday's conversation. You said the project deadline feels more like a wall than a finish line. I want to unpack that — what would it feel like if the deadline was something you were running toward?</div>
+          <div class="dlg-user" style="color: var(--text-l2); border-color: var(--accent);">I guess it would feel less heavy. Like I'm choosing it instead of being crushed by it.</div>
+          <div class="dlg-coach">That's a really important distinction — choosing versus being crushed. Let's sit with that for a moment.</div>
+          <div class="dlg-coach" style="opacity: 0.7; font-size: 12px; font-style: italic;">Three weeks ago, you used almost the same words about your relationship with deadlines at your last job. There might be a pattern here worth exploring.</div>
+        </div>
+        <div class="dlg-input" style="border-top: 1px solid var(--border-l);">
+          <div class="dlg-field" style="border-color: rgba(120,130,100,0.2); color: var(--text-l3);">What's on your mind...</div>
+          <div class="dlg-send" style="background: var(--accent2); color: #fff;">↑</div>
+        </div>
+      </div>
+      <div class="scene conv-c dark-only" style="background: var(--bg-conv-d); color: var(--text-d);">
+        <div class="coach-area" style="border-bottom: 1px solid var(--border-d); padding-bottom: 8px;">
+          <div class="coach-circle" style="background: linear-gradient(135deg, #3A4830, #5A6B48); box-shadow: 0 2px 10px rgba(139,155,122,0.08);">🌿</div>
+          <div class="coach-st" style="color: var(--text-d3); margin-top: 3px;">Thinking about what you said...</div>
+        </div>
+        <div class="dlg">
+          <div class="dlg-date">Today</div>
+          <div class="dlg-coach" style="color: #C4C4B4;">Been thinking about yesterday. You said the deadline feels like a wall. What would it feel like if it was something you were running toward?</div>
+          <div class="dlg-user" style="color: var(--text-d2); border-color: rgba(139,155,122,0.3);">I guess it would feel less heavy. Like I'm choosing it.</div>
+          <div class="dlg-coach" style="color: #C4C4B4;">That's a really important distinction.</div>
+          <div class="dlg-coach" style="opacity: 0.6; font-size: 12px; font-style: italic; color: #A0A090;">Three weeks ago, you used almost the same words about deadlines at your last job.</div>
+        </div>
+        <div class="dlg-input" style="border-top: 1px solid var(--border-d);">
+          <div class="dlg-field" style="border-color: rgba(120,130,100,0.12); color: var(--text-d2);">What's on your mind...</div>
+          <div class="dlg-send" style="background: #4A5A3A; color: #D0D8C0;">↑</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONV D: Immersive Portrait -->
+  <div class="mockup-card">
+    <div class="mockup-label">D. Immersive Portrait</div>
+    <div class="mockup-desc">Large coach character with ambient glow. Maximum emotional presence. The coach fills the space. Most "RPG" in feeling — like entering a character's chamber.</div>
+    <div class="phone">
+      <div class="scene conv-d light-only" style="background: var(--bg-conv-l); color: var(--text-l);">
+        <div class="coach-area">
+          <div class="coach-circle" style="background: linear-gradient(135deg, #B8C8A0, var(--accent)); box-shadow: 0 6px 24px var(--glow);">
+            <div class="coach-glow" style="background: var(--accent);"></div>🌿
+          </div>
+          <div class="coach-nm">Your Coach</div>
+          <div class="coach-st">Thinking about what you said...</div>
+        </div>
+        <div class="dlg">
+          <div class="dlg-date">Today</div>
+          <div class="dlg-coach">You said the project deadline feels more like a wall than a finish line. What would it feel like if the deadline was something you were running toward?</div>
+          <div class="dlg-user" style="color: var(--text-l2); border-color: var(--accent);">Like I'm choosing it instead of being crushed by it.</div>
+          <div class="dlg-coach">That's a really important distinction. Let's sit with that.</div>
+        </div>
+        <div class="dlg-input" style="border-top: 1px solid var(--border-l);">
+          <div class="dlg-field" style="border-color: rgba(120,130,100,0.2); color: var(--text-l3);">What's on your mind...</div>
+          <div class="dlg-send" style="background: var(--accent2); color: #fff;">↑</div>
+        </div>
+      </div>
+      <div class="scene conv-d dark-only" style="background: var(--bg-conv-d); color: var(--text-d);">
+        <div class="coach-area">
+          <div class="coach-circle" style="background: linear-gradient(135deg, #3A4830, #5A6B48); box-shadow: 0 6px 28px rgba(139,155,122,0.12);">
+            <div class="coach-glow" style="background: var(--accent);"></div>🌿
+          </div>
+          <div class="coach-nm" style="color: var(--text-d);">Your Coach</div>
+          <div class="coach-st" style="color: var(--text-d3);">Thinking about what you said...</div>
+        </div>
+        <div class="dlg">
+          <div class="dlg-date">Today</div>
+          <div class="dlg-coach" style="color: #C4C4B4;">You said the deadline feels like a wall. What would it feel like if it was something you were running toward?</div>
+          <div class="dlg-user" style="color: var(--text-d2); border-color: rgba(139,155,122,0.3);">Like I'm choosing it instead of being crushed.</div>
+          <div class="dlg-coach" style="color: #C4C4B4;">That's a really important distinction. Let's sit with that.</div>
+        </div>
+        <div class="dlg-input" style="border-top: 1px solid var(--border-d);">
+          <div class="dlg-field" style="border-color: rgba(120,130,100,0.12); color: var(--text-d2);">What's on your mind...</div>
+          <div class="dlg-send" style="background: #4A5A3A; color: #D0D8C0;">↑</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="divider"></div>
+<div class="section-title">Your Picks</div>
+<div class="section-sub">Which home scene layout? Which conversation layout? You can mix and match (e.g., Home B + Conversation A).</div>
+<div style="height: 60px;"></div>
+
+<script>
+function setMode(m) {
+  document.body.className = m;
+  document.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

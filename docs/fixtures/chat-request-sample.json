@@ -1,0 +1,7 @@
+{
+  "messages": [
+    {"role": "user", "content": "I've been feeling stuck at work lately."}
+  ],
+  "mode": "discovery",
+  "promptVersion": "1.0"
+}

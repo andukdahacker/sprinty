@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprinty — Character Mark Variations</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; background: #111; color: #e0e0e0; }
+
+  .header { text-align: center; padding: 40px 20px 12px; }
+  .header h1 { font-size: 26px; font-weight: 300; }
+  .header p { font-size: 13px; opacity: 0.5; margin-top: 8px; max-width: 600px; margin: 8px auto 0; line-height: 1.6; }
+
+  .section-title { text-align: center; padding: 36px 20px 6px; font-size: 18px; font-weight: 500; color: #8B9B7A; }
+  .section-sub { text-align: center; font-size: 12px; opacity: 0.4; margin-bottom: 28px; max-width: 550px; margin-left: auto; margin-right: auto; line-height: 1.6; }
+
+  .grid { display: flex; justify-content: center; gap: 32px; padding: 0 24px 40px; flex-wrap: wrap; }
+
+  .card { display: flex; flex-direction: column; align-items: center; }
+  .card-label { font-size: 14px; font-weight: 600; color: #B8C8A0; margin-bottom: 3px; }
+  .card-desc { font-size: 11px; opacity: 0.4; margin-bottom: 14px; text-align: center; max-width: 180px; line-height: 1.5; }
+
+  .icon { width: 120px; height: 120px; border-radius: 27px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; position: relative; }
+  .icon-sm { width: 60px; height: 60px; border-radius: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+  .sizes { display: flex; gap: 14px; align-items: flex-end; }
+  .size-label { font-size: 9px; opacity: 0.3; text-align: center; margin-top: 4px; }
+
+  .divider { width: 80%; max-width: 500px; height: 1px; background: rgba(255,255,255,0.06); margin: 8px auto 0; }
+
+  /* ===== Shared face parts ===== */
+  .face-circle {
+    border-radius: 50%;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .face-circle .shine {
+    position: absolute;
+    width: 50%; height: 22%;
+    background: rgba(255,255,255,0.18);
+    border-radius: 50%;
+    top: 18%; left: 20%;
+  }
+
+  /* ===== V1: Friendly Round ===== */
+  .v1-light .bg { background: linear-gradient(135deg, #EDE8E0, #E0D8CC); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+  .v1-dark .bg { background: linear-gradient(135deg, #2E3426, #232A1E); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+  .v1 .face { width: 68%; height: 68%; background: linear-gradient(150deg, #9BAF88, #7A8B6B); }
+  .v1-dark .face { background: linear-gradient(150deg, #8BA078, #6B8058); box-shadow: 0 0 24px rgba(139,175,122,0.15); }
+  .v1 .eyes { display: flex; gap: 16px; position: absolute; top: 36%; }
+  .v1 .eye { width: 9px; height: 9px; background: #2E3426; border-radius: 50%; }
+  .v1-dark .eye { background: #E8E4DC; }
+  .v1 .eye-shine { position: absolute; width: 3px; height: 3px; background: rgba(255,255,255,0.5); border-radius: 50%; top: 1px; left: 2px; }
+  .v1-dark .eye-shine { background: rgba(255,255,255,0.3); }
+  .v1 .mouth { position: absolute; top: 56%; width: 16px; height: 8px; border-bottom: 2.5px solid #2E3426; border-radius: 0 0 50% 50%; }
+  .v1-dark .mouth { border-color: #E8E4DC; }
+  .v1 .cheek { position: absolute; top: 49%; width: 9px; height: 5px; background: rgba(196,136,122,0.25); border-radius: 50%; }
+  .v1-dark .cheek { background: rgba(196,160,140,0.15); }
+  .v1 .cheek-l { left: 16%; }
+  .v1 .cheek-r { right: 16%; }
+  .v1 .leaf { position: absolute; top: 4%; right: 8%; font-size: 16px; transform: rotate(30deg); }
+
+  /* Small icon adjustments */
+  .v1 .sm-eyes { gap: 8px; }
+  .v1 .sm-eye { width: 5px; height: 5px; }
+  .v1 .sm-mouth { width: 8px; height: 4px; border-width: 1.5px; }
+  .v1 .sm-leaf { font-size: 9px; top: 3%; right: 6%; }
+
+  /* ===== V2: Closed Eyes / Peaceful ===== */
+  .v2 .face { width: 68%; height: 68%; background: linear-gradient(150deg, #A8B898, #8B9B7A); }
+  .v2-dark .face { background: linear-gradient(150deg, #8BA078, #6B8058); box-shadow: 0 0 24px rgba(139,175,122,0.12); }
+  .v2 .eye-closed { width: 10px; height: 5px; border-bottom: 2px solid #2E3426; border-radius: 0 0 50% 50%; position: relative; }
+  .v2-dark .eye-closed { border-color: #E8E4DC; }
+  .v2 .smile { position: absolute; top: 56%; width: 14px; height: 7px; border-bottom: 2px solid #2E3426; border-radius: 0 0 50% 50%; }
+  .v2-dark .smile { border-color: #E8E4DC; }
+
+  /* ===== V3: Minimal Dot Eyes ===== */
+  .v3 .face { width: 64%; height: 64%; background: linear-gradient(150deg, #B0C0A0, #8B9B7A); }
+  .v3-dark .face { background: linear-gradient(150deg, #7A9068, #5A7048); box-shadow: 0 0 20px rgba(139,155,122,0.12); }
+  .v3 .dot-eye { width: 6px; height: 6px; background: #2E3426; border-radius: 50%; }
+  .v3-dark .dot-eye { background: #D8D4CC; }
+  .v3 .line-smile { position: absolute; top: 55%; width: 12px; height: 1px; background: #2E3426; border-radius: 1px; transform: rotate(0deg); }
+  .v3 .line-smile::after { content: ''; position: absolute; right: -1px; top: -2px; width: 4px; height: 4px; border-right: 1.5px solid #2E3426; border-bottom: 1.5px solid #2E3426; border-radius: 0 0 4px 0; }
+  .v3-dark .line-smile { background: #D8D4CC; }
+  .v3-dark .line-smile::after { border-color: #D8D4CC; }
+
+  /* ===== V4: Sprout Head ===== */
+  .v4 .face { width: 62%; height: 62%; background: linear-gradient(150deg, #9BAF88, #7A8B6B); }
+  .v4-dark .face { background: linear-gradient(150deg, #7A9068, #5A7048); box-shadow: 0 0 20px rgba(139,155,122,0.12); }
+  .v4 .sprout { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); }
+  .v4 .sprout-stem { width: 2px; height: 14px; background: #6B7A5A; margin: 0 auto; border-radius: 1px; }
+  .v4-dark .sprout-stem { background: #8BA078; }
+  .v4 .sprout-leaves { display: flex; gap: 1px; margin-top: -2px; }
+  .v4 .sprout-leaf-l { width: 8px; height: 6px; background: #8B9B7A; border-radius: 50% 0 50% 50%; transform: rotate(-15deg); }
+  .v4 .sprout-leaf-r { width: 8px; height: 6px; background: #7A8B6B; border-radius: 0 50% 50% 50%; transform: rotate(15deg); }
+  .v4-dark .sprout-leaf-l { background: #8BA078; }
+  .v4-dark .sprout-leaf-r { background: #7A9068; }
+
+  /* ===== V5: Outlined / Line Art ===== */
+  .v5-light .bg { background: linear-gradient(135deg, #F4F2EC, #EDE8E0); }
+  .v5-dark .bg { background: linear-gradient(135deg, #1E2418, #1A1E14); }
+  .v5 .face-outline {
+    width: 64%; height: 64%;
+    border: 3px solid #6B7A5A;
+    border-radius: 50%;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .v5-dark .face-outline { border-color: #8BA078; }
+  .v5 .o-eye { width: 6px; height: 6px; background: #6B7A5A; border-radius: 50%; }
+  .v5-dark .o-eye { background: #8BA078; }
+  .v5 .o-smile { position: absolute; top: 56%; width: 14px; height: 7px; border-bottom: 2.5px solid #6B7A5A; border-radius: 0 0 50% 50%; }
+  .v5-dark .o-smile { border-color: #8BA078; }
+  .v5 .o-leaf { position: absolute; top: -6px; right: -4px; font-size: 14px; transform: rotate(20deg); }
+
+  /* ===== V6: Warm Glow (fixing the creepy dark) ===== */
+  .v6-dark .bg {
+    background: linear-gradient(135deg, #2A2E22, #222620);
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .v6-dark .glow-ring {
+    position: absolute;
+    width: 78%; height: 78%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(168,184,152,0.12) 0%, transparent 70%);
+  }
+  .v6-dark .face {
+    width: 62%; height: 62%;
+    background: linear-gradient(150deg, #A8B898, #8B9B7A);
+    box-shadow: 0 0 30px rgba(168,184,152,0.2), 0 0 60px rgba(168,184,152,0.08);
+    z-index: 1;
+  }
+  .v6-dark .eye { width: 8px; height: 8px; background: #2E3426; border-radius: 50%; }
+  .v6-dark .eye-shine { position: absolute; width: 3px; height: 3px; background: rgba(255,255,255,0.4); border-radius: 50%; top: 1px; left: 2px; }
+  .v6-dark .mouth { position: absolute; top: 56%; width: 14px; height: 7px; border-bottom: 2.5px solid #2E3426; border-radius: 0 0 50% 50%; }
+  .v6-dark .cheek { position: absolute; top: 49%; width: 8px; height: 5px; background: rgba(196,160,140,0.2); border-radius: 50%; }
+
+  /* ===== V7: Soft Square ===== */
+  .v7 .face-sq {
+    width: 60%; height: 60%;
+    border-radius: 22%;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .v7-light .face-sq { background: linear-gradient(150deg, #9BAF88, #7A8B6B); }
+  .v7-dark .face-sq { background: linear-gradient(150deg, #8BA078, #6B8058); box-shadow: 0 0 24px rgba(139,175,122,0.12); }
+
+  /* ===== V8: Abstract Face ===== */
+  .v8 .abstract-face {
+    width: 60%; height: 60%;
+    position: relative;
+  }
+  .v8 .a-circle { width: 100%; height: 100%; border-radius: 50%; }
+  .v8-light .a-circle { background: linear-gradient(150deg, #B0C0A0, #8B9B7A); }
+  .v8-dark .a-circle { background: linear-gradient(150deg, #8BA078, #6B8058); box-shadow: 0 0 20px rgba(139,155,122,0.12); }
+  .v8 .a-eye-area { position: absolute; top: 35%; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; }
+  .v8 .a-eye { width: 4px; height: 4px; border-radius: 50%; }
+  .v8-light .a-eye { background: #3A3A30; }
+  .v8-dark .a-eye { background: #E0DCD4; }
+  .v8 .a-curve { position: absolute; top: 52%; left: 50%; transform: translateX(-50%); width: 20px; height: 10px; border-bottom: 2px solid; border-radius: 0 0 50% 50%; }
+  .v8-light .a-curve { border-color: #3A3A30; }
+  .v8-dark .a-curve { border-color: #E0DCD4; }
+
+  /* Phone mockup */
+  .phone { width: 180px; height: 340px; border-radius: 22px; border: 2px solid rgba(255,255,255,0.08); box-shadow: 0 10px 36px rgba(0,0,0,0.3); padding: 36px 14px 14px; display: flex; flex-direction: column; margin-top: 14px; }
+  .phone-light { background: linear-gradient(180deg, #F4F2EC, #EDE8E0); }
+  .phone-dark { background: linear-gradient(180deg, #181A16, #141612); }
+  .ph-row { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
+  .ph-icon { width: 32px; height: 32px; border-radius: 7px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .ph-greeting { font-size: 8px; color: #8B8B78; }
+  .ph-name { font-size: 12px; font-weight: 600; color: #3A3A30; }
+  .phone-dark .ph-name { color: #D8D8C8; }
+  .ph-insight { background: rgba(139,155,122,0.1); border-radius: 8px; padding: 7px; font-size: 7.5px; line-height: 1.5; color: #4A4A3C; margin-bottom: 7px; }
+  .phone-dark .ph-insight { background: rgba(139,155,122,0.06); color: #B0B0A0; }
+  .ph-btn { margin-top: auto; background: linear-gradient(135deg, #7A8B6B, #6B7A5A); color: #fff; border-radius: 8px; padding: 7px; font-size: 9px; font-weight: 600; text-align: center; }
+  .phone-dark .ph-btn { background: linear-gradient(135deg, #4A5A3A, #3E4E30); color: #D0D8C0; }
+
+  /* Comparison strip at bottom */
+  .compare-title { text-align: center; padding: 32px 20px 8px; font-size: 16px; font-weight: 500; color: #8B9B7A; }
+  .compare-sub { text-align: center; font-size: 11px; opacity: 0.4; margin-bottom: 20px; }
+  .compare-row { display: flex; justify-content: center; gap: 16px; padding: 0 20px 60px; flex-wrap: wrap; }
+  .compare-item { text-align: center; }
+  .compare-label { font-size: 9px; opacity: 0.4; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Sprinty — Character Mark Variations</h1>
+  <p>Eight variations of the character mark concept. Each shown in light, dark, at two sizes, and in context on the home scene. The dark variants focus on warmth over eeriness.</p>
+</div>
+
+<!-- ===== V1: Friendly Round (Original Refined) ===== -->
+<div class="section-title">1. Friendly Round</div>
+<div class="section-sub">The original concept refined. Open eyes, warm smile, rosy cheeks. A small leaf accent. Friendly and approachable.</div>
+<div class="grid">
+  <div class="card">
+    <div class="sizes">
+      <div>
+        <div class="icon v1 v1-light"><div class="bg"><div class="face face-circle"><div class="shine"></div><div class="eyes"><div class="eye"><div class="eye-shine"></div></div><div class="eye"><div class="eye-shine"></div></div></div><div class="mouth"></div><div class="cheek cheek-l"></div><div class="cheek cheek-r"></div></div><div class="leaf">🌿</div></div></div>
+        <div class="size-label">Light</div>
+      </div>
+      <div>
+        <div class="icon v1 v1-dark"><div class="bg"><div class="face face-circle"><div class="shine"></div><div class="eyes"><div class="eye"><div class="eye-shine"></div></div><div class="eye"><div class="eye-shine"></div></div></div><div class="mouth"></div><div class="cheek cheek-l"></div><div class="cheek cheek-r"></div></div><div class="leaf">🌿</div></div></div>
+        <div class="size-label">Dark</div>
+      </div>
+    </div>
+    <div class="phone phone-light">
+      <div class="ph-row">
+        <div class="ph-icon" style="background: linear-gradient(135deg, #EDE8E0, #E0D8CC);"><div style="width: 60%; height: 60%; background: linear-gradient(150deg, #9BAF88, #7A8B6B); border-radius: 50%;"></div></div>
+        <div><div class="ph-greeting">Good evening</div><div class="ph-name">Hey, Ducdo</div></div>
+      </div>
+      <div class="ph-insight">Your coach has been thinking about what you said about the creative workshop...</div>
+      <div class="ph-btn">Talk to Sprinty</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== V2: Peaceful / Closed Eyes ===== -->
+<div class="section-title">2. Peaceful</div>
+<div class="section-sub">Closed, happy eyes — like a content smile. Conveys calm, trust, and the "coach who knows when to rest" feeling. The most Headspace-adjacent.</div>
+<div class="grid">
+  <div class="card">
+    <div class="sizes">
+      <div>
+        <div class="icon v2" style="background: linear-gradient(135deg, #EDE8E0, #E0D8CC);"><div class="face face-circle" style="width: 68%; height: 68%; background: linear-gradient(150deg, #A8B898, #8B9B7A);"><div class="shine"></div><div style="display: flex; gap: 16px; position: absolute; top: 38%;"><div class="eye-closed"></div><div class="eye-closed"></div></div><div class="smile"></div></div></div>
+        <div class="size-label">Light</div>
+      </div>
+      <div>
+        <div class="icon v2 v2-dark" style="background: linear-gradient(135deg, #2A2E22, #222620);"><div class="face face-circle" style="width: 68%; height: 68%; background: linear-gradient(150deg, #8BA078, #6B8058); box-shadow: 0 0 24px rgba(139,175,122,0.15);"><div class="shine"></div><div style="display: flex; gap: 16px; position: absolute; top: 38%;"><div class="eye-closed"></div><div class="eye-closed"></div></div><div class="smile"></div></div></div>
+        <div class="size-label">Dark</div>
+      </div>
+    </div>
+    <div class="phone phone-dark">
+      <div class="ph-row">
+        <div class="ph-icon" style="background: linear-gradient(135deg, #2A2E22, #222620);"><div style="width: 60%; height: 60%; background: linear-gradient(150deg, #8BA078, #6B8058); border-radius: 50%; box-shadow: 0 0 10px rgba(139,175,122,0.12);"></div></div>
+        <div><div class="ph-greeting">Good evening</div><div class="ph-name">Hey, Ducdo</div></div>
+      </div>
+      <div class="ph-insight">Your coach has been thinking about what you said...</div>
+      <div class="ph-btn">Talk to Sprinty</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== V3: Minimal Dots ===== -->
+<div class="section-title">3. Minimal Dots</div>
+<div class="section-sub">Stripped to essentials — two dot eyes and a subtle smile curve. Maximum abstraction while still reading as a friendly face. Clean and modern.</div>
+<div class="grid">
+  <div class="card">
+    <div class="sizes">
+      <div>
+        <div class="icon v3" style="background: linear-gradient(135deg, #EDE8E0, #E0D8CC);"><div class="face face-circle" style="width: 64%; height: 64%; background: linear-gradient(150deg, #B0C0A0, #8B9B7A);"><div style="display: flex; gap: 18px; position: absolute; top: 38%;"><div class="dot-eye"></div><div class="dot-eye"></div></div><div style="position: absolute; top: 54%; width: 14px; height: 7px; border-bottom: 2px solid #2E3426; border-radius: 0 0 50% 50%;"></div></div></div>
+        <div class="size-label">Light</div>
+      </div>
+      <div>
+        <div class="icon v3 v3-dark" style="background: linear-gradient(135deg, #2A2E22, #222620);"><div class="face face-circle" style="width: 64%; height: 64%; background: linear-gradient(150deg, #7A9068, #5A7048); box-shadow: 0 0 20px rgba(139,155,122,0.12);"><div style="display: flex; gap: 18px; position: absolute; top: 38%;"><div class="dot-eye"></div><div class="dot-eye"></div></div><div style="position: absolute; top: 54%; width: 14px; height: 7px; border-bottom: 2px solid #D8D4CC; border-radius: 0 0 50% 50%;"></div></div></div>
+        <div class="size-label">Dark</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== V4: Sprout Head ===== -->
+<div class="section-title">4. Sprout Head</div>
+<div class="section-sub">A small plant sprout grows from the top of the head. Growth is literally part of the character. The most "earthy" variant.</div>
+<div class="grid">
+  <div class="card">
+    <div class="sizes">
+      <div>
+        <div class="icon v4" style="background: linear-gradient(135deg, #EDE8E0, #E0D8CC);"><div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;"><div class="face face-circle" style="width: 60%; height: 60%; background: linear-gradient(150deg, #9BAF88, #7A8B6B);"><div class="sprout"><div class="sprout-leaves"><div class="sprout-leaf-l"></div><div class="sprout-leaf-r"></div></div><div class="sprout-stem"></div></div><div style="display: flex; gap: 14px; position: absolute; top: 38%;"><div style="width: 7px; height: 7px; background: #2E3426; border-radius: 50%;"></div><div style="width: 7px; height: 7px; background: #2E3426; border-radius: 50%;"></div></div><div style="position: absolute; top: 56%; width: 14px; height: 7px; border-bottom: 2px solid #2E3426; border-radius: 0 0 50% 50%;"></div></div></div></div>
+        <div class="size-label">Light</div>
+      </div>
+      <div>
+        <div class="icon v4 v4-dark" style="background: linear-gradient(135deg, #2A2E22, #222620);"><div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;"><div class="face face-circle" style="width: 60%; height: 60%; background: linear-gradient(150deg, #7A9068, #5A7048); box-shadow: 0 0 20px rgba(139,155,122,0.12);"><div class="sprout"><div class="sprout-leaves"><div class="sprout-leaf-l"></div><div class="sprout-leaf-r"></div></div><div class="sprout-stem"></div></div><div style="display: flex; gap: 14px; position: absolute; top: 38%;"><div style="width: 7px; height: 7px; background: #D8D4CC; border-radius: 50%;"></div><div style="width: 7px; height: 7px; background: #D8D4CC; border-radius: 50%;"></div></div><div style="position: absolute; top: 56%; width: 14px; height: 7px; border-bottom: 2px solid #D8D4CC; border-radius: 0 0 50% 50%;"></div></div></div></div>
+        <div class="size-label">Dark</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== V5: Line Art / Outlined ===== -->
+<div class="section-title">5. Line Art</div>
+<div class="section-sub">The face as an outline rather than filled. More sophisticated, less "mascot." The leaf accent adds organic warmth. Works especially well at small sizes.</div>
+<div class="grid">
+  <div class="card">
+    <div class="sizes">
+      <div>
+        <div class="icon v5 v5-light"><div class="bg" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;position:relative;"><div class="face-outline"><div style="display:flex;gap:16px;position:absolute;top:36%;"><div class="o-eye"></div><div class="o-eye"></div></div><div class="o-smile"></div><div class="o-leaf">🌿</div></div></div></div>
+        <div class="size-label">Light</div>
+      </div>
+      <div>
+        <div class="icon v5 v5-dark"><div class="bg" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;position:relative;"><div class="face-outline"><div style="display:flex;gap:16px;position:absolute;top:36%;"><div class="o-eye"></div><div class="o-eye"></div></div><div class="o-smile"></div><div class="o-leaf">🌿</div></div></div></div>
+        <div class="size-label">Dark</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== V6: Warm Glow (Dark-optimized) ===== -->
+<div class="section-title">6. Warm Glow</div>
+<div class="section-sub">Specifically designed for dark mode. The face has a soft radiant glow — like a lamp in a dark room. The "someone left a light on for you" feeling. Dark eyes on a glowing face avoids the creepy inverted-eyes problem.</div>
+<div class="grid">
+  <div class="card">
+    <div class="sizes">
+      <div>
+        <div class="icon v1 v1-light"><div class="bg"><div class="face face-circle"><div class="shine"></div><div class="eyes"><div class="eye"><div class="eye-shine"></div></div><div class="eye"><div class="eye-shine"></div></div></div><div class="mouth"></div><div class="cheek cheek-l"></div><div class="cheek cheek-r"></div></div><div class="leaf">🌿</div></div></div>
+        <div class="size-label">Light (same as V1)</div>
+      </div>
+      <div>
+        <div class="icon v6-dark"><div class="bg"><div class="glow-ring"></div><div class="face face-circle" style="width: 62%; height: 62%; background: linear-gradient(150deg, #A8B898, #8B9B7A); box-shadow: 0 0 30px rgba(168,184,152,0.2), 0 0 60px rgba(168,184,152,0.08); z-index: 1;"><div class="shine"></div><div style="display: flex; gap: 14px; position: absolute; top: 36%;"><div class="eye" style="width: 8px; height: 8px; background: #2E3426; border-radius: 50; position: relative; border-radius: 50%;"><div class="eye-shine"></div></div><div class="eye" style="width: 8px; height: 8px; background: #2E3426; border-radius: 50%; position: relative;"><div class="eye-shine"></div></div></div><div class="mouth" style="position: absolute; top: 56%; width: 14px; height: 7px; border-bottom: 2.5px solid #2E3426; border-radius: 0 0 50% 50%;"></div><div class="cheek" style="position: absolute; top: 49%; left: 16%; width: 8px; height: 5px; background: rgba(196,160,140,0.2); border-radius: 50%;"></div><div class="cheek" style="position: absolute; top: 49%; right: 16%; width: 8px; height: 5px; background: rgba(196,160,140,0.2); border-radius: 50%;"></div></div></div></div>
+        <div class="size-label">Dark (warm glow)</div>
+      </div>
+    </div>
+    <div class="phone phone-dark">
+      <div class="ph-row">
+        <div class="ph-icon" style="background: linear-gradient(135deg, #2A2E22, #222620); position: relative; overflow: hidden;"><div style="position: absolute; width: 80%; height: 80%; border-radius: 50%; background: radial-gradient(circle, rgba(168,184,152,0.1) 0%, transparent 70%); top: 10%; left: 10%;"></div><div style="width: 55%; height: 55%; background: linear-gradient(150deg, #A8B898, #8B9B7A); border-radius: 50%; box-shadow: 0 0 12px rgba(168,184,152,0.15); z-index: 1;"></div></div>
+        <div><div class="ph-greeting">Good evening</div><div class="ph-name">Hey, Ducdo</div></div>
+      </div>
+      <div class="ph-insight">Your coach has been thinking about what you said...</div>
+      <div class="ph-btn">Talk to Sprinty</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== V7: Soft Square ===== -->
+<div class="section-title">7. Soft Square</div>
+<div class="section-sub">A rounded square face instead of a circle. Feels more "app icon" and less "emoji." The squircle shape mirrors the iOS app icon shape itself — meta and cohesive.</div>
+<div class="grid">
+  <div class="card">
+    <div class="sizes">
+      <div>
+        <div class="icon v7 v7-light" style="background: linear-gradient(135deg, #EDE8E0, #E0D8CC);"><div class="face-sq" style="background: linear-gradient(150deg, #9BAF88, #7A8B6B);"><div style="display: flex; gap: 14px; position: absolute; top: 36%;"><div style="width: 8px; height: 8px; background: #2E3426; border-radius: 50%;"></div><div style="width: 8px; height: 8px; background: #2E3426; border-radius: 50%;"></div></div><div style="position: absolute; top: 56%; width: 14px; height: 7px; border-bottom: 2.5px solid #2E3426; border-radius: 0 0 50% 50%;"></div></div></div>
+        <div class="size-label">Light</div>
+      </div>
+      <div>
+        <div class="icon v7 v7-dark" style="background: linear-gradient(135deg, #2A2E22, #222620);"><div class="face-sq" style="background: linear-gradient(150deg, #8BA078, #6B8058); box-shadow: 0 0 24px rgba(139,175,122,0.12);"><div style="display: flex; gap: 14px; position: absolute; top: 36%;"><div style="width: 8px; height: 8px; background: #2E3426; border-radius: 50%;"></div><div style="width: 8px; height: 8px; background: #2E3426; border-radius: 50%;"></div></div><div style="position: absolute; top: 56%; width: 14px; height: 7px; border-bottom: 2.5px solid #2E3426; border-radius: 0 0 50% 50%;"></div></div></div>
+        <div class="size-label">Dark</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== V8: Abstract Warm ===== -->
+<div class="section-title">8. Abstract Warm</div>
+<div class="section-sub">The most minimal version. Tiny dot eyes and a gentle curve. Almost abstract — you see a face if you're looking for one, a warm shape if you're not. Sophisticated and gender-neutral.</div>
+<div class="grid">
+  <div class="card">
+    <div class="sizes">
+      <div>
+        <div class="icon v8 v8-light" style="background: linear-gradient(135deg, #EDE8E0, #E0D8CC);"><div class="abstract-face"><div class="a-circle"></div><div class="a-eye-area"><div class="a-eye"></div><div class="a-eye"></div></div><div class="a-curve"></div></div></div>
+        <div class="size-label">Light</div>
+      </div>
+      <div>
+        <div class="icon v8 v8-dark" style="background: linear-gradient(135deg, #2A2E22, #222620);"><div class="abstract-face"><div class="a-circle"></div><div class="a-eye-area"><div class="a-eye"></div><div class="a-eye"></div></div><div class="a-curve"></div></div></div>
+        <div class="size-label">Dark</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ===== COMPARISON STRIP ===== -->
+<div class="compare-title">Side by Side — All 8 at Icon Size</div>
+<div class="compare-sub">Light mode (top) and dark mode (bottom)</div>
+
+<div class="compare-row">
+  <div class="compare-item">
+    <div class="icon-sm v1 v1-light"><div class="bg" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;"><div class="face face-circle" style="width:60%;height:60%;background:linear-gradient(150deg,#9BAF88,#7A8B6B);"><div style="display:flex;gap:7px;position:absolute;top:36%;"><div style="width:4px;height:4px;background:#2E3426;border-radius:50%;"></div><div style="width:4px;height:4px;background:#2E3426;border-radius:50%;"></div></div><div style="position:absolute;top:54%;width:8px;height:4px;border-bottom:1.5px solid #2E3426;border-radius:0 0 50% 50%;"></div></div></div></div>
+    <div class="compare-label">1. Friendly</div>
+  </div>
+  <div class="compare-item">
+    <div class="icon-sm v2" style="background:linear-gradient(135deg,#EDE8E0,#E0D8CC);display:flex;align-items:center;justify-content:center;"><div class="face-circle" style="width:60%;height:60%;background:linear-gradient(150deg,#A8B898,#8B9B7A);"><div style="display:flex;gap:8px;position:absolute;top:38%;"><div style="width:7px;height:3px;border-bottom:1.5px solid #2E3426;border-radius:0 0 50% 50%;"></div><div style="width:7px;height:3px;border-bottom:1.5px solid #2E3426;border-radius:0 0 50% 50%;"></div></div><div style="position:absolute;top:54%;width:8px;height:4px;border-bottom:1.5px solid #2E3426;border-radius:0 0 50% 50%;"></div></div></div>
+    <div class="compare-label">2. Peaceful</div>
+  </div>
+  <div class="compare-item">
+    <div class="icon-sm v3" style="background:linear-gradient(135deg,#EDE8E0,#E0D8CC);display:flex;align-items:center;justify-content:center;"><div class="face-circle" style="width:60%;height:60%;background:linear-gradient(150deg,#B0C0A0,#8B9B7A);"><div style="display:flex;gap:10px;position:absolute;top:38%;"><div style="width:4px;height:4px;background:#2E3426;border-radius:50%;"></div><div style="width:4px;height:4px;background:#2E3426;border-radius:50%;"></div></div><div style="position:absolute;top:54%;width:8px;height:4px;border-bottom:1.5px solid #2E3426;border-radius:0 0 50% 50%;"></div></div></div>
+    <div class="compare-label">3. Minimal</div>
+  </div>
+  <div class="compare-item">
+    <div class="icon-sm v4" style="background:linear-gradient(135deg,#EDE8E0,#E0D8CC);display:flex;align-items:center;justify-content:center;"><div class="face-circle" style="width:55%;height:55%;background:linear-gradient(150deg,#9BAF88,#7A8B6B);position:relative;"><div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);"><div style="display:flex;gap:0;"><div style="width:5px;height:4px;background:#8B9B7A;border-radius:50% 0 50% 50%;transform:rotate(-15deg);"></div><div style="width:5px;height:4px;background:#7A8B6B;border-radius:0 50% 50% 50%;transform:rotate(15deg);"></div></div><div style="width:1.5px;height:8px;background:#6B7A5A;margin:0 auto;border-radius:1px;"></div></div><div style="display:flex;gap:8px;position:absolute;top:38%;"><div style="width:4px;height:4px;background:#2E3426;border-radius:50%;"></div><div style="width:4px;height:4px;background:#2E3426;border-radius:50%;"></div></div><div style="position:absolute;top:54%;width:8px;height:4px;border-bottom:1.5px solid #2E3426;border-radius:0 0 50% 50%;"></div></div></div>
+    <div class="compare-label">4. Sprout</div>
+  </div>
+  <div class="compare-item">
+    <div class="icon-sm v5 v5-light" style="display:flex;align-items:center;justify-content:center;"><div class="bg" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;"><div style="width:55%;height:55%;border:2px solid #6B7A5A;border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center;"><div style="display:flex;gap:8px;position:absolute;top:34%;"><div style="width:4px;height:4px;background:#6B7A5A;border-radius:50%;"></div><div style="width:4px;height:4px;background:#6B7A5A;border-radius:50%;"></div></div><div style="position:absolute;top:54%;width:8px;height:4px;border-bottom:1.5px solid #6B7A5A;border-radius:0 0 50% 50%;"></div></div></div></div>
+    <div class="compare-label">5. Line Art</div>
+  </div>
+  <div class="compare-item">
+    <div class="icon-sm" style="background:linear-gradient(135deg,#2A2E22,#222620);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;border-radius:14px;width:60px;height:60px;box-shadow:0 4px 16px rgba(0,0,0,0.3);"><div style="position:absolute;width:80%;height:80%;border-radius:50%;background:radial-gradient(circle,rgba(168,184,152,0.1) 0%,transparent 70%);"></div><div style="width:55%;height:55%;background:linear-gradient(150deg,#A8B898,#8B9B7A);border-radius:50%;box-shadow:0 0 16px rgba(168,184,152,0.15);z-index:1;position:relative;"><div style="display:flex;gap:7px;position:absolute;top:36%;left:50%;transform:translateX(-50%);"><div style="width:4px;height:4px;background:#2E3426;border-radius:50%;"></div><div style="width:4px;height:4px;background:#2E3426;border-radius:50%;"></div></div><div style="position:absolute;top:54%;left:50%;transform:translateX(-50%);width:8px;height:4px;border-bottom:1.5px solid #2E3426;border-radius:0 0 50% 50%;"></div></div></div>
+    <div class="compare-label">6. Glow (dark)</div>
+  </div>
+  <div class="compare-item">
+    <div class="icon-sm v7 v7-light" style="background:linear-gradient(135deg,#EDE8E0,#E0D8CC);display:flex;align-items:center;justify-content:center;border-radius:14px;width:60px;height:60px;box-shadow:0 4px 16px rgba(0,0,0,0.3);overflow:hidden;"><div style="width:55%;height:55%;background:linear-gradient(150deg,#9BAF88,#7A8B6B);border-radius:22%;position:relative;display:flex;align-items:center;justify-content:center;"><div style="display:flex;gap:8px;position:absolute;top:34%;"><div style="width:4px;height:4px;background:#2E3426;border-radius:50%;"></div><div style="width:4px;height:4px;background:#2E3426;border-radius:50%;"></div></div><div style="position:absolute;top:54%;width:8px;height:4px;border-bottom:1.5px solid #2E3426;border-radius:0 0 50% 50%;"></div></div></div>
+    <div class="compare-label">7. Soft Square</div>
+  </div>
+  <div class="compare-item">
+    <div class="icon-sm v8 v8-light" style="background:linear-gradient(135deg,#EDE8E0,#E0D8CC);display:flex;align-items:center;justify-content:center;border-radius:14px;width:60px;height:60px;box-shadow:0 4px 16px rgba(0,0,0,0.3);overflow:hidden;"><div style="width:55%;height:55%;position:relative;"><div style="width:100%;height:100%;border-radius:50%;background:linear-gradient(150deg,#B0C0A0,#8B9B7A);"></div><div style="position:absolute;top:35%;left:50%;transform:translateX(-50%);display:flex;gap:12px;"><div style="width:3px;height:3px;background:#3A3A30;border-radius:50%;"></div><div style="width:3px;height:3px;background:#3A3A30;border-radius:50%;"></div></div><div style="position:absolute;top:52%;left:50%;transform:translateX(-50%);width:10px;height:5px;border-bottom:1.5px solid #3A3A30;border-radius:0 0 50% 50%;"></div></div></div>
+    <div class="compare-label">8. Abstract</div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- Dark background gradient -->
+    <linearGradient id="bg-dark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#282E22"/>
+      <stop offset="100%" stop-color="#1E2418"/>
+    </linearGradient>
+    <!-- Face gradient (slightly brighter for glow effect) -->
+    <linearGradient id="face-dark" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0%" stop-color="#96AC82"/>
+      <stop offset="100%" stop-color="#7A9468"/>
+    </linearGradient>
+    <!-- Warm glow -->
+    <radialGradient id="glow-outer" cx="0.5" cy="0.53" r="0.42">
+      <stop offset="0%" stop-color="rgba(150,172,130,0.14)"/>
+      <stop offset="60%" stop-color="rgba(150,172,130,0.04)"/>
+      <stop offset="100%" stop-color="rgba(150,172,130,0)"/>
+    </radialGradient>
+    <!-- Sprout glow -->
+    <radialGradient id="sprout-glow" cx="0.5" cy="0.14" r="0.12">
+      <stop offset="0%" stop-color="rgba(150,172,130,0.18)"/>
+      <stop offset="100%" stop-color="rgba(150,172,130,0)"/>
+    </radialGradient>
+    <!-- Face shine — soft natural lighting -->
+    <radialGradient id="shine-dark" cx="0.38" cy="0.28" r="0.5">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.18)"/>
+      <stop offset="40%" stop-color="rgba(255,255,255,0.06)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+    <!-- Leaf gradients dark -->
+    <linearGradient id="leaf-l-dark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#96AC82"/>
+      <stop offset="100%" stop-color="#82A06E"/>
+    </linearGradient>
+    <linearGradient id="leaf-r-dark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#82A06E"/>
+      <stop offset="100%" stop-color="#6B8B58"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark background -->
+  <rect width="1024" height="1024" fill="url(#bg-dark)"/>
+
+  <!-- Warm glow aura -->
+  <circle cx="512" cy="540" r="430" fill="url(#glow-outer)"/>
+
+  <!-- Sprout glow -->
+  <circle cx="512" cy="160" r="120" fill="url(#sprout-glow)"/>
+
+  <!-- Face circle with glow shadow -->
+  <circle cx="512" cy="540" r="310" fill="url(#face-dark)" filter="none"/>
+  <!-- Face glow effect (layered circles) -->
+  <circle cx="512" cy="540" r="330" fill="none" stroke="rgba(150,172,130,0.08)" stroke-width="20"/>
+  <circle cx="512" cy="540" r="360" fill="none" stroke="rgba(150,172,130,0.04)" stroke-width="20"/>
+
+  <!-- Face shine — large soft wash across upper face -->
+  <ellipse cx="470" cy="440" rx="220" ry="180" fill="url(#shine-dark)"/>
+
+  <!-- Sprout stem -->
+  <rect x="506" y="140" width="12" height="110" rx="6" fill="#8BA878"/>
+
+  <!-- Sprout left leaf -->
+  <ellipse cx="485" cy="138" rx="42" ry="32" fill="url(#leaf-l-dark)" transform="rotate(-20, 485, 138)"/>
+
+  <!-- Sprout right leaf -->
+  <ellipse cx="539" cy="138" rx="42" ry="32" fill="url(#leaf-r-dark)" transform="rotate(20, 539, 138)"/>
+
+  <!-- Left eye (dark on light face — NOT creepy) -->
+  <circle cx="412" cy="500" r="36" fill="#2A3020"/>
+  <circle cx="402" cy="490" r="13" fill="rgba(255,255,255,0.4)"/>
+
+  <!-- Right eye -->
+  <circle cx="612" cy="500" r="36" fill="#2A3020"/>
+  <circle cx="602" cy="490" r="13" fill="rgba(255,255,255,0.4)"/>
+
+  <!-- Smile — gentle natural curve, thicker stroke -->
+  <path d="M 448 620 Q 512 680, 576 620" stroke="#2A3020" stroke-width="14" fill="none" stroke-linecap="round"/>
+
+  <!-- Left cheek (subtle in dark) -->
+  <ellipse cx="380" cy="575" rx="38" ry="22" fill="rgba(196,160,140,0.12)"/>
+
+  <!-- Right cheek -->
+  <ellipse cx="644" cy="575" rx="38" ry="22" fill="rgba(196,160,140,0.12)"/>
+</svg>

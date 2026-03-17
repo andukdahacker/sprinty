@@ -1,0 +1,5 @@
+{
+  "error": "invalid_jwt",
+  "message": "Invalid authentication token.",
+  "retryAfter": 0
+}

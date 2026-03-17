@@ -1,0 +1,5 @@
+event: token
+data: {"text": "I hear you. "}
+
+event: token
+data: {"text": "Let's explore that together."}
