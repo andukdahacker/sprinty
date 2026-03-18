@@ -10,12 +10,15 @@ final class CoachingViewModel {
     var isStreaming: Bool = false
     var coachExpression: CoachExpression = .welcoming
     var localError: AppError?
+    var retryAfterSeconds: Int = 0
 
     private let appState: AppState
     private let chatService: ChatServiceProtocol
     private let databaseManager: DatabaseManager
     private var streamingTask: Task<Void, Never>?
     private var currentSession: ConversationSession?
+    private var retryAfterTask: Task<Void, Never>?
+    private var cachedPromptVersion: String?
 
     init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager) {
         self.appState = appState
@@ -45,6 +48,7 @@ final class CoachingViewModel {
     func sendMessage(_ text: String) async {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         guard !isStreaming else { return }
+        guard retryAfterSeconds == 0 else { return }
 
         localError = nil
 
@@ -76,7 +80,10 @@ final class CoachingViewModel {
                 )
             }
 
-            let stream = chatService.streamChat(messages: chatMessages, mode: session.mode.rawValue)
+            // Load user profile for coach name
+            let profile = try await loadChatProfile()
+
+            let stream = chatService.streamChat(messages: chatMessages, mode: session.mode.rawValue, profile: profile)
             let dbManager = databaseManager
 
             streamingTask = Task { [weak self] in
@@ -88,7 +95,12 @@ final class CoachingViewModel {
                         switch event {
                         case .token(let tokenText):
                             self.streamingText += tokenText
-                        case .done(let safetyLevel, _, let mood, _):
+                        case .done(let safetyLevel, _, let mood, _, let promptVersion):
+                            // Cache promptVersion from first done event per session
+                            if let promptVersion, self.cachedPromptVersion == nil {
+                                self.cachedPromptVersion = promptVersion
+                            }
+
                             let assistantMessage = Message(
                                 id: UUID(),
                                 sessionId: session.id,
@@ -138,6 +150,14 @@ final class CoachingViewModel {
         streamingText = ""
     }
 
+    private func loadChatProfile() async throws -> ChatProfile? {
+        let userProfile: UserProfile? = try await databaseManager.dbPool.read { db in
+            try UserProfile.current().fetchOne(db)
+        }
+        guard let userProfile else { return nil }
+        return ChatProfile(coachName: userProfile.coachName)
+    }
+
     private func getOrCreateSession() async throws -> ConversationSession {
         if let session = currentSession {
             return session
@@ -163,7 +183,7 @@ final class CoachingViewModel {
             type: .coaching,
             mode: .discovery,
             safetyLevel: .green,
-            promptVersion: "1.0"
+            promptVersion: cachedPromptVersion ?? "1.0"
         )
 
         try await databaseManager.dbPool.write { db in
@@ -199,12 +219,31 @@ final class CoachingViewModel {
             appState.needsReauth = true
         case .networkUnavailable:
             appState.isOnline = false
-        case .providerError:
+        case .providerError(_, let retryAfter):
             localError = appError
+            if let retryAfter, retryAfter > 0 {
+                startRetryAfterTimer(seconds: retryAfter)
+            }
         case .databaseError:
             localError = appError
         default:
             localError = appError
+        }
+    }
+
+    private func startRetryAfterTimer(seconds: Int) {
+        retryAfterTask?.cancel()
+        retryAfterSeconds = seconds
+        retryAfterTask = Task { [weak self] in
+            guard let self else { return }
+            for i in stride(from: seconds, through: 0, by: -1) {
+                if Task.isCancelled { break }
+                self.retryAfterSeconds = i
+                if i > 0 {
+                    try? await Task.sleep(for: .seconds(1))
+                }
+            }
+            self.retryAfterSeconds = 0
         }
     }
 }

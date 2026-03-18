@@ -1,0 +1,108 @@
+package prompts
+
+import (
+	"crypto/sha256"
+	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+// Builder assembles system prompts from modular section files.
+type Builder struct {
+	sections     map[string]string // section name -> content
+	contentHash  string            // SHA-256 of all section contents
+	sectionsPath string
+}
+
+// NewBuilder reads all section files from the given directory and computes a content hash.
+func NewBuilder(sectionsPath string) (*Builder, error) {
+	b := &Builder{
+		sections:     make(map[string]string),
+		sectionsPath: sectionsPath,
+	}
+
+	sectionFiles := []string{
+		"base-persona.md",
+		"mode-discovery.md",
+		"safety.md",
+		"mood.md",
+		"tagging.md",
+		"context-injection.md",
+	}
+
+	var allContent strings.Builder
+
+	for _, filename := range sectionFiles {
+		path := filepath.Join(sectionsPath, filename)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("prompts.NewBuilder: failed to read %s: %w", filename, err)
+		}
+		name := strings.TrimSuffix(filename, ".md")
+		content := string(data)
+		b.sections[name] = content
+		allContent.WriteString(content)
+	}
+
+	hash := sha256.Sum256([]byte(allContent.String()))
+	b.contentHash = fmt.Sprintf("%x", hash[:8]) // first 8 bytes = 16 hex chars
+
+	slog.Info("prompt builder initialized", "hash", b.contentHash, "sections", len(b.sections))
+
+	return b, nil
+}
+
+// ContentHash returns the version hash of all prompt sections.
+func (b *Builder) ContentHash() string {
+	return b.contentHash
+}
+
+// Build assembles a system prompt for the given mode and coach name.
+func (b *Builder) Build(mode string, coachName string) string {
+	var prompt strings.Builder
+
+	// Always include base persona
+	prompt.WriteString(b.sections["base-persona"])
+	prompt.WriteString("\n\n")
+
+	// Mode-specific section
+	switch mode {
+	case "discovery":
+		if s, ok := b.sections["mode-discovery"]; ok {
+			prompt.WriteString(s)
+			prompt.WriteString("\n\n")
+		}
+	// Future modes (directive, etc.) will be added here
+	default:
+		// Default to discovery mode
+		if s, ok := b.sections["mode-discovery"]; ok {
+			prompt.WriteString(s)
+			prompt.WriteString("\n\n")
+		}
+	}
+
+	// Always include safety, mood, tagging
+	for _, section := range []string{"safety", "mood", "tagging"} {
+		if s, ok := b.sections[section]; ok {
+			prompt.WriteString(s)
+			prompt.WriteString("\n\n")
+		}
+	}
+
+	// Context injection (always last)
+	if s, ok := b.sections["context-injection"]; ok {
+		prompt.WriteString(s)
+	}
+
+	// Replace template slots
+	result := prompt.String()
+	if coachName != "" {
+		result = strings.ReplaceAll(result, "{{coach_name}}", coachName)
+	} else {
+		result = strings.ReplaceAll(result, "{{coach_name}}", "Coach")
+	}
+
+	return result
+}

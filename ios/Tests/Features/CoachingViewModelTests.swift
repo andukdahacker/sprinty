@@ -76,7 +76,7 @@ struct CoachingViewModelTests {
         mockChat.stubbedEvents = [
             .token(text: "Response "),
             .token(text: "text."),
-            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", usage: ChatUsage(inputTokens: 10, outputTokens: 5))
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil)
         ]
 
         let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
@@ -101,7 +101,7 @@ struct CoachingViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Hi."),
-            .done(safetyLevel: "green", domainTags: [], mood: "warm", usage: ChatUsage(inputTokens: 5, outputTokens: 3))
+            .done(safetyLevel: "green", domainTags: [], mood: "warm", usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
         ]
 
         let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)

@@ -19,19 +19,28 @@ final class ChatService: ChatServiceProtocol, Sendable {
         return ChatService(baseURL: url, authService: authService, session: session)
     }
 
-    func streamChat(messages: [ChatRequestMessage], mode: String) -> AsyncThrowingStream<ChatEvent, Error> {
+    func streamChat(messages: [ChatRequestMessage], mode: String, profile: ChatProfile?) -> AsyncThrowingStream<ChatEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
                     let token = try authService.getToken()
-                    let chatRequest = ChatRequest(messages: messages, mode: mode, promptVersion: "1.0")
+                    let chatRequest = ChatRequest(messages: messages, mode: mode, promptVersion: "1.0", profile: profile)
 
                     let url = baseURL.appendingPathComponent("v1/chat")
                     var request = URLRequest(url: url)
                     request.httpMethod = "POST"
                     request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
                     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-                    request.httpBody = try JSONEncoder().encode(chatRequest)
+
+                    let jsonData = try JSONEncoder().encode(chatRequest)
+
+                    // Compress request body with deflate
+                    if let compressed = try? (jsonData as NSData).compressed(using: .zlib) as Data {
+                        request.httpBody = compressed
+                        request.setValue("deflate", forHTTPHeaderField: "Content-Encoding")
+                    } else {
+                        request.httpBody = jsonData
+                    }
 
                     let (bytes, response) = try await session.bytes(for: request)
 
@@ -44,9 +53,11 @@ final class ChatService: ChatServiceProtocol, Sendable {
                     }
 
                     guard (200...299).contains(httpResponse.statusCode) else {
+                        // Parse retryAfter from error response JSON body
+                        let retryAfter = await Self.parseRetryAfter(from: bytes)
                         throw AppError.providerError(
                             message: "Your coach needs a moment. Try again shortly.",
-                            retryAfter: nil
+                            retryAfter: retryAfter
                         )
                     }
 
@@ -76,5 +87,24 @@ final class ChatService: ChatServiceProtocol, Sendable {
                 task.cancel()
             }
         }
+    }
+
+    private static func parseRetryAfter(from bytes: URLSession.AsyncBytes) async -> Int? {
+        // Collect error response body and parse retryAfter from JSON
+        do {
+            var data = Data()
+            for try await byte in bytes {
+                data.append(byte)
+                // Cap at 4KB to avoid reading a huge body on unexpected responses
+                if data.count > 4096 { break }
+            }
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let retryAfter = json["retryAfter"] as? Int {
+                return retryAfter
+            }
+        } catch {
+            // Failed to read/parse body — fall through to nil
+        }
+        return nil
     }
 }

@@ -1,0 +1,292 @@
+package providers
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"strings"
+
+	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/anthropics/anthropic-sdk-go/option"
+)
+
+// toolSchema defines the structured output schema the model "calls" as a tool.
+var toolSchema = anthropic.ToolParam{
+	Name:        "respond",
+	Description: anthropic.String("Respond to the user with coaching content and metadata."),
+	InputSchema: anthropic.ToolInputSchemaParam{
+		Properties: map[string]any{
+			"coaching": map[string]any{
+				"type":        "string",
+				"description": "The coaching response text to send to the user.",
+			},
+			"safetyLevel": map[string]any{
+				"type":        "string",
+				"enum":        []string{"green", "yellow", "orange", "red"},
+				"description": "Safety classification of the conversation.",
+			},
+			"domainTags": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "string",
+				},
+				"description": "Domain tags for this response (career, finance, relationships, etc.).",
+			},
+			"mood": map[string]any{
+				"type":        "string",
+				"enum":        []string{"welcoming", "warm", "focused", "gentle"},
+				"description": "Coach expression for this response.",
+			},
+			"memoryReferenced": map[string]any{
+				"type":        "boolean",
+				"description": "Whether prior memory/context was referenced.",
+			},
+		},
+		Required: []string{"coaching", "safetyLevel", "domainTags", "mood", "memoryReferenced"},
+	},
+}
+
+// toolResult is the parsed structured output from the model's tool call.
+type toolResult struct {
+	Coaching         string   `json:"coaching"`
+	SafetyLevel      string   `json:"safetyLevel"`
+	DomainTags       []string `json:"domainTags"`
+	Mood             string   `json:"mood"`
+	MemoryReferenced bool     `json:"memoryReferenced"`
+}
+
+// AnthropicProvider implements Provider using the Anthropic API.
+type AnthropicProvider struct {
+	client *anthropic.Client
+	model  anthropic.Model
+}
+
+// NewAnthropicProvider creates a new Anthropic provider with auto-retries disabled.
+func NewAnthropicProvider(apiKey string) *AnthropicProvider {
+	client := anthropic.NewClient(
+		option.WithAPIKey(apiKey),
+		option.WithMaxRetries(0),
+	)
+	return &AnthropicProvider{
+		client: &client,
+		model:  anthropic.ModelClaudeHaiku4_5,
+	}
+}
+
+func (p *AnthropicProvider) StreamChat(ctx context.Context, req ChatRequest) (<-chan ChatEvent, error) {
+	messages := make([]anthropic.MessageParam, 0, len(req.Messages))
+	for _, m := range req.Messages {
+		switch m.Role {
+		case "user":
+			messages = append(messages, anthropic.NewUserMessage(
+				anthropic.NewTextBlock(m.Content),
+			))
+		case "assistant":
+			messages = append(messages, anthropic.NewAssistantMessage(
+				anthropic.NewTextBlock(m.Content),
+			))
+		}
+	}
+
+	params := anthropic.MessageNewParams{
+		Model:     p.model,
+		MaxTokens: int64(1024),
+		Messages:  messages,
+		Tools:     []anthropic.ToolUnionParam{{OfTool: &toolSchema}},
+		ToolChoice: anthropic.ToolChoiceUnionParam{
+			OfTool: &anthropic.ToolChoiceToolParam{
+				Name: "respond",
+			},
+		},
+	}
+
+	if req.SystemPrompt != "" {
+		params.System = []anthropic.TextBlockParam{
+			{Text: req.SystemPrompt},
+		}
+	}
+
+	stream := p.client.Messages.NewStreaming(ctx, params)
+
+	// Check for immediate errors (e.g. 429, 500) before starting the goroutine.
+	// If the first Next() call fails, return the error to the caller so the
+	// handler can translate it into a warm user-facing response.
+	if !stream.Next() {
+		stream.Close()
+		if err := stream.Err(); err != nil {
+			return nil, fmt.Errorf("anthropic.StreamChat: %w", err)
+		}
+		// Stream completed with zero events — return empty channel
+		ch := make(chan ChatEvent)
+		close(ch)
+		return ch, nil
+	}
+
+	ch := make(chan ChatEvent)
+
+	go func() {
+		defer close(ch)
+		defer stream.Close()
+
+		var jsonBuf strings.Builder
+		var lastCoachingLen int
+		message := anthropic.Message{}
+
+		// Process the first event that was already read above
+		processEvent := func(event anthropic.MessageStreamEventUnion) {
+			message.Accumulate(event)
+
+			switch event.AsAny().(type) {
+			case anthropic.ContentBlockDeltaEvent:
+				delta := event.AsAny().(anthropic.ContentBlockDeltaEvent)
+				if delta.Delta.PartialJSON != "" {
+					jsonBuf.WriteString(delta.Delta.PartialJSON)
+
+					text := extractCoachingChunk(jsonBuf.String(), &lastCoachingLen)
+					if text != "" {
+						select {
+						case <-ctx.Done():
+							return
+						case ch <- ChatEvent{Type: "token", Text: text}:
+						}
+					}
+				}
+
+			case anthropic.MessageStopEvent:
+				result := parseFinalResult(&message)
+
+				usage := &Usage{}
+				if message.Usage.InputTokens > 0 || message.Usage.OutputTokens > 0 {
+					usage.InputTokens = int(message.Usage.InputTokens)
+					usage.OutputTokens = int(message.Usage.OutputTokens)
+				}
+
+				select {
+				case <-ctx.Done():
+					return
+				case ch <- ChatEvent{
+					Type:             "done",
+					SafetyLevel:      result.SafetyLevel,
+					DomainTags:       result.DomainTags,
+					Mood:             result.Mood,
+					MemoryReferenced: result.MemoryReferenced,
+					Usage:            usage,
+				}:
+				}
+			}
+		}
+
+		// Process the first event
+		processEvent(stream.Current())
+
+		for stream.Next() {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+			processEvent(stream.Current())
+		}
+
+		if err := stream.Err(); err != nil {
+			slog.Warn("anthropic.StreamChat: mid-stream error", "error", err)
+		}
+	}()
+
+	return ch, nil
+}
+
+// extractCoachingChunk extracts new coaching text from the partial JSON buffer.
+// It tracks how much coaching text was previously emitted via lastLen.
+func extractCoachingChunk(partialJSON string, lastLen *int) string {
+	// Look for the coaching value in the partial JSON
+	// The JSON builds up progressively: {"coaching":"Hello, let's talk..."
+	const prefix = `"coaching":"`
+
+	idx := strings.Index(partialJSON, prefix)
+	if idx == -1 {
+		return ""
+	}
+
+	// Start of the coaching value
+	valueStart := idx + len(prefix)
+	rest := partialJSON[valueStart:]
+
+	// Find the end of the coaching string value
+	// Walk through the string handling escape sequences
+	var coachingText strings.Builder
+	i := 0
+	for i < len(rest) {
+		if rest[i] == '\\' && i+1 < len(rest) {
+			// Handle escape sequences
+			switch rest[i+1] {
+			case '"':
+				coachingText.WriteByte('"')
+			case '\\':
+				coachingText.WriteByte('\\')
+			case 'n':
+				coachingText.WriteByte('\n')
+			case 'r':
+				coachingText.WriteByte('\r')
+			case 't':
+				coachingText.WriteByte('\t')
+			default:
+				coachingText.WriteByte(rest[i])
+				coachingText.WriteByte(rest[i+1])
+			}
+			i += 2
+		} else if rest[i] == '"' {
+			// End of string value
+			break
+		} else {
+			coachingText.WriteByte(rest[i])
+			i++
+		}
+	}
+
+	full := coachingText.String()
+	if len(full) > *lastLen {
+		chunk := full[*lastLen:]
+		*lastLen = len(full)
+		return chunk
+	}
+	return ""
+}
+
+// parseFinalResult extracts structured output from the final accumulated message.
+// Falls back to safe defaults on malformed output.
+func parseFinalResult(message *anthropic.Message) toolResult {
+	defaults := toolResult{
+		SafetyLevel:      "green",
+		Mood:             "welcoming",
+		MemoryReferenced: false,
+		DomainTags:       []string{},
+	}
+
+	for _, block := range message.Content {
+		if block.Type == "tool_use" {
+			var result toolResult
+			if err := json.Unmarshal(block.Input, &result); err != nil {
+				slog.Warn("anthropic.parseFinalResult: failed to parse tool result", "error", err)
+				return defaults
+			}
+
+			// Validate required fields, fall back to defaults
+			if result.SafetyLevel == "" {
+				result.SafetyLevel = defaults.SafetyLevel
+			}
+			if result.Mood == "" {
+				result.Mood = defaults.Mood
+			}
+			if result.DomainTags == nil {
+				result.DomainTags = defaults.DomainTags
+			}
+
+			return result
+		}
+	}
+
+	slog.Warn("anthropic.parseFinalResult: no tool_use block found in response")
+	return defaults
+}

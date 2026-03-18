@@ -36,11 +36,16 @@ func Load() (*Config, error) {
 		port = "8080"
 	}
 
+	anthropicKey := os.Getenv("ANTHROPIC_API_KEY")
+	if anthropicKey == "" && (env == "staging" || env == "production") {
+		return nil, fmt.Errorf("config: ANTHROPIC_API_KEY is required in %s environment", env)
+	}
+
 	cfg := &Config{
 		JWTSecret:       jwtSecret,
 		Environment:     env,
 		Port:            port,
-		AnthropicAPIKey: os.Getenv("ANTHROPIC_API_KEY"),
+		AnthropicAPIKey: anthropicKey,
 		OpenAIAPIKey:    os.Getenv("OPENAI_API_KEY"),
 		SentryDSN:       os.Getenv("SENTRY_DSN"),
 	}
@@ -48,6 +53,7 @@ func Load() (*Config, error) {
 	slog.Info("config loaded",
 		"environment", cfg.Environment,
 		"port", cfg.Port,
+		"hasAnthropicKey", cfg.AnthropicAPIKey != "",
 	)
 
 	return cfg, nil

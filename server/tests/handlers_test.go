@@ -2,9 +2,15 @@ package tests
 
 import (
 	"bufio"
+	"bytes"
+	"compress/flate"
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -14,20 +20,67 @@ import (
 	"github.com/ducdo/sprinty/server/auth"
 	"github.com/ducdo/sprinty/server/handlers"
 	"github.com/ducdo/sprinty/server/middleware"
+	"github.com/ducdo/sprinty/server/prompts"
 	"github.com/ducdo/sprinty/server/providers"
 )
 
 const testSecret = "test-secret-key-at-least-32-chars-long"
 
+func createTestPromptBuilder(t *testing.T) *prompts.Builder {
+	t.Helper()
+	dir := t.TempDir()
+	sectionsDir := filepath.Join(dir, "sections")
+	os.MkdirAll(sectionsDir, 0o755)
+	files := map[string]string{
+		"base-persona.md":      "You are {{coach_name}}, a coach.",
+		"mode-discovery.md":    "Discovery mode.",
+		"safety.md":            "Safety classification.",
+		"mood.md":              "Mood selection.",
+		"tagging.md":           "Domain tagging.",
+		"context-injection.md": "Coach: {{coach_name}}.",
+	}
+	for name, content := range files {
+		os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
+	}
+	b, err := prompts.NewBuilder(sectionsDir)
+	if err != nil {
+		t.Fatalf("failed to create prompt builder: %v", err)
+	}
+	return b
+}
+
 func setupMux() *http.ServeMux {
+	return setupMuxWithBuilder(nil)
+}
+
+func setupMuxWithBuilder(builder *prompts.Builder) *http.ServeMux {
 	mockProvider := providers.NewMockProvider()
 	authMW := middleware.AuthMiddleware(testSecret)
+
+	// If no builder provided, create a minimal one for tests
+	if builder == nil {
+		dir, _ := os.MkdirTemp("", "prompts-test-*")
+		sectionsDir := filepath.Join(dir, "sections")
+		os.MkdirAll(sectionsDir, 0o755)
+		files := map[string]string{
+			"base-persona.md":      "You are {{coach_name}}, a coach.",
+			"mode-discovery.md":    "Discovery mode.",
+			"safety.md":            "Safety.",
+			"mood.md":              "Mood.",
+			"tagging.md":           "Tags.",
+			"context-injection.md": "Coach: {{coach_name}}.",
+		}
+		for name, content := range files {
+			os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
+		}
+		builder, _ = prompts.NewBuilder(sectionsDir)
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", handlers.HealthHandler)
 	mux.HandleFunc("POST /v1/auth/register", handlers.RegisterHandler(testSecret))
 	mux.Handle("POST /v1/auth/refresh", authMW(http.HandlerFunc(handlers.RefreshHandler(testSecret))))
-	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(mockProvider))))
+	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(mockProvider, builder))))
 	return mux
 }
 
@@ -387,5 +440,124 @@ func TestResponseContentType(t *testing.T) {
 	ct2 := w2.Header().Get("Content-Type")
 	if !strings.HasPrefix(ct2, "application/json") {
 		t.Errorf("register: expected application/json, got %q", ct2)
+	}
+}
+
+// --- Story 1.6 Integration Tests ---
+
+// errorProvider is a test provider that returns errors.
+type errorProvider struct {
+	err error
+}
+
+func (p *errorProvider) StreamChat(ctx context.Context, req providers.ChatRequest) (<-chan providers.ChatEvent, error) {
+	return nil, p.err
+}
+
+func TestChatGzipRequestDecompression(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+
+	// Compress the payload using deflate (matching iOS NSData.compressed(using: .zlib))
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+	var compressed bytes.Buffer
+	w, err := flate.NewWriter(&compressed, flate.DefaultCompression)
+	if err != nil {
+		t.Fatalf("failed to create flate writer: %v", err)
+	}
+	w.Write([]byte(payload))
+	w.Close()
+
+	req := httptest.NewRequest("POST", "/v1/chat", &compressed)
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Encoding", "deflate")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d. Body: %s", rec.Code, rec.Body.String())
+	}
+
+	body := rec.Body.String()
+	if !strings.Contains(body, "event: token") {
+		t.Error("expected SSE token events from deflate-compressed request")
+	}
+	if !strings.Contains(body, "event: done") {
+		t.Error("expected SSE done event from deflate-compressed request")
+	}
+}
+
+func TestChatWithProfileContext(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0","profile":{"coachName":"Luna"}}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+
+	body := rec.Body.String()
+	if !strings.Contains(body, "event: done") {
+		t.Error("expected SSE done event")
+	}
+}
+
+func TestChatProviderError500(t *testing.T) {
+	builder := createTestPromptBuilder(t)
+
+	// Create a provider that returns an anthropic-like error
+	errProvider := &errorProvider{err: errors.New("provider error")}
+	authMW := middleware.AuthMiddleware(testSecret)
+
+	mux := http.NewServeMux()
+	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(errProvider, builder))))
+
+	token := createValidToken(t)
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadGateway {
+		t.Errorf("expected 502, got %d", rec.Code)
+	}
+
+	var body map[string]any
+	json.NewDecoder(rec.Body).Decode(&body)
+	if body["error"] != "provider_unavailable" {
+		t.Errorf("expected error provider_unavailable, got %v", body["error"])
+	}
+	if body["message"] != "Your coach needs a moment. Try again shortly." {
+		t.Errorf("unexpected error message: %v", body["message"])
+	}
+	if body["retryAfter"].(float64) != 10 {
+		t.Errorf("expected retryAfter 10, got %v", body["retryAfter"])
+	}
+}
+
+func TestPromptVersionEndpoint(t *testing.T) {
+	builder := createTestPromptBuilder(t)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/prompt/{version}", handlers.PromptVersionHandler(builder))
+
+	req := httptest.NewRequest("GET", "/v1/prompt/current", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+
+	var body map[string]string
+	json.NewDecoder(rec.Body).Decode(&body)
+	if body["version"] == "" {
+		t.Error("expected non-empty version hash")
 	}
 }
