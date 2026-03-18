@@ -154,11 +154,12 @@ Emitted once when the LLM response is complete.
 
 ```
 event: done
-data: {"safetyLevel": "green", "domainTags": [], "usage": {"inputTokens": 50, "outputTokens": 12}}
+data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "usage": {"inputTokens": 50, "outputTokens": 12}}
 ```
 
 - `safetyLevel` (string): Safety classification. Values: `green`, `yellow`, `orange`, `red`
 - `domainTags` (array of strings): Life domain tags extracted from conversation. Always an array (empty `[]` if none)
+- `mood` (string): Coach expression mood. Values: `welcoming`, `thinking`, `warm`, `focused`, `gentle`
 - `usage` (object): Token consumption
   - `inputTokens` (number): Input token count
   - `outputTokens` (number): Output token count

@@ -48,6 +48,7 @@ func ChatHandler(provider providers.Provider) http.HandlerFunc {
 				data, _ = json.Marshal(map[string]any{
 					"safetyLevel": event.SafetyLevel,
 					"domainTags":  event.DomainTags,
+					"mood":        event.Mood,
 					"usage":       event.Usage,
 				})
 			default:

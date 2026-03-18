@@ -30,6 +30,7 @@ func (m *MockProvider) StreamChat(ctx context.Context, req ChatRequest) (<-chan 
 			Type:        "done",
 			SafetyLevel: "green",
 			DomainTags:  []string{},
+			Mood:        "welcoming",
 			Usage:       &Usage{InputTokens: 50, OutputTokens: 12},
 		}:
 		}

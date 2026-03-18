@@ -1,2 +1,2 @@
 event: done
-data: {"safetyLevel": "green", "domainTags": [], "usage": {"inputTokens": 50, "outputTokens": 12}}
+data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "usage": {"inputTokens": 50, "outputTokens": 12}}

@@ -23,6 +23,7 @@ type ChatEvent struct {
 	Text        string   `json:"text,omitempty"`
 	SafetyLevel string   `json:"safetyLevel,omitempty"`
 	DomainTags  []string `json:"domainTags,omitempty"`
+	Mood        string   `json:"mood,omitempty"`
 	Usage       *Usage   `json:"usage,omitempty"`
 }
 

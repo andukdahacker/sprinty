@@ -364,6 +364,9 @@ func TestChatSSEMatchesFixtureFormat(t *testing.T) {
 	if _, ok := doneData["usage"]; !ok {
 		t.Error("missing usage in done event")
 	}
+	if doneData["mood"] != "welcoming" {
+		t.Errorf("expected mood welcoming, got %v", doneData["mood"])
+	}
 }
 
 func TestResponseContentType(t *testing.T) {
