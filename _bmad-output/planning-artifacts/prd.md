@@ -2,8 +2,8 @@
 stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-02b-vision', 'step-02c-executive-summary', 'step-03-success', 'step-04-journeys', 'step-05-domain', 'step-06-innovation', 'step-07-project-type', 'step-08-scoping', 'step-09-functional', 'step-10-nonfunctional', 'step-11-polish', 'step-12-complete']
 workflow_completed: true
 inputDocuments:
-  - '_bmad-output/planning-artifacts/product-brief-ai_life_coach-2026-03-15.md'
-  - '_bmad-output/planning-artifacts/research/market-ai-life-coaching-apps-research-2026-03-15.md'
+  - '_bmad-output/planning-artifacts/product-brief-sprinty-2026-03-15.md'
+  - '_bmad-output/planning-artifacts/research/market-sprintying-apps-research-2026-03-15.md'
   - '_bmad-output/planning-artifacts/research/domain-coaching-psychology-gamification-ai-safety-research-2026-03-15.md'
   - '_bmad-output/planning-artifacts/research/technical-local-llm-vs-cloud-for-ios-coaching-research-2026-03-15.md'
   - '_bmad-output/brainstorming/brainstorming-session-2026-03-14-1610.md'
@@ -22,7 +22,7 @@ classification:
   architecture: 'Pure cloud inference, multi-provider fallback, AnyLanguageModel abstraction'
 ---
 
-# Product Requirements Document - ai_life_coach
+# Product Requirements Document - sprinty
 
 **Author:** Ducdo
 **Date:** 2026-03-16

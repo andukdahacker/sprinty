@@ -1,6 +1,6 @@
 import Testing
 import SwiftUI
-@testable import ai_life_coach
+@testable import sprinty
 
 @Suite("SpacingScale — 9 spacing tokens on 8pt grid")
 struct SpacingScaleTests {

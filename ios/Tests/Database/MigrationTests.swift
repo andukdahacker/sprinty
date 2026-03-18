@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 import GRDB
-@testable import ai_life_coach
+@testable import sprinty
 
 @Suite("Database Migration Tests")
 struct MigrationTests {

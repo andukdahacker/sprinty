@@ -278,7 +278,7 @@ data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "usage": {
 | `server/tests/handlers_test.go` | Go `testing` + `httptest` | Verify done event includes mood field |
 
 - **Use Swift Testing** (`@Test` macro), NOT XCTest for unit tests
-- **Use `@testable import ai_life_coach`** to access internal types
+- **Use `@testable import sprinty`** to access internal types
 - **In-memory GRDB** for database tests: `DatabaseQueue()` with same migrations
 - **No mocking frameworks** — hand-written protocol mocks only
 - **Test naming**: `test_methodName_condition_expectedResult`
@@ -301,7 +301,7 @@ data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "usage": {
 
 New files to create:
 ```
-ios/ai_life_coach/
+ios/sprinty/
 ├── Features/
 │   └── Coaching/
 │       ├── Views/
@@ -348,8 +348,8 @@ docs/
 
 Files to modify:
 ```
-ios/ai_life_coach/App/RootView.swift (show CoachingView when authenticated)
-ios/ai_life_coach.xcodeproj/project.pbxproj (new source files)
+ios/sprinty/App/RootView.swift (show CoachingView when authenticated)
+ios/sprinty.xcodeproj/project.pbxproj (new source files)
 ```
 
 ### Project Structure Notes
@@ -437,21 +437,21 @@ Claude Opus 4.6 (1M context)
 - docs/fixtures/sse-done-event.txt
 
 **iOS (new):**
-- ios/ai_life_coach/Services/Networking/SSEParser.swift
-- ios/ai_life_coach/Services/Networking/ChatServiceProtocol.swift
-- ios/ai_life_coach/Services/Networking/ChatService.swift
-- ios/ai_life_coach/Features/Coaching/Models/ChatRequest.swift
-- ios/ai_life_coach/Features/Coaching/Models/ChatEvent.swift
-- ios/ai_life_coach/Features/Coaching/Models/CoachExpression.swift
-- ios/ai_life_coach/Features/Coaching/ViewModels/CoachingViewModel.swift
-- ios/ai_life_coach/Features/Coaching/Views/CoachingView.swift
-- ios/ai_life_coach/Features/Coaching/Views/CoachCharacterView.swift
-- ios/ai_life_coach/Features/Coaching/Views/DialogueTurnView.swift
-- ios/ai_life_coach/Features/Coaching/Views/DateSeparatorView.swift
-- ios/ai_life_coach/Features/Coaching/Views/TextInputView.swift
+- ios/sprinty/Services/Networking/SSEParser.swift
+- ios/sprinty/Services/Networking/ChatServiceProtocol.swift
+- ios/sprinty/Services/Networking/ChatService.swift
+- ios/sprinty/Features/Coaching/Models/ChatRequest.swift
+- ios/sprinty/Features/Coaching/Models/ChatEvent.swift
+- ios/sprinty/Features/Coaching/Models/CoachExpression.swift
+- ios/sprinty/Features/Coaching/ViewModels/CoachingViewModel.swift
+- ios/sprinty/Features/Coaching/Views/CoachingView.swift
+- ios/sprinty/Features/Coaching/Views/CoachCharacterView.swift
+- ios/sprinty/Features/Coaching/Views/DialogueTurnView.swift
+- ios/sprinty/Features/Coaching/Views/DateSeparatorView.swift
+- ios/sprinty/Features/Coaching/Views/TextInputView.swift
 
 **iOS (modified):**
-- ios/ai_life_coach/App/RootView.swift
+- ios/sprinty/App/RootView.swift
 
 **iOS Tests (new):**
 - ios/Tests/Mocks/MockChatService.swift
@@ -460,4 +460,4 @@ Claude Opus 4.6 (1M context)
 - ios/Tests/Features/CoachingViewModelTests.swift
 
 **Project (modified):**
-- ios/ai_life_coach.xcodeproj/project.pbxproj
+- ios/sprinty.xcodeproj/project.pbxproj

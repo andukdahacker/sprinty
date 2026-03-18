@@ -4,21 +4,21 @@ workflow_completed: true
 lastStep: 14
 completedAt: '2026-03-17'
 inputDocuments:
-  - '_bmad-output/planning-artifacts/product-brief-ai_life_coach-2026-03-15.md'
+  - '_bmad-output/planning-artifacts/product-brief-sprinty-2026-03-15.md'
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/architecture.md'
-  - '_bmad-output/planning-artifacts/research/market-ai-life-coaching-apps-research-2026-03-15.md'
+  - '_bmad-output/planning-artifacts/research/market-sprintying-apps-research-2026-03-15.md'
   - '_bmad-output/planning-artifacts/research/domain-coaching-psychology-gamification-ai-safety-research-2026-03-15.md'
   - '_bmad-output/planning-artifacts/research/technical-local-llm-vs-cloud-for-ios-coaching-research-2026-03-15.md'
   - '_bmad-output/brainstorming/brainstorming-session-2026-03-14-1610.md'
   - '_bmad-output/brainstorming/brainstorming-session-2026-03-15-1400.md'
 workflowType: 'ux-design'
-project_name: 'ai_life_coach'
+project_name: 'sprinty'
 user_name: 'Ducdo'
 date: '2026-03-16'
 ---
 
-# UX Design Specification ai_life_coach
+# UX Design Specification sprinty
 
 **Author:** Ducdo
 **Date:** 2026-03-16

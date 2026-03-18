@@ -1,7 +1,7 @@
 import Testing
 import Foundation
 import GRDB
-@testable import ai_life_coach
+@testable import sprinty
 
 @Suite("CoachingViewModel")
 struct CoachingViewModelTests {

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ducdo/ai-life-coach/server/auth"
-	"github.com/ducdo/ai-life-coach/server/middleware"
+	"github.com/ducdo/sprinty/server/auth"
+	"github.com/ducdo/sprinty/server/middleware"
 )
 
 type registerRequest struct {

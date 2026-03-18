@@ -15,30 +15,16 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "5456DF22C9B4D97F916F9BBE"
-               BuildableName = "ai_life_coach.app"
-               BlueprintName = "ai_life_coach"
-               ReferencedContainer = "container:ai_life_coach.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "NO"
-            buildForProfiling = "NO"
-            buildForArchiving = "NO"
-            buildForAnalyzing = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "8B58DC69B8B05864AB40C659"
-               BuildableName = "ai_life_coachTests.xctest"
-               BlueprintName = "ai_life_coachTests"
-               ReferencedContainer = "container:ai_life_coach.xcodeproj">
+               BlueprintIdentifier = "7AE3DF1965B17FB988072016"
+               BuildableName = "sprinty.app"
+               BlueprintName = "sprinty"
+               ReferencedContainer = "container:sprinty.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
-      buildConfiguration = "Staging"
+      buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
@@ -46,30 +32,17 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "5456DF22C9B4D97F916F9BBE"
-            BuildableName = "ai_life_coach.app"
-            BlueprintName = "ai_life_coach"
-            ReferencedContainer = "container:ai_life_coach.xcodeproj">
+            BlueprintIdentifier = "7AE3DF1965B17FB988072016"
+            BuildableName = "sprinty.app"
+            BlueprintName = "sprinty"
+            ReferencedContainer = "container:sprinty.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "8B58DC69B8B05864AB40C659"
-               BuildableName = "ai_life_coachTests.xctest"
-               BlueprintName = "ai_life_coachTests"
-               ReferencedContainer = "container:ai_life_coach.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
       </Testables>
-      <CommandLineArguments>
-      </CommandLineArguments>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Staging"
+      buildConfiguration = "Release"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
@@ -82,17 +55,17 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "5456DF22C9B4D97F916F9BBE"
-            BuildableName = "ai_life_coach.app"
-            BlueprintName = "ai_life_coach"
-            ReferencedContainer = "container:ai_life_coach.xcodeproj">
+            BlueprintIdentifier = "7AE3DF1965B17FB988072016"
+            BuildableName = "sprinty.app"
+            BlueprintName = "sprinty"
+            ReferencedContainer = "container:sprinty.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>
       </CommandLineArguments>
    </LaunchAction>
    <ProfileAction
-      buildConfiguration = "Staging"
+      buildConfiguration = "Release"
       shouldUseLaunchSchemeArgsEnv = "YES"
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
@@ -101,10 +74,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "5456DF22C9B4D97F916F9BBE"
-            BuildableName = "ai_life_coach.app"
-            BlueprintName = "ai_life_coach"
-            ReferencedContainer = "container:ai_life_coach.xcodeproj">
+            BlueprintIdentifier = "7AE3DF1965B17FB988072016"
+            BuildableName = "sprinty.app"
+            BlueprintName = "sprinty"
+            ReferencedContainer = "container:sprinty.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>

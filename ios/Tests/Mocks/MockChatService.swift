@@ -1,4 +1,4 @@
-@testable import ai_life_coach
+@testable import sprinty
 import Foundation
 
 final class MockChatService: ChatServiceProtocol, @unchecked Sendable {

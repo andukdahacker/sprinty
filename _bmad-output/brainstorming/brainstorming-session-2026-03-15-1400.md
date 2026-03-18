@@ -2,7 +2,7 @@
 stepsCompleted: [1, 2, 3, 4]
 session_active: false
 workflow_completed: true
-inputDocuments: ['_bmad-output/planning-artifacts/research/market-ai-life-coaching-apps-research-2026-03-15.md', '_bmad-output/planning-artifacts/research/domain-coaching-psychology-gamification-ai-safety-research-2026-03-15.md']
+inputDocuments: ['_bmad-output/planning-artifacts/research/market-sprintying-apps-research-2026-03-15.md', '_bmad-output/planning-artifacts/research/domain-coaching-psychology-gamification-ai-safety-research-2026-03-15.md']
 session_topic: 'Solving critical product design tensions and strategic challenges identified in market and domain research for the AI Life Coach product'
 session_goals: 'Generate concrete solutions for: onboarding vs retention cliff, why-not-ChatGPT differentiation, gamification redesign, business model viability, MVP scoping, go-to-market strategy, safety-as-differentiator execution, and non-directive AI coaching architecture'
 selected_approach: 'ai-recommended'

@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/ducdo/ai-life-coach/server/httputil"
+	"github.com/ducdo/sprinty/server/httputil"
 )
 
 func WriteJSON(w http.ResponseWriter, status int, data any) {

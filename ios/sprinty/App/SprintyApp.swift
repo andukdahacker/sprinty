@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct AILifeCoachApp: App {
+struct SprintyApp: App {
     @State private var appState = AppState()
 
     @Environment(\.colorScheme) private var colorScheme

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ducdo/ai-life-coach/server/auth"
-	"github.com/ducdo/ai-life-coach/server/httputil"
+	"github.com/ducdo/sprinty/server/auth"
+	"github.com/ducdo/sprinty/server/httputil"
 )
 
 type contextKey string

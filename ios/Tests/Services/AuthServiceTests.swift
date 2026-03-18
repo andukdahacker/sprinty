@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import ai_life_coach
+@testable import sprinty
 
 final class MockAPIClient: APIClientProtocol, @unchecked Sendable {
     var responses: [String: Any] = [:]

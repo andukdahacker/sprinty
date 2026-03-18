@@ -1,7 +1,7 @@
 import Testing
 import SwiftUI
 import UIKit
-@testable import ai_life_coach
+@testable import sprinty
 
 // MARK: - UIColor Helper
 

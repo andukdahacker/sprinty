@@ -28,7 +28,7 @@ So that my coaching experience is private from the start.
 
 - [x] Task 1: Initialize monorepo and Go module (AC: #1)
   - [x] Create top-level `/ios`, `/server`, `/docs` directories
-  - [x] Run `go mod init github.com/ducdo/ai-life-coach/server` inside `/server`
+  - [x] Run `go mod init github.com/ducdo/sprinty/server` inside `/server`
   - [x] Run `go get github.com/golang-jwt/jwt/v5@v5.3.0`
   - [x] Set `go 1.23` explicitly in go.mod (required for enhanced ServeMux routing — silently fails without this)
   - [x] Create `docs/api-contract.md` with full specification:
@@ -233,7 +233,7 @@ func ClaimsFromContext(ctx context.Context) (*auth.Claims, bool)
 ### Project Structure to Create
 
 ```
-ai-life-coach/
+sprinty/
 ├── docs/
 │   ├── api-contract.md
 │   └── fixtures/

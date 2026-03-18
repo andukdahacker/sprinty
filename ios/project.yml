@@ -1,4 +1,4 @@
-name: ai_life_coach
+name: sprinty
 options:
   bundleIdPrefix: com.ducdo
   deploymentTarget:
@@ -18,9 +18,9 @@ configs:
   Release: release
 
 configFiles:
-  Debug: ai_life_coach/Configuration/Debug.xcconfig
-  Staging: ai_life_coach/Configuration/Staging.xcconfig
-  Release: ai_life_coach/Configuration/Release.xcconfig
+  Debug: sprinty/Configuration/Debug.xcconfig
+  Staging: sprinty/Configuration/Staging.xcconfig
+  Release: sprinty/Configuration/Release.xcconfig
 
 packages:
   GRDB:
@@ -28,15 +28,15 @@ packages:
     from: "7.10.0"
 
 targets:
-  ai_life_coach:
+  sprinty:
     type: application
     platform: iOS
     sources:
-      - path: ai_life_coach
+      - path: sprinty
         excludes:
           - "**/*.xcconfig"
     resources:
-      - path: ai_life_coach/Resources/Assets.xcassets
+      - path: sprinty/Resources/Assets.xcassets
     settings:
       base:
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
@@ -44,26 +44,26 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait"
-        PRODUCT_BUNDLE_IDENTIFIER: com.ducdo.ai-life-coach
+        PRODUCT_BUNDLE_IDENTIFIER: com.ducdo.sprinty
         GENERATE_INFOPLIST_FILE: YES
-        CODE_SIGN_ENTITLEMENTS: ai_life_coach/ai_life_coach.entitlements
+        CODE_SIGN_ENTITLEMENTS: sprinty/sprinty.entitlements
         COACH_API_URL: "http://localhost:8080"
     dependencies:
       - package: GRDB
         product: GRDB
 
 
-  ai_life_coachTests:
+  sprintyTests:
     type: bundle.unit-test
     platform: iOS
     sources:
       - path: Tests
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.ducdo.ai-life-coach-tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.ducdo.sprinty-tests
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
-      - target: ai_life_coach
+      - target: sprinty
       - package: GRDB
         product: GRDB
 
@@ -71,35 +71,35 @@ schemes:
   Debug:
     build:
       targets:
-        ai_life_coach: all
-        ai_life_coachTests: [test]
+        sprinty: all
+        sprintyTests: [test]
     run:
       config: Debug
     test:
       config: Debug
       targets:
-        - ai_life_coachTests
+        - sprintyTests
     profile:
       config: Debug
 
   Staging:
     build:
       targets:
-        ai_life_coach: all
-        ai_life_coachTests: [test]
+        sprinty: all
+        sprintyTests: [test]
     run:
       config: Staging
     test:
       config: Staging
       targets:
-        - ai_life_coachTests
+        - sprintyTests
     profile:
       config: Staging
 
   Release:
     build:
       targets:
-        ai_life_coach: all
+        sprinty: all
     run:
       config: Release
     profile:

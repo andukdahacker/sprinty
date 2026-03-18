@@ -1,5 +1,5 @@
 import Testing
-@testable import ai_life_coach
+@testable import sprinty
 
 @Suite("CopyStandards — UI copy blacklist enforcement")
 struct CopyStandardsTests {

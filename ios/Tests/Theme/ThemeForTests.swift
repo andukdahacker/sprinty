@@ -1,6 +1,6 @@
 import Testing
 import SwiftUI
-@testable import ai_life_coach
+@testable import sprinty
 
 @Suite("themeFor — palette selection by context and color scheme")
 struct ThemeForTests {

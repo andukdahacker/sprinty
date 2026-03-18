@@ -1,4 +1,4 @@
-module github.com/ducdo/ai-life-coach/server
+module github.com/ducdo/sprinty/server
 
 go 1.26.1
 

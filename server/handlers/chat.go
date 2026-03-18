@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/ducdo/ai-life-coach/server/providers"
+	"github.com/ducdo/sprinty/server/providers"
 )
 
 func ChatHandler(provider providers.Provider) http.HandlerFunc {

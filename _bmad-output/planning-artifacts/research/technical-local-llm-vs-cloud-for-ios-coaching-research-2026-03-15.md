@@ -2,7 +2,7 @@
 stepsCompleted: [1, 2, 3, 4, 5, 6]
 workflow_completed: true
 inputDocuments:
-  - '_bmad-output/planning-artifacts/product-brief-ai_life_coach-2026-03-15.md'
+  - '_bmad-output/planning-artifacts/product-brief-sprinty-2026-03-15.md'
 workflowType: 'research'
 lastStep: 1
 research_type: 'technical'

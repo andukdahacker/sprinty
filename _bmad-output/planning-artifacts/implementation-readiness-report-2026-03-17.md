@@ -16,7 +16,7 @@ filesIncluded:
 # Implementation Readiness Assessment Report
 
 **Date:** 2026-03-17
-**Project:** ai_life_coach
+**Project:** sprinty
 
 ## Document Inventory
 
@@ -521,4 +521,4 @@ This assessment identified **3 specification gaps** (now resolved) and **1 minor
 
 **Assessor:** Implementation Readiness Workflow
 **Date:** 2026-03-17
-**Project:** ai_life_coach (Sprinty)
+**Project:** sprinty (Sprinty)

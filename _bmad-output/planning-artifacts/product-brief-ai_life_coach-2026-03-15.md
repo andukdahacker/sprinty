@@ -4,7 +4,7 @@ workflow_completed: true
 inputDocuments:
   - '_bmad-output/brainstorming/brainstorming-session-2026-03-14-1610.md'
   - '_bmad-output/brainstorming/brainstorming-session-2026-03-15-1400.md'
-  - '_bmad-output/planning-artifacts/research/market-ai-life-coaching-apps-research-2026-03-15.md'
+  - '_bmad-output/planning-artifacts/research/market-sprintying-apps-research-2026-03-15.md'
   - '_bmad-output/planning-artifacts/research/domain-coaching-psychology-gamification-ai-safety-research-2026-03-15.md'
   - '_bmad-output/planning-artifacts/research/technical-local-llm-vs-cloud-for-ios-coaching-research-2026-03-15.md'
 date: 2026-03-15

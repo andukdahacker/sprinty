@@ -5,15 +5,15 @@ lastStep: 8
 status: 'complete'
 completedAt: '2026-03-16'
 inputDocuments:
-  - '_bmad-output/planning-artifacts/product-brief-ai_life_coach-2026-03-15.md'
+  - '_bmad-output/planning-artifacts/product-brief-sprinty-2026-03-15.md'
   - '_bmad-output/planning-artifacts/prd.md'
-  - '_bmad-output/planning-artifacts/research/market-ai-life-coaching-apps-research-2026-03-15.md'
+  - '_bmad-output/planning-artifacts/research/market-sprintying-apps-research-2026-03-15.md'
   - '_bmad-output/planning-artifacts/research/domain-coaching-psychology-gamification-ai-safety-research-2026-03-15.md'
   - '_bmad-output/planning-artifacts/research/technical-local-llm-vs-cloud-for-ios-coaching-research-2026-03-15.md'
   - '_bmad-output/brainstorming/brainstorming-session-2026-03-14-1610.md'
   - '_bmad-output/brainstorming/brainstorming-session-2026-03-15-1400.md'
 workflowType: 'architecture'
-project_name: 'ai_life_coach'
+project_name: 'sprinty'
 user_name: 'Ducdo'
 date: '2026-03-16'
 ---
@@ -174,7 +174,7 @@ Understanding what's testable and how informs module boundary decisions in later
 **Monorepo** with two top-level directories. For a solo developer, one repo means one git log, one search scope, shared documentation, and a single source of truth for the API contract between iOS and server.
 
 ```
-ai-life-coach/
+sprinty/
 ├── ios/                          # Xcode project root
 ├── server/                       # Go module root
 ├── docs/
@@ -183,7 +183,7 @@ ai-life-coach/
 └── README.md
 ```
 
-Railway is configured to watch the `server/` subdirectory for deploys. Xcode project lives at `ios/ai_life_coach.xcodeproj`.
+Railway is configured to watch the `server/` subdirectory for deploys. Xcode project lives at `ios/sprinty.xcodeproj`.
 
 ### Local Development Workflow
 
@@ -220,7 +220,7 @@ Railway is configured to watch the `server/` subdirectory for deploys. Xcode pro
 **Initialization:**
 
 ```
-Xcode → New Project → App → SwiftUI → ai_life_coach (inside ios/ directory)
+Xcode → New Project → App → SwiftUI → sprinty (inside ios/ directory)
 ```
 
 **Architectural Decisions:**
@@ -235,7 +235,7 @@ Xcode → New Project → App → SwiftUI → ai_life_coach (inside ios/ directo
 **Project Structure Convention:**
 
 ```
-ios/ai_life_coach/
+ios/sprinty/
 ├── App/                          # App lifecycle (@main, AppState)
 ├── Features/
 │   ├── Coaching/                 # Conversation engine UI
@@ -286,7 +286,7 @@ ios/ai_life_coach/
 
 ```bash
 cd server/
-go mod init github.com/ducdo/ai-life-coach/server
+go mod init github.com/ducdo/sprinty/server
 go get github.com/anthropics/anthropic-sdk-go
 go get github.com/openai/openai-go/v3
 go get github.com/getsentry/sentry-go
@@ -955,7 +955,7 @@ import (
 
     "github.com/anthropics/anthropic-sdk-go"
 
-    "github.com/ducdo/ai-life-coach/server/providers"
+    "github.com/ducdo/sprinty/server/providers"
 )
 ```
 
@@ -982,7 +982,7 @@ One concrete rule: AppState is created once, lives in SwiftUI Environment, passe
 
 ```swift
 // Created once at App root
-@main struct AILifeCoachApp: App {
+@main struct SprintyApp: App {
     @State private var appState = AppState()
 
     var body: some Scene {
@@ -1218,7 +1218,7 @@ struct AvatarView: View {
 ### Complete Project Directory Structure
 
 ```
-ai-life-coach/
+sprinty/
 ├── .github/
 │   └── workflows/
 │       ├── ios.yml                           # Swift tests + build on ios/ changes
@@ -1235,20 +1235,20 @@ ai-life-coach/
 │       └── auth-register-response.json
 │
 ├── ios/
-│   ├── ai_life_coach.xcodeproj/
+│   ├── sprinty.xcodeproj/
 │   │   └── xcshareddata/xcschemes/
 │   │       ├── Debug.xcscheme
 │   │       ├── Staging.xcscheme
 │   │       └── Release.xcscheme
-│   ├── ai_life_coach/
-│   │   ├── ai_life_coach.entitlements        # App Groups + Keychain access groups
+│   ├── sprinty/
+│   │   ├── sprinty.entitlements        # App Groups + Keychain access groups
 │   │   ├── Configuration/
 │   │   │   ├── Debug.xcconfig                # COACH_API_URL = http://localhost:8080
 │   │   │   ├── Staging.xcconfig              # COACH_API_URL = https://staging.railway.app
 │   │   │   └── Release.xcconfig              # COACH_API_URL = https://production.railway.app
 │   │   │
 │   │   ├── App/
-│   │   │   ├── AILifeCoachApp.swift          # @main entry, AppState creation, Environment injection
+│   │   │   ├── SprintyApp.swift          # @main entry, AppState creation, Environment injection
 │   │   │   └── AppState.swift                # @Observable unified state, ExperienceContext enum
 │   │   │
 │   │   ├── Features/
@@ -1356,7 +1356,7 @@ ai-life-coach/
 │   │   └── Preview Content/
 │   │       └── PreviewData.swift                       # Mock data for SwiftUI previews
 │   │
-│   ├── ai_life_coach_widgetExtension/                  # WidgetKit target (same App Group)
+│   ├── sprinty_widgetExtension/                  # WidgetKit target (same App Group)
 │   │   ├── WidgetBundle.swift
 │   │   └── Info.plist
 │   │
@@ -1509,7 +1509,7 @@ middleware/ wraps handlers (auth → tier → guardrails → logging)
 | **Monetization (FR53-FR58)** | `Services/Subscription/`, `Services/Networking/AuthService.swift` | `middleware/tier.go`, `middleware/guardrails.go`, `auth/jwt.go` |
 | **Privacy & Data (FR59-FR62)** | `Services/Database/DatabaseManager.swift`, `Resources/PrivacyInfo.xcprivacy` | N/A (on-device) |
 | **Backend & Infra (FR63-FR67)** | N/A | `providers/`, `middleware/`, `config/`, `Dockerfile` |
-| **Widgets (FR68-FR69)** | `Features/Widgets/`, `ai_life_coach_widgetExtension/` | N/A |
+| **Widgets (FR68-FR69)** | `Features/Widgets/`, `sprinty_widgetExtension/` | N/A |
 | **Offline Capability (FR70-FR72)** | `Core/State/ConnectivityMonitor.swift`, `App/AppState.swift` | N/A |
 | **Conversation History (FR73-FR76)** | `Features/Coaching/`, `Services/Memory/` | N/A |
 | **Autonomy & Self-Reliance (FR77-FR78)** | `Services/Networking/` (tracks engagement source) | `prompts/sections/autonomy.md` |
@@ -1696,7 +1696,7 @@ POST-CONVERSATION PIPELINE (async, best-effort):
 6. When adding new capabilities, follow extension point patterns (4 files for provider, 2 for prompt section)
 
 **First Implementation Priority:**
-1. Monorepo setup (ai-life-coach/ with ios/, server/, docs/ directories, .gitignore)
+1. Monorepo setup (sprinty/ with ios/, server/, docs/ directories, .gitignore)
 2. Server scaffold: `go mod init`, auth endpoints, health check, mock SSE chat endpoint
 3. iOS project: Xcode SwiftUI App in ios/, App Groups entitlement, xcconfig files
 4. Connect: iOS Simulator hits localhost server, parses mock SSE stream — validates end-to-end pipeline

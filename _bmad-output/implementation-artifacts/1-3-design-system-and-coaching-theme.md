@@ -81,7 +81,7 @@ So that the experience feels personal and calming, not like a generic tech app.
     - Conversation context + light → `conversationLight` palette
     - Conversation context + dark → `conversationDark` palette
     - Safety/pause overrides return self for now (stubs)
-  - [x] Inject theme at App root in `AILifeCoachApp.swift` via `.environment(\.coachingTheme, themeFor(...))`
+  - [x] Inject theme at App root in `SprintyApp.swift` via `.environment(\.coachingTheme, themeFor(...))`
 
 - [x] **Task 2: ColorPalette with four theme instances** (AC: 1, 2, 3, 4, 5, 9)
   - [x] Create `Core/Theme/ColorPalette.swift` with all semantic color tokens as `let` properties
@@ -149,13 +149,13 @@ So that the experience feels personal and calming, not like a generic tech app.
   - [x] `Tests/Theme/SpacingScaleTests.swift` — verify all 9 spacing values match spec; verify SE margin is 16pt when width <= 375; verify minTouchTarget is 44pt
   - [x] `Tests/Theme/CopyStandardsTests.swift` — verify blacklist catches each forbidden word; verify clean copy passes
   - [x] `Tests/Theme/ThemeForTests.swift` — verify `themeFor()` returns correct palette for each context + color scheme combination
-  - [x] All tests use Swift Testing (`@Test` macro), NOT XCTest. Use `@testable import ai_life_coach` to access internal types.
+  - [x] All tests use Swift Testing (`@Test` macro), NOT XCTest. Use `@testable import sprinty` to access internal types.
 
 ## Dev Notes
 
 ### Architecture Compliance
 
-- **Location:** All theme files go under `ios/ai_life_coach/Core/Theme/`
+- **Location:** All theme files go under `ios/sprinty/Core/Theme/`
 - **CoachingTheme is a `struct`, not a class** — it holds immutable design tokens (`let` properties), not mutable state. A struct is `Sendable` by default, avoids the `@Observable` + `Sendable` conflict under Swift 6 strict concurrency, and works naturally with SwiftUI environment
 - **Environment injection:** Use custom `EnvironmentKey` pattern (`\.coachingTheme`) — NOT the iOS 17+ `@Environment(Type.self)` pattern used for AppState. Rationale: theme selection depends on context (home vs. conversation) and color scheme, so different views may receive different theme instances. AppState is a single shared instance; theme is not
 - **Palette selection is a view-level concern.** Each screen (HomeView, CoachingView) picks its palette via `themeFor()` and injects it for its subtree. AppState does NOT own the theme — it provides the `experienceContext` that informs palette selection
@@ -230,7 +230,7 @@ Dark mode is not a color inversion — it's an emotional variant. Every dark pal
 - Entitlements overwritten by xcodegen — don't modify entitlements in this story
 
 **Files from 1.2 to modify:**
-- `ios/ai_life_coach/App/AILifeCoachApp.swift` — add `.environment(\.coachingTheme, themeFor(...))` injection
+- `ios/sprinty/App/SprintyApp.swift` — add `.environment(\.coachingTheme, themeFor(...))` injection
 
 ### Git Intelligence
 
@@ -242,7 +242,7 @@ Commit convention: `feat: Story X.Y — description`
 
 ### Project Structure Notes
 
-New files to create (all under `ios/ai_life_coach/`):
+New files to create (all under `ios/sprinty/`):
 
 ```
 Core/Theme/
@@ -289,7 +289,7 @@ Claude Opus 4.6 (1M context)
 - Dark mode sendButton contrast failure: original #4A5A3A yielded ~2.35:1 contrast against dark backgrounds. Adjusted to #607252 (~3.1:1) to meet WCAG 3:1 non-text requirement (AC9).
 
 ### Completion Notes List
-- **Task 1:** Created `CoachingTheme.swift` with struct, `SafetyThemeOverride` enum, `ExperienceContext` enum, `EnvironmentKey`/`EnvironmentValues` extension, and `themeFor()` function. Safety/pause/ambient stubs return self. Injected at App root in `AILifeCoachApp.swift`.
+- **Task 1:** Created `CoachingTheme.swift` with struct, `SafetyThemeOverride` enum, `ExperienceContext` enum, `EnvironmentKey`/`EnvironmentValues` extension, and `themeFor()` function. Safety/pause/ambient stubs return self. Injected at App root in `SprintyApp.swift`.
 - **Task 2:** Created `ColorPalette.swift` with 25 semantic color tokens and 4 static palette instances (homeLight, homeDark, conversationLight, conversationDark). Added `Color(hex:opacity:)` initializer extension. Created 23 asset catalog `.colorset` entries under `Resources/Assets.xcassets/Colors/`. Adjusted dark sendButton from #4A5A3A to #607252 for WCAG 3:1 compliance.
 - **Task 3:** Created `TypographyScale.swift` with all 12 semantic text styles using iOS semantic fonts (never fixed sizes). Implemented 12 View extension modifiers (`.coachVoiceStyle()`, etc.) that apply font + lineSpacing together. Coach/user voice use 1.65x line height (11pt lineSpacing).
 - **Task 4:** Created `SpacingScale.swift` with 9 spacing tokens on 8pt grid, including `screenMargin(for:)` function for SE detection (16pt when width <= 375). Created `RadiusTokens.swift` with 5 corner radius tokens. Added `.contentColumn()` View modifier for Pro Max 390pt cap.
@@ -302,15 +302,15 @@ Claude Opus 4.6 (1M context)
 - 2026-03-18: Code review fixes — (M1) Removed 23 dead asset catalog .colorset entries (code uses Color(hex:) not asset catalog). (M2) Added contrast tests for userAccent and sprintProgress per AC9; fixed light palette userAccent/sprintProgressStart #8B9B7A → #748465 for WCAG 3:1. (M3) Fixed CopyStandards to use word-boundary regex instead of substring matching. (M4) Added project.pbxproj to File List. (L1) Completed palette token access tests for all 4 palettes (25/25 tokens each). 89 tests passing.
 
 ### File List
-- ios/ai_life_coach/Core/Theme/CoachingTheme.swift (new)
-- ios/ai_life_coach/Core/Theme/ColorPalette.swift (new)
-- ios/ai_life_coach/Core/Theme/TypographyScale.swift (new)
-- ios/ai_life_coach/Core/Theme/SpacingScale.swift (new)
-- ios/ai_life_coach/Core/Theme/RadiusTokens.swift (new)
-- ios/ai_life_coach/Core/Utilities/CopyStandards.swift (new)
-- ios/ai_life_coach/Preview Content/ThemePreview.swift (new)
-- ios/ai_life_coach/App/AILifeCoachApp.swift (modified — theme injection)
-- ios/ai_life_coach.xcodeproj/project.pbxproj (modified — new source files)
+- ios/sprinty/Core/Theme/CoachingTheme.swift (new)
+- ios/sprinty/Core/Theme/ColorPalette.swift (new)
+- ios/sprinty/Core/Theme/TypographyScale.swift (new)
+- ios/sprinty/Core/Theme/SpacingScale.swift (new)
+- ios/sprinty/Core/Theme/RadiusTokens.swift (new)
+- ios/sprinty/Core/Utilities/CopyStandards.swift (new)
+- ios/sprinty/Preview Content/ThemePreview.swift (new)
+- ios/sprinty/App/SprintyApp.swift (modified — theme injection)
+- ios/sprinty.xcodeproj/project.pbxproj (modified — new source files)
 - ios/Tests/Theme/ColorPaletteTests.swift (new)
 - ios/Tests/Theme/TypographyScaleTests.swift (new)
 - ios/Tests/Theme/SpacingScaleTests.swift (new)

@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/ducdo/ai-life-coach/server/config"
+	"github.com/ducdo/sprinty/server/config"
 )
 
 func TestConfigFailsFastOnMissingJWTSecret(t *testing.T) {

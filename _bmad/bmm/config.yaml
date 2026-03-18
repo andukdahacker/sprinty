@@ -3,7 +3,7 @@
 # Version: 6.1.0
 # Date: 2026-03-14T16:09:39.457Z
 
-project_name: ai_life_coach
+project_name: sprinty
 user_skill_level: intermediate
 planning_artifacts: "{project-root}/_bmad-output/planning-artifacts"
 implementation_artifacts: "{project-root}/_bmad-output/implementation-artifacts"

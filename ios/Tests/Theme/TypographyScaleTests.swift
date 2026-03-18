@@ -1,6 +1,6 @@
 import Testing
 import SwiftUI
-@testable import ai_life_coach
+@testable import sprinty
 
 @Suite("TypographyScale — 12 semantic text styles")
 struct TypographyScaleTests {

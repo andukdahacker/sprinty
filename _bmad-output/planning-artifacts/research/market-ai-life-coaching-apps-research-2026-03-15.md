@@ -233,7 +233,7 @@ For apps that blend AI with human coaching, users report long wait times to hear
 
 Recurring complaints about opaque billing, charges after cancellation, and unclear free-trial-to-paid conversion. This is an industry-wide trust issue, not unique to coaching apps.
 
-_Sources: [Saner.AI Review](https://www.saner.ai/blogs/best-ai-life-coach), [Leadership Coaching Lab](https://www.theleadershipcoachinglab.com/blog/ai-coaching-apps-review), [Bestie AI Review](https://bestieai.app/topics/growth/best-ai-life-coach-app-review), [CHI 2024 Conference](https://dl.acm.org/doi/full/10.1145/3613904.3642178)_
+_Sources: [Saner.AI Review](https://www.saner.ai/blogs/best-sprinty), [Leadership Coaching Lab](https://www.theleadershipcoachinglab.com/blog/ai-coaching-apps-review), [Bestie AI Review](https://bestieai.app/topics/growth/best-sprinty-app-review), [CHI 2024 Conference](https://dl.acm.org/doi/full/10.1145/3613904.3642178)_
 
 ### Unmet Customer Needs
 
@@ -604,7 +604,7 @@ _Sources: [Mindvalley Review](https://makeheadway.com/blog/mindvalley-review/), 
 
 **Notable Exit: Woebot** — Woebot Health, a pioneer in CBT chatbots, **shut down its consumer app on June 30, 2025**, shifting entirely to enterprise healthcare partnerships. This is a cautionary signal: even well-funded, clinically-validated AI therapy apps struggle to sustain a consumer business model.
 
-_Sources: [Neoprompt](https://neoprompt.ai/blog/ai-life-coach-apps), [Habitica Case Study](https://trophy.so/blog/habitica-gamification-case-study), [EU-Startups/Simple Life](https://www.eu-startups.com/2025/10/london-based-simple-life-raises-over-e33-million-in-a-series-b-round-backed-by-kevin-hart-to-scale-its-ai-health-coach/), [Telehealth.org/Woebot](https://telehealth.org/news/ai-psychotherapy-shutdown-what-woebots-exit-signals-for-clinicians/)_
+_Sources: [Neoprompt](https://neoprompt.ai/blog/sprinty-apps), [Habitica Case Study](https://trophy.so/blog/habitica-gamification-case-study), [EU-Startups/Simple Life](https://www.eu-startups.com/2025/10/london-based-simple-life-raises-over-e33-million-in-a-series-b-round-backed-by-kevin-hart-to-scale-its-ai-health-coach/), [Telehealth.org/Woebot](https://telehealth.org/news/ai-psychotherapy-shutdown-what-woebots-exit-signals-for-clinicians/)_
 
 ### Market Share Analysis
 
@@ -730,7 +730,7 @@ The coaching app market is projected at 15.3% CAGR through 2033. This growth wil
 
 Simple Life raised €33M Series B for an AI health coach alone. Building a 10-domain AI coaching platform with gamification, social features, and multi-agent architecture will require significant resources. Without funding, scope must be drastically reduced.
 
-_Sources: [OpenPR Coaching App Market](https://www.openpr.com/news/4316215/coaching-apps-market-to-register-a-cagr-of-15-3-through-2033-key), [AInvest/BetterUp](https://www.ainvest.com/news/bestup-ai-driven-coaching-platform-disruptive-force-hr-tech-scalable-growth-high-roi-2507/), [Cuckoo AI Market Report](https://cuckoo.network/blog/2025/07/05/major-players-in-ai-life-coach-market)_
+_Sources: [OpenPR Coaching App Market](https://www.openpr.com/news/4316215/coaching-apps-market-to-register-a-cagr-of-15-3-through-2033-key), [AInvest/BetterUp](https://www.ainvest.com/news/bestup-ai-driven-coaching-platform-disruptive-force-hr-tech-scalable-growth-high-roi-2507/), [Cuckoo AI Market Report](https://cuckoo.network/blog/2025/07/05/major-players-in-sprinty-market)_
 
 ### Opportunities
 

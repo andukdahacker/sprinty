@@ -3,7 +3,9 @@
     "allow": [
       "WebSearch",
       "Bash(go build:*)",
-      "Bash(go test:*)"
+      "Bash(go test:*)",
+      "Bash(xcodegen generate:*)",
+      "Bash(xcodebuild:*)"
     ]
   }
 }

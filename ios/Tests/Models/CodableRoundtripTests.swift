@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import ai_life_coach
+@testable import sprinty
 
 @Suite("Codable Roundtrip Tests")
 struct CodableRoundtripTests {

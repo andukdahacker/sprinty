@@ -6,11 +6,11 @@ inputDocuments:
   - '_bmad-output/planning-artifacts/ux-design-specification.md'
 ---
 
-# ai_life_coach - Epic Breakdown
+# sprinty - Epic Breakdown
 
 ## Overview
 
-This document provides the complete epic and story breakdown for ai_life_coach, decomposing the requirements from the PRD, UX Design if it exists, and Architecture requirements into implementable stories.
+This document provides the complete epic and story breakdown for sprinty, decomposing the requirements from the PRD, UX Design if it exists, and Architecture requirements into implementable stories.
 
 ## Requirements Inventory
 

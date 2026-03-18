@@ -11,10 +11,10 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/ducdo/ai-life-coach/server/auth"
-	"github.com/ducdo/ai-life-coach/server/handlers"
-	"github.com/ducdo/ai-life-coach/server/middleware"
-	"github.com/ducdo/ai-life-coach/server/providers"
+	"github.com/ducdo/sprinty/server/auth"
+	"github.com/ducdo/sprinty/server/handlers"
+	"github.com/ducdo/sprinty/server/middleware"
+	"github.com/ducdo/sprinty/server/providers"
 )
 
 const testSecret = "test-secret-key-at-least-32-chars-long"

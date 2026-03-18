@@ -27,11 +27,11 @@ So that my data is encrypted and my identity persists across sessions.
 ## Tasks / Subtasks
 
 - [x] Task 1: Create Xcode project and folder structure (AC: #1)
-  - [x]Create `ios/ai_life_coach.xcodeproj` with SwiftUI App template
+  - [x]Create `ios/sprinty.xcodeproj` with SwiftUI App template
   - [x]Set deployment target iOS 17+, Swift 6.x
   - [x]Enable strict concurrency checking (Build Settings → Strict Concurrency Checking → Complete)
   - [x]Create feature-based MVVM folder structure (see Project Structure below)
-  - [x]Add `ai_life_coach.entitlements` with App Groups + Keychain access groups
+  - [x]Add `sprinty.entitlements` with App Groups + Keychain access groups
   - [x]Create xcconfig files: `Debug.xcconfig` (`COACH_API_URL = http://localhost:8080`), `Staging.xcconfig`, `Release.xcconfig`
   - [x]Create 3 Xcode schemes: Debug, Staging, Release — each linked to its xcconfig
 
@@ -42,7 +42,7 @@ So that my data is encrypted and my identity persists across sessions.
 
 - [x] Task 3: Implement DatabaseManager (AC: #4)
   - [x]Create `Services/Database/DatabaseManager.swift`
-  - [x]Initialize `DatabasePool` in App Group shared container path: `FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.ducdo.ai-life-coach")!`
+  - [x]Initialize `DatabasePool` in App Group shared container path: `FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.ducdo.sprinty")!`
   - [x]Apply `NSFileProtectionComplete` to the database file via `FileManager.setAttributes`
   - [x]Configure WAL mode (GRDB default)
   - [x]Run `DatabaseMigrator` on every launch (idempotent)
@@ -106,7 +106,7 @@ So that my data is encrypted and my identity persists across sessions.
 - [x] Task 8: Implement AppState and App entry point (AC: #1)
   - [x]Create `Core/State/AppState.swift` — `@Observable` class with `@MainActor`
   - [x]Properties: `isAuthenticated: Bool`, `needsReauth: Bool`, `isOnline: Bool`
-  - [x]Create `App/AILifeCoachApp.swift` — `@main` entry point
+  - [x]Create `App/SprintyApp.swift` — `@main` entry point
   - [x]Create AppState once via `@State`, inject into environment
   - [x]On launch: initialize DatabaseManager, then AuthService registration flow
   - [x]Create `App/RootView.swift` — minimal placeholder that shows auth status
@@ -154,7 +154,7 @@ So that my data is encrypted and my identity persists across sessions.
 ### Keychain Implementation
 
 - Use Security framework directly (`SecItemAdd`, `SecItemCopyMatching`, `SecItemUpdate`, `SecItemDelete`) — no third-party Keychain wrappers needed for this scope
-- Service name: `"com.ducdo.ai-life-coach"`
+- Service name: `"com.ducdo.sprinty"`
 - Two Keychain items: `"device-uuid"` (String) and `"auth-jwt"` (String)
 - Accessibility: `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`
 - Do NOT set `kSecAttrSynchronizable` — device UUID must be unique per device, never synced via iCloud
@@ -162,8 +162,8 @@ So that my data is encrypted and my identity persists across sessions.
 
 ### App Group Configuration
 
-- App Group identifier: `"group.com.ducdo.ai-life-coach"`
-- Database path: `containerURL(forSecurityApplicationGroupIdentifier:)` + `"/ai_life_coach.sqlite"`
+- App Group identifier: `"group.com.ducdo.sprinty"`
+- Database path: `containerURL(forSecurityApplicationGroupIdentifier:)` + `"/sprinty.sqlite"`
 - This MUST be set up from day one — retrofitting later means migrating database file location for existing users
 - Add App Group capability in Xcode → Signing & Capabilities
 - Both main app target and future widget extension target must use same App Group
@@ -256,19 +256,19 @@ Services throw, ViewModels catch and route. Never force-unwrap. Use `guard let` 
 
 ```
 ios/
-├── ai_life_coach.xcodeproj/
+├── sprinty.xcodeproj/
 │   └── xcshareddata/xcschemes/
 │       ├── Debug.xcscheme
 │       ├── Staging.xcscheme
 │       └── Release.xcscheme
-├── ai_life_coach/
-│   ├── ai_life_coach.entitlements
+├── sprinty/
+│   ├── sprinty.entitlements
 │   ├── Configuration/
 │   │   ├── Debug.xcconfig
 │   │   ├── Staging.xcconfig
 │   │   └── Release.xcconfig
 │   ├── App/
-│   │   ├── AILifeCoachApp.swift          # @main entry, AppState creation, Environment injection
+│   │   ├── SprintyApp.swift          # @main entry, AppState creation, Environment injection
 │   │   ├── AppState.swift                # @Observable unified state (@MainActor)
 │   │   └── RootView.swift                # Minimal placeholder view
 │   ├── Features/                         # Empty feature folders (structure only)
@@ -389,25 +389,25 @@ Claude Opus 4.6 (1M context)
 
 - ios/.gitignore
 - ios/project.yml (xcodegen spec)
-- ios/ai_life_coach.xcodeproj/ (generated)
-- ios/ai_life_coach/ai_life_coach.entitlements
-- ios/ai_life_coach/Configuration/Debug.xcconfig
-- ios/ai_life_coach/Configuration/Staging.xcconfig
-- ios/ai_life_coach/Configuration/Release.xcconfig
-- ios/ai_life_coach/App/AILifeCoachApp.swift
-- ios/ai_life_coach/App/AppState.swift
-- ios/ai_life_coach/App/RootView.swift
-- ios/ai_life_coach/Core/Errors/AppError.swift
-- ios/ai_life_coach/Core/Utilities/Constants.swift
-- ios/ai_life_coach/Models/ConversationSession.swift
-- ios/ai_life_coach/Models/Message.swift
-- ios/ai_life_coach/Services/Database/DatabaseManager.swift
-- ios/ai_life_coach/Services/Database/Migrations.swift
-- ios/ai_life_coach/Services/Networking/APIClient.swift
-- ios/ai_life_coach/Services/Networking/AuthService.swift
-- ios/ai_life_coach/Preview Content/PreviewData.swift
-- ios/ai_life_coach/Resources/Assets.xcassets/Contents.json
-- ios/ai_life_coach/Resources/Assets.xcassets/AppIcon.appiconset/Contents.json
+- ios/sprinty.xcodeproj/ (generated)
+- ios/sprinty/sprinty.entitlements
+- ios/sprinty/Configuration/Debug.xcconfig
+- ios/sprinty/Configuration/Staging.xcconfig
+- ios/sprinty/Configuration/Release.xcconfig
+- ios/sprinty/App/SprintyApp.swift
+- ios/sprinty/App/AppState.swift
+- ios/sprinty/App/RootView.swift
+- ios/sprinty/Core/Errors/AppError.swift
+- ios/sprinty/Core/Utilities/Constants.swift
+- ios/sprinty/Models/ConversationSession.swift
+- ios/sprinty/Models/Message.swift
+- ios/sprinty/Services/Database/DatabaseManager.swift
+- ios/sprinty/Services/Database/Migrations.swift
+- ios/sprinty/Services/Networking/APIClient.swift
+- ios/sprinty/Services/Networking/AuthService.swift
+- ios/sprinty/Preview Content/PreviewData.swift
+- ios/sprinty/Resources/Assets.xcassets/Contents.json
+- ios/sprinty/Resources/Assets.xcassets/AppIcon.appiconset/Contents.json
 - ios/Tests/Database/MigrationTests.swift
 - ios/Tests/Models/CodableRoundtripTests.swift
 - ios/Tests/Services/AuthServiceTests.swift

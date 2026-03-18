@@ -9,10 +9,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ducdo/ai-life-coach/server/config"
-	"github.com/ducdo/ai-life-coach/server/handlers"
-	"github.com/ducdo/ai-life-coach/server/middleware"
-	"github.com/ducdo/ai-life-coach/server/providers"
+	"github.com/ducdo/sprinty/server/config"
+	"github.com/ducdo/sprinty/server/handlers"
+	"github.com/ducdo/sprinty/server/middleware"
+	"github.com/ducdo/sprinty/server/providers"
 )
 
 func main() {
