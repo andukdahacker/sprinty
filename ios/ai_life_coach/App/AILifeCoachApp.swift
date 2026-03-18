@@ -4,10 +4,13 @@ import SwiftUI
 struct AILifeCoachApp: App {
     @State private var appState = AppState()
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(appState)
+                .environment(\.coachingTheme, themeFor(context: .home, colorScheme: colorScheme))
                 .task {
                     await bootstrap()
                 }
