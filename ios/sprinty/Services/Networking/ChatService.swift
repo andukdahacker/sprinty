@@ -26,7 +26,7 @@ final class ChatService: ChatServiceProtocol, Sendable {
                     let token = try authService.getToken()
                     let chatRequest = ChatRequest(messages: messages, mode: mode, promptVersion: "1.0")
 
-                    let url = baseURL.appendingPathComponent("/v1/chat")
+                    let url = baseURL.appendingPathComponent("v1/chat")
                     var request = URLRequest(url: url)
                     request.httpMethod = "POST"
                     request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")

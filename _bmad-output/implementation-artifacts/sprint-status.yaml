@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-17
-last_updated: 2026-03-18
+last_updated: 2026-03-18  # code review fixes applied
 project: sprinty
 project_key: NOKEY
 tracking_system: file-system
@@ -47,7 +47,7 @@ development_status:
   1-1-server-scaffold-and-auth-endpoints: done
   1-2-ios-project-foundation-and-database: done
   1-3-design-system-and-coaching-theme: done
-  1-4-conversation-view-with-mock-streaming: review
+  1-4-conversation-view-with-mock-streaming: done
   1-5-onboarding-flow: backlog
   1-6-real-ai-coaching-integration: backlog
   1-7-sqlite-vec-and-embedding-spike: backlog

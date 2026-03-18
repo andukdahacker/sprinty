@@ -1,6 +1,6 @@
 # Story 1.4: Conversation View with Mock Streaming
 
-Status: review
+Status: done
 
 ## Story
 
@@ -285,17 +285,17 @@ data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "usage": {
 
 ### Accessibility Checklist
 
-- [ ] Each `DialogueTurnView`: `accessibilityLabel` prefixed "Coach says:" or "You said:"
-- [ ] `CoachCharacterView`: `accessibilityLabel: "Your coach"`, `accessibilityValue` tracks expression state, changes announced
-- [ ] `TextInputView` field: `accessibilityLabel: "Message your coach"`
-- [ ] Send button: `accessibilityLabel: "Send message"`, 44pt minimum touch target
-- [ ] `DateSeparatorView`: accessibility landmark, `accessibilityLabel: "Conversation from [date]"`
-- [ ] VoiceOver navigation order: coach character → dialogue turns (chronological) → input field
-- [ ] Coach expression changes announced to VoiceOver
-- [ ] Dynamic Type: all text scales via semantic iOS font sizes
-- [ ] Coach portrait: 100pt default, 80pt at Accessibility XL+
-- [ ] Reduce Motion: `@Environment(\.accessibilityReduceMotion)` — if true, expression crossfades become instant (`.animation(.none)`)
-- [ ] All text contrast ≥ 4.5:1 (already verified in Story 1.3 palette)
+- [x] Each `DialogueTurnView`: `accessibilityLabel` prefixed "Coach says:" or "You said:"
+- [x] `CoachCharacterView`: `accessibilityLabel: "Your coach"`, `accessibilityValue` tracks expression state, changes announced
+- [x] `TextInputView` field: `accessibilityLabel: "Message your coach"`
+- [x] Send button: `accessibilityLabel: "Send message"`, 44pt minimum touch target
+- [x] `DateSeparatorView`: accessibility landmark, `accessibilityLabel: "Conversation from [date]"`
+- [x] VoiceOver navigation order: coach character → dialogue turns (chronological) → input field
+- [x] Coach expression changes announced to VoiceOver
+- [x] Dynamic Type: all text scales via semantic iOS font sizes
+- [x] Coach portrait: 100pt default, 80pt at Accessibility XL+
+- [x] Reduce Motion: `@Environment(\.accessibilityReduceMotion)` — if true, expression crossfades become instant (`.animation(.none)`)
+- [x] All text contrast ≥ 4.5:1 (already verified in Story 1.3 palette)
 
 ### File Structure
 
@@ -423,6 +423,7 @@ Claude Opus 4.6 (1M context)
 ### Change Log
 
 - 2026-03-18: Story 1.4 implementation complete — conversation view with mock SSE streaming, all 12 tasks done, 111 tests passing
+- 2026-03-18: Code review fixes applied — [H1] RootView ViewModel persisted via @State to survive re-renders, [H2] SSEParser refactored with generic `parseLines()` and tests rewritten to exercise real parser, [M1] SSEParserTests and ChatEventCodableTests now load from docs/fixtures/, [M2] ChatService URL path fixed (removed leading slash), [L1] Accessibility checklist checked off
 
 ### File List
 

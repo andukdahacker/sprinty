@@ -2,16 +2,22 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AppState.self) private var appState
+    @State private var viewModel: CoachingViewModel?
 
     var body: some View {
         if appState.isAuthenticated, let databaseManager = appState.databaseManager {
-            let chatService = makeChatService()
-            let viewModel = CoachingViewModel(
-                appState: appState,
-                chatService: chatService,
-                databaseManager: databaseManager
-            )
-            CoachingView(viewModel: viewModel)
+            if let viewModel {
+                CoachingView(viewModel: viewModel)
+            } else {
+                Color.clear.onAppear {
+                    let chatService = makeChatService()
+                    viewModel = CoachingViewModel(
+                        appState: appState,
+                        chatService: chatService,
+                        databaseManager: databaseManager
+                    )
+                }
+            }
         } else if appState.needsReauth {
             VStack(spacing: 16) {
                 Image(systemName: "exclamationmark.triangle.fill")

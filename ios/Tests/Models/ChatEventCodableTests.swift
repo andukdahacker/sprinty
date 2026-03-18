@@ -4,10 +4,16 @@ import Foundation
 
 @Suite("ChatEvent Codable")
 struct ChatEventCodableTests {
-    @Test("Decodes token SSE event")
-    func test_fromSSE_tokenEvent_parsesText() throws {
-        let sseEvent = SSEEvent(type: "token", data: "{\"text\": \"I hear you. \"}")
-        let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
+
+    // MARK: - Fixture-based tests
+
+    @Test("Decodes token event from fixture SSE data")
+    func test_fromSSE_tokenEvent_fromFixture() throws {
+        let fixtureContent = try loadFixture("sse-token-event.txt")
+        let events = parseSSEFixture(fixtureContent)
+
+        #expect(!events.isEmpty)
+        let chatEvent = try ChatEvent.from(sseEvent: events[0])
 
         if case .token(let text) = chatEvent {
             #expect(text == "I hear you. ")
@@ -16,17 +22,17 @@ struct ChatEventCodableTests {
         }
     }
 
-    @Test("Decodes done SSE event with all fields")
-    func test_fromSSE_doneEvent_parsesAllFields() throws {
-        let json = """
-        {"safetyLevel": "green", "domainTags": ["work"], "mood": "welcoming", "usage": {"inputTokens": 50, "outputTokens": 12}}
-        """
-        let sseEvent = SSEEvent(type: "done", data: json)
-        let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
+    @Test("Decodes done event from fixture SSE data")
+    func test_fromSSE_doneEvent_fromFixture() throws {
+        let fixtureContent = try loadFixture("sse-done-event.txt")
+        let events = parseSSEFixture(fixtureContent)
+
+        #expect(events.count == 1)
+        let chatEvent = try ChatEvent.from(sseEvent: events[0])
 
         if case .done(let safetyLevel, let domainTags, let mood, let usage) = chatEvent {
             #expect(safetyLevel == "green")
-            #expect(domainTags == ["work"])
+            #expect(domainTags.isEmpty)
             #expect(mood == "welcoming")
             #expect(usage.inputTokens == 50)
             #expect(usage.outputTokens == 12)
@@ -34,6 +40,31 @@ struct ChatEventCodableTests {
             Issue.record("Expected done event")
         }
     }
+
+    @Test("ChatRequest encodes matching fixture format")
+    func test_chatRequest_matchesFixture() throws {
+        let fixtureData = try Data(contentsOf: fixtureURL("chat-request-sample.json"))
+        let fixtureJSON = try JSONSerialization.jsonObject(with: fixtureData) as? [String: Any]
+
+        let request = ChatRequest(
+            messages: [ChatRequestMessage(role: "user", content: "I've been feeling stuck at work lately.")],
+            mode: "discovery",
+            promptVersion: "1.0"
+        )
+        let encoded = try JSONEncoder().encode(request)
+        let encodedJSON = try JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+
+        #expect(encodedJSON?["mode"] as? String == fixtureJSON?["mode"] as? String)
+        #expect(encodedJSON?["promptVersion"] as? String == fixtureJSON?["promptVersion"] as? String)
+
+        let fixtureMessages = fixtureJSON?["messages"] as? [[String: Any]]
+        let encodedMessages = encodedJSON?["messages"] as? [[String: Any]]
+        #expect(fixtureMessages?.count == encodedMessages?.count)
+        #expect(fixtureMessages?[0]["role"] as? String == encodedMessages?[0]["role"] as? String)
+        #expect(fixtureMessages?[0]["content"] as? String == encodedMessages?[0]["content"] as? String)
+    }
+
+    // MARK: - Edge cases
 
     @Test("Decodes done event with empty domainTags array")
     func test_fromSSE_doneEvent_emptyDomainTags() throws {
@@ -73,24 +104,6 @@ struct ChatEventCodableTests {
         }
     }
 
-    @Test("ChatRequest encodes with correct keys")
-    func test_chatRequest_encodesCorrectly() throws {
-        let request = ChatRequest(
-            messages: [ChatRequestMessage(role: "user", content: "hello")],
-            mode: "discovery",
-            promptVersion: "1.0"
-        )
-        let data = try JSONEncoder().encode(request)
-        let decoded = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-
-        #expect(decoded?["mode"] as? String == "discovery")
-        #expect(decoded?["promptVersion"] as? String == "1.0")
-        let messages = decoded?["messages"] as? [[String: Any]]
-        #expect(messages?.count == 1)
-        #expect(messages?[0]["role"] as? String == "user")
-        #expect(messages?[0]["content"] as? String == "hello")
-    }
-
     @Test("CoachExpression initializes from mood string")
     func test_coachExpression_initFromMood() {
         #expect(CoachExpression(mood: "welcoming") == .welcoming)
@@ -100,5 +113,44 @@ struct ChatEventCodableTests {
         #expect(CoachExpression(mood: "gentle") == .gentle)
         #expect(CoachExpression(mood: nil) == .welcoming)
         #expect(CoachExpression(mood: "invalid") == .welcoming)
+    }
+
+    // MARK: - Helpers
+
+    private func fixtureURL(_ filename: String) -> URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent() // Models/
+            .deletingLastPathComponent() // Tests/
+            .deletingLastPathComponent() // ios/
+            .deletingLastPathComponent() // project root
+            .appendingPathComponent("docs")
+            .appendingPathComponent("fixtures")
+            .appendingPathComponent(filename)
+    }
+
+    private func loadFixture(_ filename: String) throws -> String {
+        try String(contentsOf: fixtureURL(filename), encoding: .utf8)
+    }
+
+    private func parseSSEFixture(_ content: String) -> [SSEEvent] {
+        let lines = content.components(separatedBy: "\n")
+        var currentEventType: String?
+        var currentData: String?
+        var events: [SSEEvent] = []
+
+        for line in lines {
+            if line.hasPrefix("event: ") {
+                currentEventType = String(line.dropFirst(7))
+            } else if line.hasPrefix("data: ") {
+                currentData = String(line.dropFirst(6))
+            } else if line.isEmpty {
+                if let eventType = currentEventType, let data = currentData {
+                    events.append(SSEEvent(type: eventType, data: data))
+                }
+                currentEventType = nil
+                currentData = nil
+            }
+        }
+        return events
     }
 }

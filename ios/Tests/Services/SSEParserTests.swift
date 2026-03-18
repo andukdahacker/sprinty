@@ -4,18 +4,13 @@ import Foundation
 
 @Suite("SSEParser")
 struct SSEParserTests {
-    @Test("Parses token events")
-    func test_parse_tokenEvents_returnsTokenText() async throws {
-        let input = """
-        event: token
-        data: {"text": "I hear you. "}
 
-        event: token
-        data: {"text": "Let's explore that together."}
+    // MARK: - Real SSEParser Tests
 
-        """
-
-        let events = try await parseLines(from: input)
+    @Test("Parses token events from fixture file")
+    func test_parse_tokenEvents_fromFixture() async throws {
+        let input = try loadFixture("sse-token-event.txt")
+        let events = try await parseSSE(input)
 
         #expect(events.count == 2)
         #expect(events[0].type == "token")
@@ -24,15 +19,10 @@ struct SSEParserTests {
         #expect(events[1].data == "{\"text\": \"Let's explore that together.\"}")
     }
 
-    @Test("Parses done event with mood field")
-    func test_parse_doneEvent_returnsDoneWithMood() async throws {
-        let input = """
-        event: done
-        data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "usage": {"inputTokens": 50, "outputTokens": 12}}
-
-        """
-
-        let events = try await parseLines(from: input)
+    @Test("Parses done event with mood field from fixture file")
+    func test_parse_doneEvent_fromFixture() async throws {
+        let input = try loadFixture("sse-done-event.txt")
+        let events = try await parseSSE(input)
 
         #expect(events.count == 1)
         #expect(events[0].type == "done")
@@ -41,19 +31,11 @@ struct SSEParserTests {
 
     @Test("Parses complete stream with token and done events")
     func test_parse_completeStream_returnsAllEvents() async throws {
-        let input = """
-        event: token
-        data: {"text": "Hello "}
+        let tokenFixture = try loadFixture("sse-token-event.txt")
+        let doneFixture = try loadFixture("sse-done-event.txt")
+        let combined = tokenFixture + "\n" + doneFixture
 
-        event: token
-        data: {"text": "there."}
-
-        event: done
-        data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "usage": {"inputTokens": 10, "outputTokens": 5}}
-
-        """
-
-        let events = try await parseLines(from: input)
+        let events = try await parseSSE(combined)
 
         #expect(events.count == 3)
         #expect(events[0].type == "token")
@@ -63,17 +45,18 @@ struct SSEParserTests {
 
     @Test("Handles empty stream gracefully")
     func test_parse_emptyStream_returnsNoEvents() async throws {
-        let events = try await parseLines(from: "")
+        let events = try await parseSSE("")
         #expect(events.isEmpty)
     }
 
     @Test("Ignores incomplete events without blank line terminator")
     func test_parse_incompleteEvent_ignored() async throws {
         let input = "event: token\ndata: {\"text\": \"incomplete\"}"
-
-        let events = try await parseLines(from: input)
+        let events = try await parseSSE(input)
         #expect(events.isEmpty)
     }
+
+    // MARK: - ChatEvent.from conversion
 
     @Test("ChatEvent.from converts token SSE event to ChatEvent")
     func test_chatEventFrom_tokenSSE() throws {
@@ -105,27 +88,53 @@ struct SSEParserTests {
 
     // MARK: - Helpers
 
-    private func parseLines(from string: String) async throws -> [SSEEvent] {
-        let lines = string.components(separatedBy: "\n")
+    private func loadFixture(_ filename: String) throws -> String {
+        let testFile = URL(fileURLWithPath: #filePath)
+        let fixtureURL = testFile
+            .deletingLastPathComponent() // Services/
+            .deletingLastPathComponent() // Tests/
+            .deletingLastPathComponent() // ios/
+            .deletingLastPathComponent() // project root
+            .appendingPathComponent("docs")
+            .appendingPathComponent("fixtures")
+            .appendingPathComponent(filename)
+        return try String(contentsOf: fixtureURL, encoding: .utf8)
+    }
 
-        var currentEventType: String?
-        var currentData: String?
+    private func parseSSE(_ input: String) async throws -> [SSEEvent] {
+        let lines = AsyncLineSequence(string: input)
+        let parser = SSEParser()
+        let stream = parser.parseLines(lines)
+
         var events: [SSEEvent] = []
-
-        for line in lines {
-            if line.hasPrefix("event: ") {
-                currentEventType = String(line.dropFirst(7))
-            } else if line.hasPrefix("data: ") {
-                currentData = String(line.dropFirst(6))
-            } else if line.isEmpty {
-                if let eventType = currentEventType, let data = currentData {
-                    events.append(SSEEvent(type: eventType, data: data))
-                }
-                currentEventType = nil
-                currentData = nil
-            }
+        for try await event in stream {
+            events.append(event)
         }
-
         return events
+    }
+}
+
+private struct AsyncLineSequence: AsyncSequence, Sendable {
+    typealias Element = String
+    let lines: [String]
+
+    init(string: String) {
+        self.lines = string.components(separatedBy: "\n")
+    }
+
+    func makeAsyncIterator() -> AsyncIterator {
+        AsyncIterator(lines: lines)
+    }
+
+    struct AsyncIterator: AsyncIteratorProtocol {
+        let lines: [String]
+        var index = 0
+
+        mutating func next() -> String? {
+            guard index < lines.count else { return nil }
+            let line = lines[index]
+            index += 1
+            return line
+        }
     }
 }

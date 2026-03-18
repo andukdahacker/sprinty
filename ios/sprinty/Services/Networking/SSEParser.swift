@@ -2,13 +2,17 @@ import Foundation
 
 struct SSEParser: Sendable {
     func parse(bytes: URLSession.AsyncBytes) -> AsyncThrowingStream<SSEEvent, Error> {
+        parseLines(bytes.lines)
+    }
+
+    func parseLines<Lines: AsyncSequence & Sendable>(_ lines: Lines) -> AsyncThrowingStream<SSEEvent, Error> where Lines.Element == String {
         AsyncThrowingStream { continuation in
             let task = Task {
                 var currentEventType: String?
                 var currentData: String?
 
                 do {
-                    for try await line in bytes.lines {
+                    for try await line in lines {
                         if Task.isCancelled {
                             continuation.finish()
                             return
