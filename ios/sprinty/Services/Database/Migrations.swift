@@ -29,5 +29,22 @@ enum DatabaseMigrations {
                 columns: ["sessionId"]
             )
         }
+
+        migrator.registerMigration("v2") { db in
+            try db.create(table: "UserProfile") { t in
+                t.column("id", .text).primaryKey().notNull()
+                t.column("avatarId", .text).notNull().defaults(to: "")
+                t.column("coachAppearanceId", .text).notNull().defaults(to: "")
+                t.column("coachName", .text).notNull().defaults(to: "")
+                t.column("onboardingStep", .integer).notNull().defaults(to: 0)
+                t.column("onboardingCompleted", .boolean).notNull().defaults(to: false)
+                t.column("values", .text)
+                t.column("goals", .text)
+                t.column("personalityTraits", .text)
+                t.column("domainStates", .text)
+                t.column("createdAt", .text).notNull()
+                t.column("updatedAt", .text).notNull()
+            }
+        }
     }
 }

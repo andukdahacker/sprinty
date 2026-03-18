@@ -3,10 +3,18 @@ import SwiftUI
 struct RootView: View {
     @Environment(AppState.self) private var appState
     @State private var viewModel: CoachingViewModel?
+    @State private var onboardingViewModel: OnboardingViewModel?
+    @State private var onboardingChecked = false
 
     var body: some View {
         if appState.isAuthenticated, let databaseManager = appState.databaseManager {
-            if let viewModel {
+            if !onboardingChecked {
+                Color.clear.task {
+                    await checkOnboardingState(databaseManager: databaseManager)
+                }
+            } else if !appState.onboardingCompleted {
+                onboardingView(databaseManager: databaseManager)
+            } else if let viewModel {
                 CoachingView(viewModel: viewModel)
             } else {
                 Color.clear.onAppear {
@@ -39,6 +47,37 @@ struct RootView: View {
                 ProgressView()
                 Text("Connecting...")
                     .font(.headline)
+            }
+        }
+    }
+
+    private func checkOnboardingState(databaseManager: DatabaseManager) async {
+        do {
+            let profile = try await databaseManager.dbPool.read { db in
+                try UserProfile.current().fetchOne(db)
+            }
+            if let profile, profile.onboardingCompleted {
+                appState.onboardingCompleted = true
+            }
+        } catch {
+            // No profile or error — treat as not onboarded
+        }
+        onboardingChecked = true
+    }
+
+    @ViewBuilder
+    private func onboardingView(databaseManager: DatabaseManager) -> some View {
+        if let onboardingViewModel {
+            OnboardingContainerView(
+                viewModel: onboardingViewModel,
+                makeChatService: makeChatService
+            )
+        } else {
+            Color.clear.onAppear {
+                onboardingViewModel = OnboardingViewModel(
+                    appState: appState,
+                    databaseManager: databaseManager
+                )
             }
         }
     }
