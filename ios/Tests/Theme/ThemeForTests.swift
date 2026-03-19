@@ -51,6 +51,45 @@ struct ThemeForTests {
         #expect(colorsMatch(theme.palette.backgroundStart, baseline.palette.backgroundStart))
     }
 
+    @Test("Discovery ambient mode returns warmer light palette")
+    func test_applyingAmbientMode_discovery_returnsWarmerPalette() {
+        let base = themeFor(context: .conversation, colorScheme: .light)
+        let discovery = base.applyingAmbientMode(.discovery, colorScheme: .light)
+
+        // Discovery background should differ from base conversation background
+        let baseStart = Color(hex: 0xF8F5EE)
+        let discoveryStart = Color(hex: 0xFAF4E4)
+        #expect(!colorsMatch(discovery.palette.backgroundStart, baseStart))
+        #expect(colorsMatch(discovery.palette.backgroundStart, discoveryStart))
+
+        // Text colors should remain unchanged
+        #expect(colorsMatch(discovery.palette.textPrimary, base.palette.textPrimary))
+    }
+
+    @Test("Discovery ambient mode returns warmer dark palette")
+    func test_applyingAmbientMode_discovery_darkMode_returnsWarmerPalette() {
+        let base = themeFor(context: .conversation, colorScheme: .dark)
+        let discovery = base.applyingAmbientMode(.discovery, colorScheme: .dark)
+
+        // Discovery dark background should match the warm-shifted values
+        let discoveryStart = Color(hex: 0x1E1C16)
+        let discoveryEnd = Color(hex: 0x1A1812)
+        #expect(colorsMatch(discovery.palette.backgroundStart, discoveryStart))
+        #expect(colorsMatch(discovery.palette.backgroundEnd, discoveryEnd))
+
+        // Text colors should remain unchanged
+        #expect(colorsMatch(discovery.palette.textPrimary, base.palette.textPrimary))
+    }
+
+    @Test("Directive ambient mode returns unchanged palette (stub)")
+    func test_applyingAmbientMode_directive_returnsSelf() {
+        let base = themeFor(context: .conversation, colorScheme: .light)
+        let directive = base.applyingAmbientMode(.directive, colorScheme: .light)
+
+        #expect(colorsMatch(directive.palette.backgroundStart, base.palette.backgroundStart))
+        #expect(colorsMatch(directive.palette.backgroundEnd, base.palette.backgroundEnd))
+    }
+
     @Test("Theme includes typography, spacing, and corner radius")
     func themeComponentsPresent() {
         let theme = themeFor(context: .home, colorScheme: .light)

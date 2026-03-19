@@ -76,7 +76,7 @@ struct CoachingViewModelTests {
         mockChat.stubbedEvents = [
             .token(text: "Response "),
             .token(text: "text."),
-            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil)
         ]
 
         let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
@@ -101,7 +101,7 @@ struct CoachingViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Hi."),
-            .done(safetyLevel: "green", domainTags: [], mood: "warm", usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "warm", mode: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
         ]
 
         let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
@@ -180,6 +180,29 @@ struct CoachingViewModelTests {
 
         #expect(viewModel.messages.isEmpty)
         #expect(mockChat.lastMessages == nil)
+    }
+
+    @Test("Done event with mode updates session mode")
+    @MainActor
+    func test_sendMessage_whenDoneEventHasMode_updatesSessionMode() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Let's focus."),
+            .done(safetyLevel: "green", domainTags: [], mood: "focused", mode: "directive", usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil)
+        ]
+
+        let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
+        let _ = try await createSession(in: db)
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        #expect(viewModel.coachingMode == .discovery)
+
+        await viewModel.sendMessage("I want to set a goal")
+        try await Task.sleep(for: .milliseconds(500))
+
+        #expect(viewModel.coachingMode == .directive)
     }
 
     @Test("Cancel streaming stops the task")

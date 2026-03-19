@@ -21,6 +21,7 @@ func setupTestSections(t *testing.T) string {
 		"safety.md":            "Classify safety: green/yellow/orange/red.",
 		"mood.md":              "Select mood: welcoming/warm/focused/gentle.",
 		"tagging.md":           "Tag domains: career, finance, etc.",
+		"cultural.md":          "Cultural context.",
 		"context-injection.md": "Coach name: {{coach_name}}.",
 	}
 
@@ -41,8 +42,8 @@ func TestNewBuilder_LoadsSections(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	if len(b.sections) != 6 {
-		t.Errorf("expected 6 sections, got %d", len(b.sections))
+	if len(b.sections) != 7 {
+		t.Errorf("expected 7 sections, got %d", len(b.sections))
 	}
 
 	if b.contentHash == "" {
@@ -154,5 +155,33 @@ func TestBuilder_Build_UnknownModeDefaultsToDiscovery(t *testing.T) {
 
 	if !strings.Contains(prompt, "Discovery mode") {
 		t.Error("expected unknown mode to fall back to discovery")
+	}
+}
+
+func TestBuilder_Build_DiscoveryMode_IncludesDiscoverySection(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	prompt := b.Build("discovery", "Luna")
+
+	if !strings.Contains(prompt, "Discovery mode") {
+		t.Error("expected discovery section in discovery mode prompt")
+	}
+}
+
+func TestBuilder_Build_IncludesCulturalSection(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	prompt := b.Build("discovery", "Luna")
+
+	if !strings.Contains(prompt, "Cultural context") {
+		t.Error("expected cultural section in assembled prompt")
 	}
 }

@@ -89,6 +89,7 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 					"safetyLevel":   event.SafetyLevel,
 					"domainTags":    event.DomainTags,
 					"mood":          event.Mood,
+					"mode":          event.Mode,
 					"usage":         event.Usage,
 					"promptVersion": promptBuilder.ContentHash(),
 				})

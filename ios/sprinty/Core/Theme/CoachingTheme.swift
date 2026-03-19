@@ -32,8 +32,15 @@ struct CoachingTheme: Sendable {
         self // Stub — Story 7.1 fills in
     }
 
-    func applyingAmbientMode(_ mode: CoachingMode) -> CoachingTheme {
-        self // Stub — Story 2.x fills in
+    func applyingAmbientMode(_ mode: CoachingMode, colorScheme: ColorScheme = .light) -> CoachingTheme {
+        switch mode {
+        case .discovery:
+            let (start, end) = ColorPalette.discoveryBackgroundColors(for: colorScheme)
+            let shifted = palette.discoveryWarmShift(backgroundStart: start, backgroundEnd: end)
+            return CoachingTheme(palette: shifted, typography: typography, spacing: spacing, cornerRadius: cornerRadius)
+        case .directive:
+            return self // Stub — Story 2.2 fills in
+        }
     }
 }
 

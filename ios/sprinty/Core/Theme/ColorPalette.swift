@@ -193,3 +193,52 @@ extension ColorPalette {
         sendButton: Color(hex: 0x607252) // Adjusted from #4A5A3A for WCAG 3:1 contrast (AC9)
     )
 }
+
+// MARK: - Discovery Ambient Mode Shift
+
+extension ColorPalette {
+    /// Discovery background colors by color scheme.
+    /// Light: #FAF4E4 / #F2EBDA — warmer/golden shift from conversation base.
+    /// Dark: #1E1C16 / #1A1812 — warmer dark shift from conversation base.
+    static func discoveryBackgroundColors(for colorScheme: ColorScheme) -> (start: Color, end: Color) {
+        switch colorScheme {
+        case .dark:
+            return (Color(hex: 0x1E1C16), Color(hex: 0x1A1812))
+        default:
+            return (Color(hex: 0xFAF4E4), Color(hex: 0xF2EBDA))
+        }
+    }
+
+    /// Shifts background gradient toward warmer/golden tones for Discovery mode.
+    /// Only background gradient changes — all text colors remain unchanged.
+    /// Note: If safety override is active, ambient shifts should be suppressed (Story 6.2).
+    func discoveryWarmShift(backgroundStart newStart: Color, backgroundEnd newEnd: Color) -> ColorPalette {
+        ColorPalette(
+            backgroundStart: newStart,
+            backgroundEnd: newEnd,
+            textPrimary: textPrimary,
+            textSecondary: textSecondary,
+            avatarGlow: avatarGlow,
+            avatarGradientStart: avatarGradientStart,
+            avatarGradientEnd: avatarGradientEnd,
+            insightBackground: insightBackground,
+            sprintTrack: sprintTrack,
+            sprintProgressStart: sprintProgressStart,
+            sprintProgressEnd: sprintProgressEnd,
+            primaryActionStart: primaryActionStart,
+            primaryActionEnd: primaryActionEnd,
+            primaryActionText: primaryActionText,
+            coachDialogue: coachDialogue,
+            userDialogue: userDialogue,
+            userAccent: userAccent,
+            coachPortraitGradientStart: coachPortraitGradientStart,
+            coachPortraitGradientEnd: coachPortraitGradientEnd,
+            coachPortraitGlow: coachPortraitGlow,
+            coachNameText: coachNameText,
+            coachStatusText: coachStatusText,
+            dateSeparator: dateSeparator,
+            inputBorder: inputBorder,
+            sendButton: sendButton
+        )
+    }
+}

@@ -36,6 +36,9 @@
 
 generated: 2026-03-17
 last_updated: 2026-03-19
+# Story 2.1 code review completed: 2026-03-19
+# Story 2.1 dev started: 2026-03-19
+# Story 2.1 context created: 2026-03-19
 # Story 1.9 code review completed: 2026-03-19
 # Story 1.9 dev completed: 2026-03-19
 # Story 1.9 context created: 2026-03-19
@@ -65,8 +68,8 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: Coaching Intelligence & Modes
-  epic-2: backlog
-  2-1-discovery-mode-coaching: backlog
+  epic-2: in-progress
+  2-1-discovery-mode-coaching: done
   2-2-directive-mode-with-contingency-plans: backlog
   2-3-natural-mode-transitions: backlog
   2-4-challenger-capability: backlog

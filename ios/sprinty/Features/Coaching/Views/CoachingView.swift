@@ -7,6 +7,7 @@ struct CoachingView: View {
 
     private var conversationTheme: CoachingTheme {
         themeFor(context: .conversation, colorScheme: colorScheme, safetyLevel: .none, isPaused: false)
+            .applyingAmbientMode(viewModel.coachingMode, colorScheme: colorScheme)
     }
 
     var body: some View {
@@ -71,6 +72,10 @@ struct CoachingView: View {
             )
         }
         .environment(\.coachingTheme, conversationTheme)
+        .animation(
+            UIAccessibility.isReduceMotionEnabled ? nil : .easeInOut(duration: 0.4),
+            value: viewModel.coachingMode
+        )
         .task {
             viewModel.loadMessages()
         }
@@ -123,3 +128,52 @@ struct CoachingView: View {
         }
     }
 }
+
+// MARK: - Ambient Mode Previews
+
+#if DEBUG
+private struct AmbientModePreview: View {
+    let mode: CoachingMode
+    let colorScheme: ColorScheme
+
+    var body: some View {
+        let base = themeFor(context: .conversation, colorScheme: colorScheme)
+        let themed = base.applyingAmbientMode(mode, colorScheme: colorScheme)
+        VStack {
+            Text("\(mode.rawValue.capitalized) — \(colorScheme == .dark ? "Dark" : "Light")")
+                .font(.headline)
+                .foregroundStyle(themed.palette.textPrimary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            LinearGradient(
+                colors: [themed.palette.backgroundStart, themed.palette.backgroundEnd],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
+    }
+}
+
+#Preview("Discovery Ambient — Light") {
+    AmbientModePreview(mode: .discovery, colorScheme: .light)
+        .environment(\.colorScheme, .light)
+}
+
+#Preview("Discovery Ambient — Dark") {
+    AmbientModePreview(mode: .discovery, colorScheme: .dark)
+        .environment(\.colorScheme, .dark)
+}
+
+#Preview("Directive Ambient — Light (Stub)") {
+    AmbientModePreview(mode: .directive, colorScheme: .light)
+        .environment(\.colorScheme, .light)
+}
+
+#Preview("Directive Ambient — Dark (Stub)") {
+    AmbientModePreview(mode: .directive, colorScheme: .dark)
+        .environment(\.colorScheme, .dark)
+}
+#endif

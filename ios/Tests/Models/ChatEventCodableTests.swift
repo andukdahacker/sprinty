@@ -30,12 +30,14 @@ struct ChatEventCodableTests {
         #expect(events.count == 1)
         let chatEvent = try ChatEvent.from(sseEvent: events[0])
 
-        if case .done(let safetyLevel, let domainTags, let mood, let usage, _) = chatEvent {
+        if case .done(let safetyLevel, let domainTags, let mood, let mode, let usage, let promptVersion) = chatEvent {
             #expect(safetyLevel == "green")
             #expect(domainTags.isEmpty)
             #expect(mood == "welcoming")
+            #expect(mode == "discovery")
             #expect(usage.inputTokens == 50)
             #expect(usage.outputTokens == 12)
+            #expect(promptVersion == "abc123")
         } else {
             Issue.record("Expected done event")
         }
@@ -75,7 +77,7 @@ struct ChatEventCodableTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(_, let domainTags, _, _, _) = chatEvent {
+        if case .done(_, let domainTags, _, _, _, _) = chatEvent {
             #expect(domainTags.isEmpty)
         } else {
             Issue.record("Expected done event")
@@ -90,8 +92,38 @@ struct ChatEventCodableTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(_, _, let mood, _, _) = chatEvent {
+        if case .done(_, _, let mood, _, _, _) = chatEvent {
             #expect(mood == nil)
+        } else {
+            Issue.record("Expected done event")
+        }
+    }
+
+    @Test("Decodes done event and extracts mode field")
+    func test_parseSseEvent_withDoneEvent_extractsMode() throws {
+        let json = """
+        {"safetyLevel": "green", "domainTags": ["career"], "mood": "warm", "mode": "discovery", "usage": {"inputTokens": 10, "outputTokens": 5}, "promptVersion": "abc"}
+        """
+        let sseEvent = SSEEvent(type: "done", data: json)
+        let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
+
+        if case .done(_, _, _, let mode, _, _) = chatEvent {
+            #expect(mode == "discovery")
+        } else {
+            Issue.record("Expected done event")
+        }
+    }
+
+    @Test("Decodes done event with nil mode for backward compat")
+    func test_parseSseEvent_withDoneEvent_nilMode() throws {
+        let json = """
+        {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "usage": {"inputTokens": 10, "outputTokens": 5}}
+        """
+        let sseEvent = SSEEvent(type: "done", data: json)
+        let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
+
+        if case .done(_, _, _, let mode, _, _) = chatEvent {
+            #expect(mode == nil)
         } else {
             Issue.record("Expected done event")
         }

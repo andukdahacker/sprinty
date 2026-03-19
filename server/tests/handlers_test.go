@@ -37,6 +37,7 @@ func createTestPromptBuilder(t *testing.T) *prompts.Builder {
 		"safety.md":            "Safety classification.",
 		"mood.md":              "Mood selection.",
 		"tagging.md":           "Domain tagging.",
+		"cultural.md":          "Cultural.",
 		"context-injection.md": "Coach: {{coach_name}}.",
 	}
 	for name, content := range files {
@@ -68,6 +69,7 @@ func setupMuxWithBuilder(builder *prompts.Builder) *http.ServeMux {
 			"safety.md":            "Safety.",
 			"mood.md":              "Mood.",
 			"tagging.md":           "Tags.",
+			"cultural.md":          "Cultural.",
 			"context-injection.md": "Coach: {{coach_name}}.",
 		}
 		for name, content := range files {
@@ -445,7 +447,7 @@ func TestSSEDoneEventMatchesFixtureFormat(t *testing.T) {
 				t.Fatalf("fixture done data invalid JSON: %v", err)
 			}
 			// Verify expected fields from fixture
-			for _, field := range []string{"safetyLevel", "domainTags", "mood", "usage"} {
+			for _, field := range []string{"safetyLevel", "domainTags", "mood", "mode", "usage", "promptVersion"} {
 				if _, ok := doneData[field]; !ok {
 					t.Errorf("fixture done data missing field %q", field)
 				}
@@ -524,6 +526,9 @@ func TestChatSSEMatchesFixtureFormat(t *testing.T) {
 	}
 	if doneData["mood"] != "welcoming" {
 		t.Errorf("expected mood welcoming, got %v", doneData["mood"])
+	}
+	if _, ok := doneData["mode"]; !ok {
+		t.Error("missing mode in done event")
 	}
 }
 
@@ -669,5 +674,43 @@ func TestPromptVersionEndpoint(t *testing.T) {
 	json.NewDecoder(rec.Body).Decode(&body)
 	if body["version"] == "" {
 		t.Error("expected non-empty version hash")
+	}
+}
+
+// --- Story 2.1 Tests ---
+
+func TestChatHandler_DoneEvent_IncludesMode(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+
+	chatPayload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(chatPayload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	// Parse SSE events to find the done event
+	var doneData map[string]any
+	scanner := bufio.NewScanner(w.Body)
+	var currentType string
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "event: ") {
+			currentType = strings.TrimPrefix(line, "event: ")
+		} else if strings.HasPrefix(line, "data: ") && currentType == "done" {
+			data := strings.TrimPrefix(line, "data: ")
+			json.Unmarshal([]byte(data), &doneData)
+		}
+	}
+
+	if doneData == nil {
+		t.Fatal("no done event found in SSE output")
+	}
+	if doneData["mode"] != "discovery" {
+		t.Errorf("expected mode 'discovery', got %v", doneData["mode"])
 	}
 }

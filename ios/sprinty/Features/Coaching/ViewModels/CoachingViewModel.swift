@@ -11,6 +11,7 @@ final class CoachingViewModel {
     var coachExpression: CoachExpression = .welcoming
     var localError: AppError?
     var retryAfterSeconds: Int = 0
+    var coachingMode: CoachingMode = .discovery
 
     private let appState: AppState
     private let chatService: ChatServiceProtocol
@@ -36,6 +37,7 @@ final class CoachingViewModel {
         do {
             let session = try await getOrCreateSession()
             currentSession = session
+            coachingMode = session.mode
             let loaded = try await databaseManager.dbPool.read { db in
                 try Message.forSession(id: session.id).fetchAll(db)
             }
@@ -95,7 +97,7 @@ final class CoachingViewModel {
                         switch event {
                         case .token(let tokenText):
                             self.streamingText += tokenText
-                        case .done(let safetyLevel, _, let mood, _, let promptVersion):
+                        case .done(let safetyLevel, _, let mood, let mode, _, let promptVersion):
                             // Cache promptVersion from first done event per session
                             if let promptVersion, self.cachedPromptVersion == nil {
                                 self.cachedPromptVersion = promptVersion
@@ -124,6 +126,10 @@ final class CoachingViewModel {
 
                             if let level = SafetyLevel(rawValue: safetyLevel) {
                                 await self.updateSessionSafetyLevel(level)
+                            }
+
+                            if let mode, let newMode = CoachingMode(rawValue: mode), newMode != self.coachingMode {
+                                await self.updateSessionMode(newMode)
                             }
                         }
                     }
@@ -192,6 +198,21 @@ final class CoachingViewModel {
 
         currentSession = session
         return session
+    }
+
+    private func updateSessionMode(_ newMode: CoachingMode) async {
+        guard var session = currentSession else { return }
+        session.mode = newMode
+        let updatedSession = session
+        do {
+            try await databaseManager.dbPool.write { db in
+                try updatedSession.update(db)
+            }
+            currentSession = updatedSession
+            coachingMode = newMode
+        } catch {
+            handleError(error)
+        }
     }
 
     private func updateSessionSafetyLevel(_ level: SafetyLevel) async {

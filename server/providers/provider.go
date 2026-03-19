@@ -30,6 +30,7 @@ type ChatEvent struct {
 	SafetyLevel      string   `json:"safetyLevel,omitempty"`
 	DomainTags       []string `json:"domainTags,omitempty"`
 	Mood             string   `json:"mood,omitempty"`
+	Mode             string   `json:"mode,omitempty"`
 	MemoryReferenced bool     `json:"memoryReferenced,omitempty"`
 	Usage            *Usage   `json:"usage,omitempty"`
 }

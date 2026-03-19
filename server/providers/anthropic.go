@@ -170,6 +170,7 @@ func (p *AnthropicProvider) StreamChat(ctx context.Context, req ChatRequest) (<-
 					SafetyLevel:      result.SafetyLevel,
 					DomainTags:       result.DomainTags,
 					Mood:             result.Mood,
+					Mode:             req.Mode,
 					MemoryReferenced: result.MemoryReferenced,
 					Usage:            usage,
 				}:

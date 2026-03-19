@@ -2,7 +2,7 @@ import Foundation
 
 enum ChatEvent: Sendable {
     case token(text: String)
-    case done(safetyLevel: String, domainTags: [String], mood: String?, usage: ChatUsage, promptVersion: String?)
+    case done(safetyLevel: String, domainTags: [String], mood: String?, mode: String?, usage: ChatUsage, promptVersion: String?)
 }
 
 struct ChatUsage: Codable, Sendable {
@@ -26,6 +26,7 @@ extension ChatEvent {
                 safetyLevel: parsed.safetyLevel,
                 domainTags: parsed.domainTags,
                 mood: parsed.mood,
+                mode: parsed.mode,
                 usage: parsed.usage,
                 promptVersion: parsed.promptVersion
             )
@@ -48,6 +49,7 @@ private struct DoneEventData: Codable {
     let safetyLevel: String
     let domainTags: [String]
     let mood: String?
+    let mode: String?
     let usage: ChatUsage
     let promptVersion: String?
 }
