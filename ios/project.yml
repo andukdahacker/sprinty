@@ -26,6 +26,8 @@ packages:
   GRDB:
     url: https://github.com/groue/GRDB.swift.git
     from: "7.10.0"
+  SQLiteVecKit:
+    path: Packages/SQLiteVecKit
 
 targets:
   sprinty:
@@ -37,6 +39,10 @@ targets:
           - "**/*.xcconfig"
     resources:
       - path: sprinty/Resources/Assets.xcassets
+      - path: sprinty/Resources/MiniLM.mlpackage
+        optional: true
+      - path: sprinty/Resources/vocab.txt
+        optional: true
     settings:
       base:
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
@@ -51,7 +57,8 @@ targets:
     dependencies:
       - package: GRDB
         product: GRDB
-
+      - package: SQLiteVecKit
+        product: SQLiteVecKit
 
   sprintyTests:
     type: bundle.unit-test
@@ -66,6 +73,8 @@ targets:
       - target: sprinty
       - package: GRDB
         product: GRDB
+      - package: SQLiteVecKit
+        product: SQLiteVecKit
 
 schemes:
   Debug:

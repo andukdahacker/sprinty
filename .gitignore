@@ -15,3 +15,7 @@
 # OS files
 .DS_Store
 Thumbs.db
+
+# Core ML models (large binary — use scripts/convert_model.py to regenerate)
+*.mlpackage
+*.mlmodelc
