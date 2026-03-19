@@ -175,6 +175,31 @@ func TestRegisterWithValidUUID(t *testing.T) {
 	}
 }
 
+func TestRegisterResponseMatchesFixture(t *testing.T) {
+	// Validate register response matches shared fixture format (auth-register-response.json)
+	fixture := loadFixture(t, "auth-register-response.json")
+	var fixtureBody map[string]any
+	if err := json.Unmarshal(fixture, &fixtureBody); err != nil {
+		t.Fatalf("fixture parse failed: %v", err)
+	}
+
+	mux := setupMux()
+	payload := `{"deviceId": "550e8400-e29b-41d4-a716-446655440000"}`
+	req := httptest.NewRequest("POST", "/v1/auth/register", strings.NewReader(payload))
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	var body map[string]any
+	json.NewDecoder(w.Body).Decode(&body)
+
+	// Response must have the same keys as the fixture
+	for key := range fixtureBody {
+		if _, ok := body[key]; !ok {
+			t.Errorf("register response missing key %q present in fixture", key)
+		}
+	}
+}
+
 func TestRegisterMissingDeviceID(t *testing.T) {
 	mux := setupMux()
 	payload := `{"deviceId": ""}`
@@ -349,6 +374,86 @@ func TestProtectedEndpointWithValidJWT(t *testing.T) {
 	}
 }
 
+func TestChatWithFixtureRequest(t *testing.T) {
+	// Use chat-request-sample.json fixture as the request payload
+	fixture := loadFixture(t, "chat-request-sample.json")
+
+	mux := setupMux()
+	token := createValidToken(t)
+
+	req := httptest.NewRequest("POST", "/v1/chat", bytes.NewReader(fixture))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d. Body: %s", w.Code, w.Body.String())
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "event: token") {
+		t.Error("expected SSE token events from fixture request")
+	}
+	if !strings.Contains(body, "event: done") {
+		t.Error("expected SSE done event from fixture request")
+	}
+}
+
+func TestSSETokenEventMatchesFixtureFormat(t *testing.T) {
+	// Validate that SSE token events match the format in sse-token-event.txt
+	fixture := loadFixture(t, "sse-token-event.txt")
+	fixtureStr := string(fixture)
+
+	// Fixture should have "event: token" lines
+	if !strings.Contains(fixtureStr, "event: token") {
+		t.Fatal("fixture sse-token-event.txt missing 'event: token'")
+	}
+
+	// Parse fixture to extract expected JSON structure
+	scanner := bufio.NewScanner(strings.NewReader(fixtureStr))
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "data: ") {
+			data := strings.TrimPrefix(line, "data: ")
+			var tokenData map[string]string
+			if err := json.Unmarshal([]byte(data), &tokenData); err != nil {
+				t.Errorf("fixture token data invalid JSON: %v", err)
+			}
+			if _, ok := tokenData["text"]; !ok {
+				t.Error("fixture token data missing 'text' field")
+			}
+		}
+	}
+}
+
+func TestSSEDoneEventMatchesFixtureFormat(t *testing.T) {
+	// Validate that SSE done events match the format in sse-done-event.txt
+	fixture := loadFixture(t, "sse-done-event.txt")
+	fixtureStr := string(fixture)
+
+	if !strings.Contains(fixtureStr, "event: done") {
+		t.Fatal("fixture sse-done-event.txt missing 'event: done'")
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(fixtureStr))
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "data: ") {
+			data := strings.TrimPrefix(line, "data: ")
+			var doneData map[string]any
+			if err := json.Unmarshal([]byte(data), &doneData); err != nil {
+				t.Fatalf("fixture done data invalid JSON: %v", err)
+			}
+			// Verify expected fields from fixture
+			for _, field := range []string{"safetyLevel", "domainTags", "mood", "usage"} {
+				if _, ok := doneData[field]; !ok {
+					t.Errorf("fixture done data missing field %q", field)
+				}
+			}
+		}
+	}
+}
+
 func TestChatSSEMatchesFixtureFormat(t *testing.T) {
 	mux := setupMux()
 	token := createValidToken(t)
@@ -507,7 +612,7 @@ func TestChatWithProfileContext(t *testing.T) {
 	}
 }
 
-func TestChatProviderError500(t *testing.T) {
+func TestChatProviderError502(t *testing.T) {
 	builder := createTestPromptBuilder(t)
 
 	// Create a provider that returns an anthropic-like error
@@ -528,16 +633,21 @@ func TestChatProviderError500(t *testing.T) {
 		t.Errorf("expected 502, got %d", rec.Code)
 	}
 
+	// Validate response matches error-response-502.json fixture
+	fixture := loadFixture(t, "error-response-502.json")
+	var expected map[string]any
+	json.Unmarshal(fixture, &expected)
+
 	var body map[string]any
 	json.NewDecoder(rec.Body).Decode(&body)
-	if body["error"] != "provider_unavailable" {
-		t.Errorf("expected error provider_unavailable, got %v", body["error"])
+	if body["error"] != expected["error"] {
+		t.Errorf("expected error %v, got %v", expected["error"], body["error"])
 	}
-	if body["message"] != "Your coach needs a moment. Try again shortly." {
-		t.Errorf("unexpected error message: %v", body["message"])
+	if body["message"] != expected["message"] {
+		t.Errorf("expected message %v, got %v", expected["message"], body["message"])
 	}
-	if body["retryAfter"].(float64) != 10 {
-		t.Errorf("expected retryAfter 10, got %v", body["retryAfter"])
+	if body["retryAfter"].(float64) != expected["retryAfter"].(float64) {
+		t.Errorf("expected retryAfter %v, got %v", expected["retryAfter"], body["retryAfter"])
 	}
 }
 

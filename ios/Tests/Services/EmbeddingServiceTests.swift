@@ -33,7 +33,11 @@ struct EmbeddingServiceTests {
         #expect(tokenCount == 2)
     }
 
-    @Test("EmbeddingService generates 384-dim embeddings and semantic similarity works")
+    @Test(
+        "EmbeddingService generates 384-dim embeddings and semantic similarity works",
+        .enabled(if: ProcessInfo.processInfo.environment["CI"] == nil,
+                 "Core ML model not available in CI")
+    )
     func embeddingServiceFullPipeline() throws {
         let model = try EmbeddingTestHelpers.modelURL()
         let vocab = try EmbeddingTestHelpers.vocabURL()

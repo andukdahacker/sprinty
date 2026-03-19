@@ -35,7 +35,10 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-17
-last_updated: 2026-03-18
+last_updated: 2026-03-19
+# Story 1.8 code review completed: 2026-03-19
+# Story 1.8 dev started: 2026-03-19
+# Story 1.8 context created: 2026-03-19
 # Story 1.7 code review completed: 2026-03-18
 # Story 1.7 context created: 2026-03-18
 # Story 1.6 review completed: 2026-03-18
@@ -54,7 +57,7 @@ development_status:
   1-5-onboarding-flow: done
   1-6-real-ai-coaching-integration: done
   1-7-sqlite-vec-and-embedding-spike: done
-  1-8-ci-cd-pipeline-and-test-infrastructure: backlog
+  1-8-ci-cd-pipeline-and-test-infrastructure: done
   1-9-home-screen-foundation: backlog
   epic-1-retrospective: optional
 

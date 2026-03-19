@@ -91,11 +91,11 @@ struct AuthServiceTests {
         #expect(json?["deviceId"] as? String == "abc-123")
     }
 
-    @Test("AuthResponse decodes token correctly")
+    @Test("AuthResponse decodes from shared fixture")
     func authResponseFormat() throws {
-        let json = #"{"token":"my-jwt-token"}"#
-        let resp = try JSONDecoder().decode(AuthResponse.self, from: json.data(using: .utf8)!)
-        #expect(resp.token == "my-jwt-token")
+        let fixtureStr = try loadFixture("auth-register-response.json")
+        let resp = try JSONDecoder().decode(AuthResponse.self, from: Data(fixtureStr.utf8))
+        #expect(resp.token.isEmpty == false)
     }
 
     // MARK: - Mock Infrastructure
@@ -253,5 +253,20 @@ struct AuthServiceTests {
         #expect(throws: AppError.self) {
             _ = try authService.getToken()
         }
+    }
+
+    // MARK: - Helpers
+
+    private func loadFixture(_ filename: String) throws -> String {
+        let testFile = URL(fileURLWithPath: #filePath)
+        let fixtureURL = testFile
+            .deletingLastPathComponent() // Services/
+            .deletingLastPathComponent() // Tests/
+            .deletingLastPathComponent() // ios/
+            .deletingLastPathComponent() // project root
+            .appendingPathComponent("docs")
+            .appendingPathComponent("fixtures")
+            .appendingPathComponent(filename)
+        return try String(contentsOf: fixtureURL, encoding: .utf8)
     }
 }

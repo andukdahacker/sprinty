@@ -114,11 +114,51 @@ struct CodableRoundtripTests {
         #expect(json?["deviceId"] as? String == "test-uuid-123")
     }
 
-    @Test("AuthResponse decodes correctly")
-    func authResponseDecoding() throws {
-        let json = #"{"token":"jwt-token-here"}"#
-        let data = json.data(using: .utf8)!
-        let response = try decoder.decode(AuthResponse.self, from: data)
-        #expect(response.token == "jwt-token-here")
+    @Test("AuthResponse decodes from shared fixture")
+    func authResponseFromFixture() throws {
+        let fixtureData = try Data(loadFixture("auth-register-response.json").utf8)
+        let response = try decoder.decode(AuthResponse.self, from: fixtureData)
+        #expect(response.token.isEmpty == false)
+    }
+
+    @Test("ChatRequest decodes from shared fixture")
+    func chatRequestFromFixture() throws {
+        let fixtureData = try Data(loadFixture("chat-request-sample.json").utf8)
+        let json = try JSONSerialization.jsonObject(with: fixtureData) as? [String: Any]
+        #expect(json?["messages"] != nil)
+        #expect(json?["mode"] as? String == "discovery")
+        #expect(json?["promptVersion"] as? String == "1.0")
+    }
+
+    @Test("Error response 401 decodes from shared fixture")
+    func errorResponse401FromFixture() throws {
+        let fixtureStr = try loadFixture("error-response-401.json")
+        let json = try JSONSerialization.jsonObject(with: Data(fixtureStr.utf8)) as? [String: Any]
+        #expect(json?["error"] as? String == "invalid_jwt")
+        #expect(json?["message"] != nil)
+    }
+
+    @Test("Error response 502 decodes from shared fixture")
+    func errorResponse502FromFixture() throws {
+        let fixtureStr = try loadFixture("error-response-502.json")
+        let json = try JSONSerialization.jsonObject(with: Data(fixtureStr.utf8)) as? [String: Any]
+        #expect(json?["error"] as? String == "provider_unavailable")
+        #expect(json?["message"] as? String == "Your coach needs a moment. Try again shortly.")
+        #expect(json?["retryAfter"] as? Int == 10)
+    }
+
+    // MARK: - Helpers
+
+    private func loadFixture(_ filename: String) throws -> String {
+        let testFile = URL(fileURLWithPath: #filePath)
+        let fixtureURL = testFile
+            .deletingLastPathComponent() // Models/
+            .deletingLastPathComponent() // Tests/
+            .deletingLastPathComponent() // ios/
+            .deletingLastPathComponent() // project root
+            .appendingPathComponent("docs")
+            .appendingPathComponent("fixtures")
+            .appendingPathComponent(filename)
+        return try String(contentsOf: fixtureURL, encoding: .utf8)
     }
 }
