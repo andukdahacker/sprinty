@@ -2,9 +2,12 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AppState.self) private var appState
-    @State private var viewModel: CoachingViewModel?
+    @State private var homeViewModel: HomeViewModel?
+    @State private var coachingViewModel: CoachingViewModel?
     @State private var onboardingViewModel: OnboardingViewModel?
     @State private var onboardingChecked = false
+    @State private var showConversation = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         if appState.isAuthenticated, let databaseManager = appState.databaseManager {
@@ -14,17 +17,8 @@ struct RootView: View {
                 }
             } else if !appState.onboardingCompleted {
                 onboardingView(databaseManager: databaseManager)
-            } else if let viewModel {
-                CoachingView(viewModel: viewModel)
             } else {
-                Color.clear.onAppear {
-                    let chatService = makeChatService()
-                    viewModel = CoachingViewModel(
-                        appState: appState,
-                        chatService: chatService,
-                        databaseManager: databaseManager
-                    )
-                }
+                authenticatedView(databaseManager: databaseManager)
             }
         } else if appState.needsReauth {
             VStack(spacing: 16) {
@@ -49,6 +43,59 @@ struct RootView: View {
                     .font(.headline)
             }
         }
+    }
+
+    @ViewBuilder
+    private func authenticatedView(databaseManager: DatabaseManager) -> some View {
+        if let homeViewModel {
+            ZStack {
+                HomeView(viewModel: homeViewModel) {
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.45)) {
+                        ensureCoachingViewModel(databaseManager: databaseManager)
+                        showConversation = true
+                    }
+                }
+                .opacity(showConversation ? 0 : 1)
+                .offset(y: showConversation ? -20 : 0)
+
+                if showConversation, let coachingViewModel {
+                    CoachingView(viewModel: coachingViewModel)
+                        .transition(.opacity)
+                        .overlay(alignment: .topLeading) {
+                            Button {
+                                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) {
+                                    showConversation = false
+                                }
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                    .frame(width: 44, height: 44)
+                            }
+                            .padding(.leading, 8)
+                            .padding(.top, 4)
+                            .accessibilityLabel("Back to home")
+                        }
+                }
+            }
+        } else {
+            Color.clear.onAppear {
+                homeViewModel = HomeViewModel(
+                    appState: appState,
+                    databaseManager: databaseManager
+                )
+            }
+        }
+    }
+
+    private func ensureCoachingViewModel(databaseManager: DatabaseManager) {
+        guard coachingViewModel == nil else { return }
+        let chatService = makeChatService()
+        coachingViewModel = CoachingViewModel(
+            appState: appState,
+            chatService: chatService,
+            databaseManager: databaseManager
+        )
     }
 
     private func checkOnboardingState(databaseManager: DatabaseManager) async {

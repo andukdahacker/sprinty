@@ -36,6 +36,9 @@
 
 generated: 2026-03-17
 last_updated: 2026-03-19
+# Story 1.9 code review completed: 2026-03-19
+# Story 1.9 dev completed: 2026-03-19
+# Story 1.9 context created: 2026-03-19
 # Story 1.8 code review completed: 2026-03-19
 # Story 1.8 dev started: 2026-03-19
 # Story 1.8 context created: 2026-03-19
@@ -58,7 +61,7 @@ development_status:
   1-6-real-ai-coaching-integration: done
   1-7-sqlite-vec-and-embedding-spike: done
   1-8-ci-cd-pipeline-and-test-infrastructure: done
-  1-9-home-screen-foundation: backlog
+  1-9-home-screen-foundation: done
   epic-1-retrospective: optional
 
   # Epic 2: Coaching Intelligence & Modes
