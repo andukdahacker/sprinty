@@ -81,13 +81,42 @@ struct ThemeForTests {
         #expect(colorsMatch(discovery.palette.textPrimary, base.palette.textPrimary))
     }
 
-    @Test("Directive ambient mode returns unchanged palette (stub)")
-    func test_applyingAmbientMode_directive_returnsSelf() {
+    @Test("Directive ambient mode returns cooler light palette")
+    func test_applyingAmbientMode_directive_returnsCoolerPalette() {
         let base = themeFor(context: .conversation, colorScheme: .light)
         let directive = base.applyingAmbientMode(.directive, colorScheme: .light)
 
-        #expect(colorsMatch(directive.palette.backgroundStart, base.palette.backgroundStart))
-        #expect(colorsMatch(directive.palette.backgroundEnd, base.palette.backgroundEnd))
+        // Directive background should differ from base conversation background (cooler, not warmer)
+        let baseStart = Color(hex: 0xF8F5EE)
+        let directiveStart = Color(hex: 0xF2F5F8)
+        #expect(!colorsMatch(directive.palette.backgroundStart, baseStart))
+        #expect(colorsMatch(directive.palette.backgroundStart, directiveStart))
+    }
+
+    @Test("Directive ambient mode returns cooler dark palette")
+    func test_applyingAmbientMode_directive_darkMode_returnsCoolerPalette() {
+        let base = themeFor(context: .conversation, colorScheme: .dark)
+        let directive = base.applyingAmbientMode(.directive, colorScheme: .dark)
+
+        // Directive dark background should match the cool-shifted values
+        let directiveStart = Color(hex: 0x181C1E)
+        let directiveEnd = Color(hex: 0x14181A)
+        #expect(colorsMatch(directive.palette.backgroundStart, directiveStart))
+        #expect(colorsMatch(directive.palette.backgroundEnd, directiveEnd))
+
+        // Text colors should remain unchanged
+        #expect(colorsMatch(directive.palette.textPrimary, base.palette.textPrimary))
+    }
+
+    @Test("Directive ambient mode preserves text colors")
+    func test_applyingAmbientMode_directive_textColorsUnchanged() {
+        let base = themeFor(context: .conversation, colorScheme: .light)
+        let directive = base.applyingAmbientMode(.directive, colorScheme: .light)
+
+        #expect(colorsMatch(directive.palette.textPrimary, base.palette.textPrimary))
+        #expect(colorsMatch(directive.palette.textSecondary, base.palette.textSecondary))
+        #expect(colorsMatch(directive.palette.coachDialogue, base.palette.coachDialogue))
+        #expect(colorsMatch(directive.palette.userDialogue, base.palette.userDialogue))
     }
 
     @Test("Theme includes typography, spacing, and corner radius")

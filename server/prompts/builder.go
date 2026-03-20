@@ -26,6 +26,7 @@ func NewBuilder(sectionsPath string) (*Builder, error) {
 	sectionFiles := []string{
 		"base-persona.md",
 		"mode-discovery.md",
+		"mode-directive.md",
 		"safety.md",
 		"mood.md",
 		"tagging.md",
@@ -75,7 +76,11 @@ func (b *Builder) Build(mode string, coachName string) string {
 			prompt.WriteString(s)
 			prompt.WriteString("\n\n")
 		}
-	// Future modes (directive, etc.) will be added here
+	case "directive":
+		if s, ok := b.sections["mode-directive"]; ok {
+			prompt.WriteString(s)
+			prompt.WriteString("\n\n")
+		}
 	default:
 		// Default to discovery mode
 		if s, ok := b.sections["mode-discovery"]; ok {

@@ -167,12 +167,12 @@ private struct AmbientModePreview: View {
         .environment(\.colorScheme, .dark)
 }
 
-#Preview("Directive Ambient — Light (Stub)") {
+#Preview("Directive Ambient — Light") {
     AmbientModePreview(mode: .directive, colorScheme: .light)
         .environment(\.colorScheme, .light)
 }
 
-#Preview("Directive Ambient — Dark (Stub)") {
+#Preview("Directive Ambient — Dark") {
     AmbientModePreview(mode: .directive, colorScheme: .dark)
         .environment(\.colorScheme, .dark)
 }

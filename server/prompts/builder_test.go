@@ -18,6 +18,7 @@ func setupTestSections(t *testing.T) string {
 	files := map[string]string{
 		"base-persona.md":      "You are {{coach_name}}, a coach.",
 		"mode-discovery.md":    "Discovery mode: ask probing questions.",
+		"mode-directive.md":    "Directive mode: provide confident action steps.",
 		"safety.md":            "Classify safety: green/yellow/orange/red.",
 		"mood.md":              "Select mood: welcoming/warm/focused/gentle.",
 		"tagging.md":           "Tag domains: career, finance, etc.",
@@ -42,8 +43,8 @@ func TestNewBuilder_LoadsSections(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	if len(b.sections) != 7 {
-		t.Errorf("expected 7 sections, got %d", len(b.sections))
+	if len(b.sections) != 8 {
+		t.Errorf("expected 8 sections, got %d", len(b.sections))
 	}
 
 	if b.contentHash == "" {
@@ -169,6 +170,43 @@ func TestBuilder_Build_DiscoveryMode_IncludesDiscoverySection(t *testing.T) {
 
 	if !strings.Contains(prompt, "Discovery mode") {
 		t.Error("expected discovery section in discovery mode prompt")
+	}
+}
+
+func TestBuilder_Build_DirectiveMode(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	prompt := b.Build("directive", "Luna")
+
+	if !strings.Contains(prompt, "Directive mode") {
+		t.Error("expected directive mode section in directive mode prompt")
+	}
+	if !strings.Contains(prompt, "You are Luna, a coach.") {
+		t.Error("expected base persona with coach name injected")
+	}
+	if !strings.Contains(prompt, "Classify safety") {
+		t.Error("expected safety section")
+	}
+}
+
+func TestBuilder_Build_DirectiveMode_ExcludesDiscovery(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	prompt := b.Build("directive", "Luna")
+
+	if strings.Contains(prompt, "Discovery mode") {
+		t.Error("expected discovery section to be absent in directive mode")
+	}
+	if !strings.Contains(prompt, "Directive mode") {
+		t.Error("expected directive section present in directive mode")
 	}
 }
 

@@ -35,7 +35,9 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-17
-last_updated: 2026-03-19
+last_updated: 2026-03-20
+# Story 2.2 dev started: 2026-03-20
+# Story 2.2 context created: 2026-03-20
 # Story 2.1 code review completed: 2026-03-19
 # Story 2.1 dev started: 2026-03-19
 # Story 2.1 context created: 2026-03-19
@@ -70,7 +72,7 @@ development_status:
   # Epic 2: Coaching Intelligence & Modes
   epic-2: in-progress
   2-1-discovery-mode-coaching: done
-  2-2-directive-mode-with-contingency-plans: backlog
+  2-2-directive-mode-with-contingency-plans: done
   2-3-natural-mode-transitions: backlog
   2-4-challenger-capability: backlog
   2-5-adaptive-coaching-tone: backlog

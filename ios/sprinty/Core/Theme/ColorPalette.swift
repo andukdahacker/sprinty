@@ -242,3 +242,53 @@ extension ColorPalette {
         )
     }
 }
+
+// MARK: - Directive Ambient Mode Shift
+
+extension ColorPalette {
+    /// Directive background colors by color scheme.
+    /// Light: #F2F5F8 / #E8ECF0 — cooler/blue-gray shift from conversation base.
+    /// Dark: #181C1E / #14181A — cooler dark shift from conversation base.
+    /// Note: If safety override is active, ambient shifts should be suppressed (Story 6.2).
+    static func directiveBackgroundColors(for colorScheme: ColorScheme) -> (start: Color, end: Color) {
+        switch colorScheme {
+        case .dark:
+            return (Color(hex: 0x181C1E), Color(hex: 0x14181A))
+        default:
+            return (Color(hex: 0xF2F5F8), Color(hex: 0xE8ECF0))
+        }
+    }
+
+    /// Shifts background gradient toward cooler/focused tones for Directive mode.
+    /// Only background gradient changes — all text colors remain unchanged.
+    /// Note: If safety override is active, ambient shifts should be suppressed (Story 6.2).
+    func directiveCoolShift(backgroundStart newStart: Color, backgroundEnd newEnd: Color) -> ColorPalette {
+        ColorPalette(
+            backgroundStart: newStart,
+            backgroundEnd: newEnd,
+            textPrimary: textPrimary,
+            textSecondary: textSecondary,
+            avatarGlow: avatarGlow,
+            avatarGradientStart: avatarGradientStart,
+            avatarGradientEnd: avatarGradientEnd,
+            insightBackground: insightBackground,
+            sprintTrack: sprintTrack,
+            sprintProgressStart: sprintProgressStart,
+            sprintProgressEnd: sprintProgressEnd,
+            primaryActionStart: primaryActionStart,
+            primaryActionEnd: primaryActionEnd,
+            primaryActionText: primaryActionText,
+            coachDialogue: coachDialogue,
+            userDialogue: userDialogue,
+            userAccent: userAccent,
+            coachPortraitGradientStart: coachPortraitGradientStart,
+            coachPortraitGradientEnd: coachPortraitGradientEnd,
+            coachPortraitGlow: coachPortraitGlow,
+            coachNameText: coachNameText,
+            coachStatusText: coachStatusText,
+            dateSeparator: dateSeparator,
+            inputBorder: inputBorder,
+            sendButton: sendButton
+        )
+    }
+}

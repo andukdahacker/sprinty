@@ -39,7 +39,9 @@ struct CoachingTheme: Sendable {
             let shifted = palette.discoveryWarmShift(backgroundStart: start, backgroundEnd: end)
             return CoachingTheme(palette: shifted, typography: typography, spacing: spacing, cornerRadius: cornerRadius)
         case .directive:
-            return self // Stub — Story 2.2 fills in
+            let (start, end) = ColorPalette.directiveBackgroundColors(for: colorScheme)
+            let shifted = palette.directiveCoolShift(backgroundStart: start, backgroundEnd: end)
+            return CoachingTheme(palette: shifted, typography: typography, spacing: spacing, cornerRadius: cornerRadius)
         }
     }
 }

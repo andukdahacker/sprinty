@@ -34,6 +34,7 @@ func createTestPromptBuilder(t *testing.T) *prompts.Builder {
 	files := map[string]string{
 		"base-persona.md":      "You are {{coach_name}}, a coach.",
 		"mode-discovery.md":    "Discovery mode.",
+		"mode-directive.md":    "Directive.",
 		"safety.md":            "Safety classification.",
 		"mood.md":              "Mood selection.",
 		"tagging.md":           "Domain tagging.",
@@ -66,6 +67,7 @@ func setupMuxWithBuilder(builder *prompts.Builder) *http.ServeMux {
 		files := map[string]string{
 			"base-persona.md":      "You are {{coach_name}}, a coach.",
 			"mode-discovery.md":    "Discovery mode.",
+			"mode-directive.md":    "Directive.",
 			"safety.md":            "Safety.",
 			"mood.md":              "Mood.",
 			"tagging.md":           "Tags.",
