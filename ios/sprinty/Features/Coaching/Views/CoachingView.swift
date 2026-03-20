@@ -86,6 +86,8 @@ struct CoachingView: View {
         )
         .task {
             viewModel.loadMessages()
+            await viewModel.retryMissingSummaries()
+            await viewModel.retryMissingEmbeddings()
         }
         .onDisappear {
             viewModel.cancelStreaming()

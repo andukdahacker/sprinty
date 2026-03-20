@@ -19,13 +19,14 @@ struct CoachingViewModelTests {
     @MainActor
     private func makeViewModel(
         chatService: MockChatService = MockChatService(),
-        dbManager: DatabaseManager? = nil
+        dbManager: DatabaseManager? = nil,
+        embeddingPipeline: MockEmbeddingPipeline? = nil
     ) async throws -> (CoachingViewModel, MockChatService, DatabaseManager, AppState) {
         let db = try dbManager ?? makeTestDB()
         let appState = AppState()
         appState.isAuthenticated = true
         appState.databaseManager = db
-        let viewModel = CoachingViewModel(appState: appState, chatService: chatService, databaseManager: db)
+        let viewModel = CoachingViewModel(appState: appState, chatService: chatService, databaseManager: db, embeddingPipeline: embeddingPipeline)
         return (viewModel, chatService, db, appState)
     }
 
@@ -487,6 +488,95 @@ struct CoachingViewModelTests {
         #expect(summaries.count == 1)
         #expect(summaries[0].summary == "Retry summary.")
         #expect(mockChat.summarizeCallCount == 1)
+    }
+
+    // MARK: - Story 3.2 — Embedding Pipeline Integration
+
+    @Test("endSession triggers embedding pipeline after summary generation")
+    @MainActor
+    func test_endSession_callsEmbeddingPipeline() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Response."),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+        ]
+        mockChat.stubbedSummaryResponse = SummaryResponse(
+            summary: "Explored career stress.",
+            keyMoments: ["identified pattern"],
+            domainTags: ["career"],
+            emotionalMarkers: nil,
+            keyDecisions: nil
+        )
+
+        let mockPipeline = MockEmbeddingPipeline()
+        let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat, embeddingPipeline: mockPipeline)
+        let _ = try await createSession(in: db)
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        await viewModel.sendMessage("I'm stressed")
+        try await Task.sleep(for: .milliseconds(500))
+
+        await viewModel.endSession()
+        try await Task.sleep(for: .milliseconds(800))
+
+        #expect(mockPipeline.embedCallCount == 1)
+        #expect(mockPipeline.lastEmbedSummary?.summary == "Explored career stress.")
+        #expect(mockPipeline.lastEmbedRowid != nil)
+    }
+
+    @Test("endSession with embedding failure still persists summary")
+    @MainActor
+    func test_endSession_embeddingFailure_summaryStillPersisted() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Response."),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+        ]
+        mockChat.stubbedSummaryResponse = SummaryResponse(
+            summary: "Career chat.",
+            keyMoments: ["moment"],
+            domainTags: ["career"],
+            emotionalMarkers: nil,
+            keyDecisions: nil
+        )
+
+        let mockPipeline = MockEmbeddingPipeline()
+        mockPipeline.stubbedEmbedError = EmbeddingServiceError.invalidOutput
+        let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat, embeddingPipeline: mockPipeline)
+        let session = try await createSession(in: db)
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        await viewModel.sendMessage("Hello")
+        try await Task.sleep(for: .milliseconds(500))
+
+        await viewModel.endSession()
+        try await Task.sleep(for: .milliseconds(800))
+
+        // Summary should still be persisted despite embedding failure
+        let summaries = try await db.dbPool.read { dbConn in
+            try ConversationSummary.forSession(id: session.id).fetchAll(dbConn)
+        }
+        #expect(summaries.count == 1)
+        #expect(summaries[0].summary == "Career chat.")
+        #expect(summaries[0].embedding == nil)
+
+        // Embedding was attempted
+        #expect(mockPipeline.embedCallCount == 1)
+    }
+
+    @Test("retryMissingEmbeddings delegates to embedding pipeline")
+    @MainActor
+    func test_retryMissingEmbeddings_delegatesToPipeline() async throws {
+        let mockPipeline = MockEmbeddingPipeline()
+        let (viewModel, _, _, _) = try await makeViewModel(embeddingPipeline: mockPipeline)
+
+        await viewModel.retryMissingEmbeddings()
+
+        #expect(mockPipeline.retryCallCount == 1)
     }
 
     @Test("getOrCreateSession creates new session after previous was ended")

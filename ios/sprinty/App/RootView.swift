@@ -1,4 +1,5 @@
 import SwiftUI
+import OSLog
 
 struct RootView: View {
     @Environment(AppState.self) private var appState
@@ -91,11 +92,46 @@ struct RootView: View {
     private func ensureCoachingViewModel(databaseManager: DatabaseManager) {
         guard coachingViewModel == nil else { return }
         let chatService = makeChatService()
+        let embeddingPipeline = makeEmbeddingPipeline(databaseManager: databaseManager)
         coachingViewModel = CoachingViewModel(
             appState: appState,
             chatService: chatService,
-            databaseManager: databaseManager
+            databaseManager: databaseManager,
+            embeddingPipeline: embeddingPipeline
         )
+    }
+
+    private func makeEmbeddingPipeline(databaseManager: DatabaseManager) -> EmbeddingPipelineProtocol? {
+        let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "sprinty", category: "memory")
+
+        guard let modelURL = Bundle.main.url(forResource: "MiniLM", withExtension: "mlmodelc") ?? Bundle.main.url(forResource: "MiniLM", withExtension: "mlpackage"),
+              let vocabURL = Bundle.main.url(forResource: "vocab", withExtension: "txt")
+        else {
+            logger.warning("Core ML model or vocab not found — embedding pipeline disabled")
+            return nil
+        }
+
+        do {
+            let embeddingService = try EmbeddingService(modelURL: modelURL, vocabURL: vocabURL)
+
+            guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.ducdo.sprinty") else {
+                logger.warning("App Group container not available — embedding pipeline disabled")
+                return nil
+            }
+
+            let vectorDBPath = containerURL.appendingPathComponent("sprinty-vectors.sqlite").path
+            let vectorSearch = try VectorSearch(path: vectorDBPath)
+            try vectorSearch.createTable()
+
+            return EmbeddingPipeline(
+                embeddingService: embeddingService,
+                vectorSearch: vectorSearch,
+                databaseManager: databaseManager
+            )
+        } catch {
+            logger.error("Failed to initialize embedding pipeline: \(error)")
+            return nil
+        }
     }
 
     private func checkOnboardingState(databaseManager: DatabaseManager) async {

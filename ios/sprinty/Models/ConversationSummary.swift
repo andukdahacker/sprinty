@@ -55,6 +55,25 @@ extension ConversationSummary {
     }
 }
 
+// MARK: - Embedding Helpers
+
+extension ConversationSummary {
+    var decodedEmbedding: [Float]? {
+        guard let embedding else { return nil }
+        let count = embedding.count / MemoryLayout<Float>.size
+        guard count > 0 else { return nil }
+        return embedding.withUnsafeBytes { buffer in
+            Array(buffer.bindMemory(to: Float.self))
+        }
+    }
+
+    static func encodeEmbedding(_ floats: [Float]) -> Data {
+        floats.withUnsafeBufferPointer { buffer in
+            Data(buffer: buffer)
+        }
+    }
+}
+
 // MARK: - Query Extensions
 
 extension ConversationSummary {
@@ -71,5 +90,9 @@ extension ConversationSummary {
             .replacingOccurrences(of: "%", with: "\\%")
             .replacingOccurrences(of: "_", with: "\\_")
         return filter(Column("domainTags").like("%\"\(escaped)\"%"))
+    }
+
+    static func withoutEmbedding() -> QueryInterfaceRequest<ConversationSummary> {
+        filter(Column("embedding") == nil)
     }
 }

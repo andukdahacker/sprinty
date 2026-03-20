@@ -36,6 +36,9 @@
 
 generated: 2026-03-17
 last_updated: 2026-03-20
+# Story 3.2 code review completed: 2026-03-20
+# Story 3.2 dev started: 2026-03-20
+# Story 3.2 context created: 2026-03-20
 # Story 3.1 dev started: 2026-03-20
 # Story 3.1 context created: 2026-03-20
 # Story 2.5 code review completed: 2026-03-20
@@ -90,7 +93,7 @@ development_status:
   # Epic 3: Memory, Continuity & Understanding
   epic-3: in-progress
   3-1-conversation-summaries-and-key-moments: done
-  3-2-embedding-pipeline-and-vector-storage: backlog
+  3-2-embedding-pipeline-and-vector-storage: done
   3-3-user-profile-and-domain-state: backlog
   3-4-rag-powered-contextual-coaching: backlog
   3-5-conversation-history-browsing: backlog

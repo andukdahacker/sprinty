@@ -25,10 +25,13 @@ final class CoachingViewModel {
     private var retryAfterTask: Task<Void, Never>?
     private var cachedPromptVersion: String?
 
-    init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager) {
+    private let embeddingPipeline: EmbeddingPipelineProtocol?
+
+    init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager, embeddingPipeline: EmbeddingPipelineProtocol? = nil) {
         self.appState = appState
         self.chatService = chatService
         self.databaseManager = databaseManager
+        self.embeddingPipeline = embeddingPipeline
     }
 
     func loadMessages() {
@@ -220,12 +223,26 @@ final class CoachingViewModel {
                 createdAt: Date()
             )
 
-            try await databaseManager.dbPool.write { db in
+            let rowid = try await databaseManager.dbPool.write { db in
                 try summary.insert(db)
+                return db.lastInsertedRowID
+            }
+
+            if let embeddingPipeline {
+                do {
+                    try await embeddingPipeline.embed(summary: summary, rowid: rowid)
+                } catch {
+                    Logger(subsystem: Bundle.main.bundleIdentifier ?? "sprinty", category: "memory")
+                        .error("Embedding failed for summary \(summary.id): \(error)")
+                }
             }
         } catch {
             Logger(subsystem: Bundle.main.bundleIdentifier ?? "sprinty", category: "memory").error("Summary generation failed for session \(sessionId): \(error)")
         }
+    }
+
+    func retryMissingEmbeddings() async {
+        await embeddingPipeline?.retryMissingEmbeddings()
     }
 
     func retryMissingSummaries() async {
