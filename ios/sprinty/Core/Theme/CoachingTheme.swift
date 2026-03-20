@@ -32,6 +32,12 @@ struct CoachingTheme: Sendable {
         self // Stub — Story 7.1 fills in
     }
 
+    func applyingChallengerShift(colorScheme: ColorScheme) -> CoachingTheme {
+        let (start, end) = ColorPalette.challengerBackgroundColors(for: colorScheme)
+        let shifted = palette.challengerGroundedShift(backgroundStart: start, backgroundEnd: end)
+        return CoachingTheme(palette: shifted, typography: typography, spacing: spacing, cornerRadius: cornerRadius)
+    }
+
     func applyingAmbientMode(_ mode: CoachingMode, colorScheme: ColorScheme = .light) -> CoachingTheme {
         switch mode {
         case .discovery:

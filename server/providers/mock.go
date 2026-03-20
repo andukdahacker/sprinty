@@ -3,7 +3,8 @@ package providers
 import "context"
 
 type MockProvider struct {
-	StubbedMode string
+	StubbedMode           string
+	StubbedChallengerUsed bool
 }
 
 func NewMockProvider() *MockProvider {
@@ -34,12 +35,13 @@ func (m *MockProvider) StreamChat(ctx context.Context, req ChatRequest) (<-chan 
 		case <-ctx.Done():
 			return
 		case ch <- ChatEvent{
-			Type:        "done",
-			SafetyLevel: "green",
-			DomainTags:  []string{},
-			Mood:        "welcoming",
-			Mode:        func() string { if m.StubbedMode != "" { return m.StubbedMode }; return req.Mode }(),
-			Usage:       &Usage{InputTokens: 50, OutputTokens: 12},
+			Type:           "done",
+			SafetyLevel:    "green",
+			DomainTags:     []string{},
+			Mood:           "welcoming",
+			Mode:           func() string { if m.StubbedMode != "" { return m.StubbedMode }; return req.Mode }(),
+			ChallengerUsed: m.StubbedChallengerUsed,
+			Usage:          &Usage{InputTokens: 50, OutputTokens: 12},
 		}:
 		}
 	}()

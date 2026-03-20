@@ -6,8 +6,12 @@ struct CoachingView: View {
     @State private var inputText = ""
 
     private var conversationTheme: CoachingTheme {
-        themeFor(context: .conversation, colorScheme: colorScheme, safetyLevel: .none, isPaused: false)
+        var theme = themeFor(context: .conversation, colorScheme: colorScheme, safetyLevel: .none, isPaused: false)
             .applyingAmbientMode(viewModel.coachingMode, colorScheme: colorScheme)
+        if viewModel.challengerActive {
+            theme = theme.applyingChallengerShift(colorScheme: colorScheme)
+        }
+        return theme
     }
 
     var body: some View {
@@ -75,6 +79,10 @@ struct CoachingView: View {
         .animation(
             UIAccessibility.isReduceMotionEnabled ? nil : .easeInOut(duration: 0.4),
             value: viewModel.coachingMode
+        )
+        .animation(
+            UIAccessibility.isReduceMotionEnabled ? nil : .easeInOut(duration: 0.4),
+            value: viewModel.challengerActive
         )
         .task {
             viewModel.loadMessages()
@@ -174,6 +182,42 @@ private struct AmbientModePreview: View {
 
 #Preview("Directive Ambient — Dark") {
     AmbientModePreview(mode: .directive, colorScheme: .dark)
+        .environment(\.colorScheme, .dark)
+}
+
+private struct ChallengerAmbientPreview: View {
+    let mode: CoachingMode
+    let colorScheme: ColorScheme
+
+    var body: some View {
+        let base = themeFor(context: .conversation, colorScheme: colorScheme)
+        let themed = base.applyingAmbientMode(mode, colorScheme: colorScheme)
+            .applyingChallengerShift(colorScheme: colorScheme)
+        VStack {
+            Text("Challenger + \(mode.rawValue.capitalized) — \(colorScheme == .dark ? "Dark" : "Light")")
+                .font(.headline)
+                .foregroundStyle(themed.palette.textPrimary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            LinearGradient(
+                colors: [themed.palette.backgroundStart, themed.palette.backgroundEnd],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
+    }
+}
+
+#Preview("Challenger Ambient — Light") {
+    ChallengerAmbientPreview(mode: .discovery, colorScheme: .light)
+        .environment(\.colorScheme, .light)
+}
+
+#Preview("Challenger Ambient — Dark") {
+    ChallengerAmbientPreview(mode: .discovery, colorScheme: .dark)
         .environment(\.colorScheme, .dark)
 }
 #endif

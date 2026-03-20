@@ -86,12 +86,13 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 			case "done":
 				eventType = "done"
 				data, _ = json.Marshal(map[string]any{
-					"safetyLevel":   event.SafetyLevel,
-					"domainTags":    event.DomainTags,
-					"mood":          event.Mood,
-					"mode":          event.Mode,
-					"usage":         event.Usage,
-					"promptVersion": promptBuilder.ContentHash(),
+					"safetyLevel":    event.SafetyLevel,
+					"domainTags":     event.DomainTags,
+					"mood":           event.Mood,
+					"mode":           event.Mode,
+					"challengerUsed": event.ChallengerUsed,
+					"usage":          event.Usage,
+					"promptVersion":  promptBuilder.ContentHash(),
 				})
 			default:
 				continue

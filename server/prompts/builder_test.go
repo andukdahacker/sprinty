@@ -25,6 +25,7 @@ func setupTestSections(t *testing.T) string {
 		"cultural.md":          "Cultural context.",
 		"context-injection.md": "Coach name: {{coach_name}}.",
 		"mode-transitions.md": "Mode transitions: analyze user intent.",
+		"challenger.md":       "Challenger capability: push back constructively.",
 	}
 
 	for name, content := range files {
@@ -44,8 +45,8 @@ func TestNewBuilder_LoadsSections(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	if len(b.sections) != 9 {
-		t.Errorf("expected 9 sections, got %d", len(b.sections))
+	if len(b.sections) != 10 {
+		t.Errorf("expected 10 sections, got %d", len(b.sections))
 	}
 
 	if b.contentHash == "" {
@@ -222,6 +223,21 @@ func TestBuilder_Build_IncludesModeTransitions(t *testing.T) {
 		prompt := b.Build(mode, "Luna")
 		if !strings.Contains(prompt, "Mode transitions") {
 			t.Errorf("expected mode-transitions section in %s mode prompt", mode)
+		}
+	}
+}
+
+func TestBuilder_Build_IncludesChallenger(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	for _, mode := range []string{"discovery", "directive", "unknown"} {
+		prompt := b.Build(mode, "Luna")
+		if !strings.Contains(prompt, "Challenger capability") {
+			t.Errorf("expected challenger section in %s mode prompt", mode)
 		}
 	}
 }

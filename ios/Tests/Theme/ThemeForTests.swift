@@ -119,6 +119,39 @@ struct ThemeForTests {
         #expect(colorsMatch(directive.palette.userDialogue, base.palette.userDialogue))
     }
 
+    @Test("Challenger ambient shift produces different background from base conversation")
+    func test_applyingChallengerShift_producesDistinctBackground() {
+        let base = themeFor(context: .conversation, colorScheme: .light)
+        let discovery = base.applyingAmbientMode(.discovery, colorScheme: .light)
+        let challenged = discovery.applyingChallengerShift(colorScheme: .light)
+
+        // Challenger background should differ from both base and discovery backgrounds
+        let baseStart = Color(hex: 0xF8F5EE)
+        let challengerStart = Color(hex: 0xEDE8E0)
+        let challengerEnd = Color(hex: 0xE4DED4)
+        #expect(!colorsMatch(challenged.palette.backgroundStart, baseStart))
+        #expect(colorsMatch(challenged.palette.backgroundStart, challengerStart))
+        #expect(colorsMatch(challenged.palette.backgroundEnd, challengerEnd))
+
+        // Text colors should remain unchanged
+        #expect(colorsMatch(challenged.palette.textPrimary, base.palette.textPrimary))
+    }
+
+    @Test("Challenger ambient shift dark mode produces distinct background")
+    func test_applyingChallengerShift_darkMode_producesDistinctBackground() {
+        let base = themeFor(context: .conversation, colorScheme: .dark)
+        let discovery = base.applyingAmbientMode(.discovery, colorScheme: .dark)
+        let challenged = discovery.applyingChallengerShift(colorScheme: .dark)
+
+        let challengerStart = Color(hex: 0x1A1816)
+        let challengerEnd = Color(hex: 0x161412)
+        #expect(colorsMatch(challenged.palette.backgroundStart, challengerStart))
+        #expect(colorsMatch(challenged.palette.backgroundEnd, challengerEnd))
+
+        // Text colors should remain unchanged
+        #expect(colorsMatch(challenged.palette.textPrimary, base.palette.textPrimary))
+    }
+
     @Test("Theme includes typography, spacing, and corner radius")
     func themeComponentsPresent() {
         let theme = themeFor(context: .home, colorScheme: .light)

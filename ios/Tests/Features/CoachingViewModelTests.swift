@@ -76,7 +76,7 @@ struct CoachingViewModelTests {
         mockChat.stubbedEvents = [
             .token(text: "Response "),
             .token(text: "text."),
-            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil)
         ]
 
         let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
@@ -101,7 +101,7 @@ struct CoachingViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Hi."),
-            .done(safetyLevel: "green", domainTags: [], mood: "warm", mode: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "warm", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
         ]
 
         let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
@@ -188,7 +188,7 @@ struct CoachingViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Let's focus."),
-            .done(safetyLevel: "green", domainTags: [], mood: "focused", mode: "directive", usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "focused", mode: "directive", challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil)
         ]
 
         let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
@@ -203,6 +203,59 @@ struct CoachingViewModelTests {
         try await Task.sleep(for: .milliseconds(500))
 
         #expect(viewModel.coachingMode == .directive)
+    }
+
+    @Test("Done event with challengerUsed true sets challengerActive")
+    @MainActor
+    func test_sendMessage_challengerUsedTrue_setsChallengerActive() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Have you considered..."),
+            .done(safetyLevel: "green", domainTags: ["career"], mood: "focused", mode: "discovery", challengerUsed: true, usage: ChatUsage(inputTokens: 20, outputTokens: 15), promptVersion: nil)
+        ]
+
+        let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
+        let _ = try await createSession(in: db)
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        await viewModel.sendMessage("I'm going to quit my job")
+        try await Task.sleep(for: .milliseconds(500))
+
+        #expect(viewModel.challengerActive == true)
+    }
+
+    @Test("Challenger active resets to false on next done event without challenger")
+    @MainActor
+    func test_sendMessage_challengerUsedFalse_resetsChallengerActive() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Have you considered..."),
+            .done(safetyLevel: "green", domainTags: [], mood: "focused", mode: "discovery", challengerUsed: true, usage: ChatUsage(inputTokens: 20, outputTokens: 15), promptVersion: nil)
+        ]
+
+        let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
+        let _ = try await createSession(in: db)
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        await viewModel.sendMessage("I want to quit")
+        try await Task.sleep(for: .milliseconds(500))
+
+        #expect(viewModel.challengerActive == true)
+
+        // Now send again with challengerUsed false
+        mockChat.stubbedEvents = [
+            .token(text: "That makes sense."),
+            .done(safetyLevel: "green", domainTags: [], mood: "warm", mode: "discovery", challengerUsed: false, usage: ChatUsage(inputTokens: 20, outputTokens: 15), promptVersion: nil)
+        ]
+
+        await viewModel.sendMessage("I've thought it through")
+        try await Task.sleep(for: .milliseconds(500))
+
+        #expect(viewModel.challengerActive == false)
     }
 
     @Test("Cancel streaming stops the task")

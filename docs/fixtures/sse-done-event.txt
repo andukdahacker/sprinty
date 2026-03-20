@@ -1,2 +1,2 @@
 event: done
-data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "mode": "discovery", "usage": {"inputTokens": 50, "outputTokens": 12}, "promptVersion": "abc123"}
+data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "mode": "discovery", "challengerUsed": false, "usage": {"inputTokens": 50, "outputTokens": 12}, "promptVersion": "abc123"}

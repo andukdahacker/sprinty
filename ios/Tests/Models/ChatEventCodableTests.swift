@@ -30,11 +30,12 @@ struct ChatEventCodableTests {
         #expect(events.count == 1)
         let chatEvent = try ChatEvent.from(sseEvent: events[0])
 
-        if case .done(let safetyLevel, let domainTags, let mood, let mode, let usage, let promptVersion) = chatEvent {
+        if case .done(let safetyLevel, let domainTags, let mood, let mode, let challengerUsed, let usage, let promptVersion) = chatEvent {
             #expect(safetyLevel == "green")
             #expect(domainTags.isEmpty)
             #expect(mood == "welcoming")
             #expect(mode == "discovery")
+            #expect(challengerUsed == false)
             #expect(usage.inputTokens == 50)
             #expect(usage.outputTokens == 12)
             #expect(promptVersion == "abc123")
@@ -77,7 +78,7 @@ struct ChatEventCodableTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(_, let domainTags, _, _, _, _) = chatEvent {
+        if case .done(_, let domainTags, _, _, _, _, _) = chatEvent {
             #expect(domainTags.isEmpty)
         } else {
             Issue.record("Expected done event")
@@ -92,7 +93,7 @@ struct ChatEventCodableTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(_, _, let mood, _, _, _) = chatEvent {
+        if case .done(_, _, let mood, _, _, _, _) = chatEvent {
             #expect(mood == nil)
         } else {
             Issue.record("Expected done event")
@@ -107,7 +108,7 @@ struct ChatEventCodableTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(_, _, _, let mode, _, _) = chatEvent {
+        if case .done(_, _, _, let mode, _, _, _) = chatEvent {
             #expect(mode == "discovery")
         } else {
             Issue.record("Expected done event")
@@ -122,8 +123,23 @@ struct ChatEventCodableTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(_, _, _, let mode, _, _) = chatEvent {
+        if case .done(_, _, _, let mode, _, _, _) = chatEvent {
             #expect(mode == nil)
+        } else {
+            Issue.record("Expected done event")
+        }
+    }
+
+    @Test("Decodes done event with challengerUsed true")
+    func test_fromSSE_doneEvent_challengerUsedTrue() throws {
+        let json = """
+        {"safetyLevel": "green", "domainTags": ["career"], "mood": "focused", "mode": "discovery", "challengerUsed": true, "usage": {"inputTokens": 30, "outputTokens": 20}, "promptVersion": "v2"}
+        """
+        let sseEvent = SSEEvent(type: "done", data: json)
+        let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
+
+        if case .done(_, _, _, _, let challengerUsed, _, _) = chatEvent {
+            #expect(challengerUsed == true)
         } else {
             Issue.record("Expected done event")
         }

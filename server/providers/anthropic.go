@@ -47,8 +47,12 @@ var toolSchema = anthropic.ToolParam{
 				"enum":        []string{"discovery", "directive"},
 				"description": "The coaching mode for this response. Set to 'discovery' when user is exploring or uncertain, 'directive' when user has clear goals or wants action steps. Default to current mode if unclear.",
 			},
+			"challengerUsed": map[string]any{
+				"type":        "boolean",
+				"description": "Set to true when this response includes constructive pushback, alternative perspectives, or stress-testing of the user's assumptions. Set to false for normal coaching responses.",
+			},
 		},
-		Required: []string{"coaching", "safetyLevel", "domainTags", "mood", "memoryReferenced", "mode"},
+		Required: []string{"coaching", "safetyLevel", "domainTags", "mood", "memoryReferenced", "mode", "challengerUsed"},
 	},
 }
 
@@ -60,6 +64,7 @@ type toolResult struct {
 	Mood             string   `json:"mood"`
 	MemoryReferenced bool     `json:"memoryReferenced"`
 	Mode             string   `json:"mode"`
+	ChallengerUsed   bool     `json:"challengerUsed"`
 }
 
 // AnthropicProvider implements Provider using the Anthropic API.
@@ -178,6 +183,7 @@ func (p *AnthropicProvider) StreamChat(ctx context.Context, req ChatRequest) (<-
 					Mood:             result.Mood,
 					Mode:             func() string { if result.Mode != "" { return result.Mode }; return req.Mode }(),
 					MemoryReferenced: result.MemoryReferenced,
+					ChallengerUsed:   result.ChallengerUsed,
 					Usage:            usage,
 				}:
 				}

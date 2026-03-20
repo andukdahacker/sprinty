@@ -243,6 +243,54 @@ extension ColorPalette {
     }
 }
 
+// MARK: - Challenger Ambient Mode Shift
+
+extension ColorPalette {
+    /// Challenger background colors by color scheme.
+    /// Light: #EDE8E0 / #E4DED4 — deeper earth tones, grounded feel.
+    /// Dark: #1A1816 / #161412 — deeper warm dark, grounded feel.
+    static func challengerBackgroundColors(for colorScheme: ColorScheme) -> (start: Color, end: Color) {
+        switch colorScheme {
+        case .dark:
+            return (Color(hex: 0x1A1816), Color(hex: 0x161412))
+        default:
+            return (Color(hex: 0xEDE8E0), Color(hex: 0xE4DED4))
+        }
+    }
+
+    /// Shifts background gradient toward deeper/grounded tones for Challenger capability.
+    /// Only background gradient changes — all text colors remain unchanged.
+    func challengerGroundedShift(backgroundStart newStart: Color, backgroundEnd newEnd: Color) -> ColorPalette {
+        ColorPalette(
+            backgroundStart: newStart,
+            backgroundEnd: newEnd,
+            textPrimary: textPrimary,
+            textSecondary: textSecondary,
+            avatarGlow: avatarGlow,
+            avatarGradientStart: avatarGradientStart,
+            avatarGradientEnd: avatarGradientEnd,
+            insightBackground: insightBackground,
+            sprintTrack: sprintTrack,
+            sprintProgressStart: sprintProgressStart,
+            sprintProgressEnd: sprintProgressEnd,
+            primaryActionStart: primaryActionStart,
+            primaryActionEnd: primaryActionEnd,
+            primaryActionText: primaryActionText,
+            coachDialogue: coachDialogue,
+            userDialogue: userDialogue,
+            userAccent: userAccent,
+            coachPortraitGradientStart: coachPortraitGradientStart,
+            coachPortraitGradientEnd: coachPortraitGradientEnd,
+            coachPortraitGlow: coachPortraitGlow,
+            coachNameText: coachNameText,
+            coachStatusText: coachStatusText,
+            dateSeparator: dateSeparator,
+            inputBorder: inputBorder,
+            sendButton: sendButton
+        )
+    }
+}
+
 // MARK: - Directive Ambient Mode Shift
 
 extension ColorPalette {

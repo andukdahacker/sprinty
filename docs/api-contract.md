@@ -154,13 +154,14 @@ Emitted once when the LLM response is complete.
 
 ```
 event: done
-data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "mode": "discovery", "usage": {"inputTokens": 50, "outputTokens": 12}, "promptVersion": "a1b2c3d4"}
+data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "mode": "discovery", "challengerUsed": false, "usage": {"inputTokens": 50, "outputTokens": 12}, "promptVersion": "a1b2c3d4"}
 ```
 
 - `safetyLevel` (string): Safety classification. Values: `green`, `yellow`, `orange`, `red`
 - `domainTags` (array of strings): Life domain tags extracted from conversation. Always an array (empty `[]` if none)
 - `mood` (string): Coach expression mood. Values: `welcoming`, `thinking`, `warm`, `focused`, `gentle`
 - `mode` (string): Coaching mode for this response. Values: `discovery`, `directive`. May differ from request mode when the LLM decides to transition.
+- `challengerUsed` (boolean): Whether this response used the Challenger capability (constructive pushback, alternative perspectives). Default: `false`.
 - `usage` (object): Token consumption
   - `inputTokens` (number): Input token count
   - `outputTokens` (number): Output token count

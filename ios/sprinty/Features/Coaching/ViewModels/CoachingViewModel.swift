@@ -12,6 +12,7 @@ final class CoachingViewModel {
     var localError: AppError?
     var retryAfterSeconds: Int = 0
     var coachingMode: CoachingMode = .discovery
+    var challengerActive: Bool = false
     var modeSegments: [ModeSegment] = []
 
     private let appState: AppState
@@ -99,7 +100,7 @@ final class CoachingViewModel {
                         switch event {
                         case .token(let tokenText):
                             self.streamingText += tokenText
-                        case .done(let safetyLevel, _, let mood, let mode, _, let promptVersion):
+                        case .done(let safetyLevel, _, let mood, let mode, let challengerUsed, _, let promptVersion):
                             // Cache promptVersion from first done event per session
                             if let promptVersion, self.cachedPromptVersion == nil {
                                 self.cachedPromptVersion = promptVersion
@@ -133,6 +134,8 @@ final class CoachingViewModel {
                             if let mode, let newMode = CoachingMode(rawValue: mode), newMode != self.coachingMode {
                                 await self.updateSessionMode(newMode)
                             }
+
+                            self.challengerActive = challengerUsed ?? false
                         }
                     }
 

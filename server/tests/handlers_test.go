@@ -41,6 +41,7 @@ func createTestPromptBuilder(t *testing.T) *prompts.Builder {
 		"cultural.md":          "Cultural.",
 		"context-injection.md": "Coach: {{coach_name}}.",
 		"mode-transitions.md": "Mode transitions: analyze user intent.",
+		"challenger.md":       "Challenger capability: push back constructively.",
 	}
 	for name, content := range files {
 		os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
@@ -75,6 +76,7 @@ func setupMuxWithBuilder(builder *prompts.Builder) *http.ServeMux {
 			"cultural.md":          "Cultural.",
 			"context-injection.md": "Coach: {{coach_name}}.",
 			"mode-transitions.md": "Mode transitions: analyze user intent.",
+			"challenger.md":       "Challenger capability: push back constructively.",
 		}
 		for name, content := range files {
 			os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
@@ -451,7 +453,7 @@ func TestSSEDoneEventMatchesFixtureFormat(t *testing.T) {
 				t.Fatalf("fixture done data invalid JSON: %v", err)
 			}
 			// Verify expected fields from fixture
-			for _, field := range []string{"safetyLevel", "domainTags", "mood", "mode", "usage", "promptVersion"} {
+			for _, field := range []string{"safetyLevel", "domainTags", "mood", "mode", "challengerUsed", "usage", "promptVersion"} {
 				if _, ok := doneData[field]; !ok {
 					t.Errorf("fixture done data missing field %q", field)
 				}
@@ -757,6 +759,45 @@ func TestChatHandler_DoneEvent_ModeTransition(t *testing.T) {
 	}
 	if doneData["mode"] != "directive" {
 		t.Errorf("expected mode 'directive' from stubbed provider, got %v", doneData["mode"])
+	}
+}
+
+func TestChatHandler_DoneEvent_ChallengerUsed(t *testing.T) {
+	builder := createTestPromptBuilder(t)
+	mockProvider := &providers.MockProvider{StubbedChallengerUsed: true}
+	authMW := middleware.AuthMiddleware(testSecret)
+
+	mux := http.NewServeMux()
+	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(mockProvider, builder))))
+
+	token := createValidToken(t)
+	chatPayload := `{"messages":[{"role":"user","content":"I'm going to quit my job tomorrow"}],"mode":"discovery","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(chatPayload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	var doneData map[string]any
+	scanner := bufio.NewScanner(w.Body)
+	var currentType string
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "event: ") {
+			currentType = strings.TrimPrefix(line, "event: ")
+		} else if strings.HasPrefix(line, "data: ") && currentType == "done" {
+			json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &doneData)
+		}
+	}
+
+	if doneData == nil {
+		t.Fatal("no done event found in SSE output")
+	}
+	if doneData["challengerUsed"] != true {
+		t.Errorf("expected challengerUsed true, got %v", doneData["challengerUsed"])
 	}
 }
 
