@@ -146,4 +146,8 @@ private struct FailingChatService: ChatServiceProtocol {
             continuation.finish(throwing: AppError.networkUnavailable)
         }
     }
+
+    func summarize(messages: [ChatRequestMessage]) async throws -> SummaryResponse {
+        throw AppError.networkUnavailable
+    }
 }

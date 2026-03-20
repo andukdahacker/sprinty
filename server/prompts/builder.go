@@ -37,6 +37,7 @@ func NewBuilder(sectionsPath string) (*Builder, error) {
 		"context-injection.md",
 		"mode-transitions.md",
 		"challenger.md",
+		"summarize.md",
 	}
 
 	var allContent strings.Builder
@@ -64,6 +65,14 @@ func NewBuilder(sectionsPath string) (*Builder, error) {
 // ContentHash returns the version hash of all prompt sections.
 func (b *Builder) ContentHash() string {
 	return b.contentHash
+}
+
+// SummarizePrompt returns the summarization system prompt.
+func (b *Builder) SummarizePrompt() string {
+	if s, ok := b.sections["summarize"]; ok {
+		return s
+	}
+	return ""
 }
 
 // Build assembles a system prompt for the given mode, coach name, and user state.

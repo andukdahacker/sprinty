@@ -44,6 +44,7 @@ type ChatEvent struct {
 	MemoryReferenced bool     `json:"memoryReferenced,omitempty"`
 	ChallengerUsed   bool     `json:"challengerUsed,omitempty"`
 	Usage            *Usage   `json:"usage,omitempty"`
+	SummaryData      any      `json:"summaryData,omitempty"`
 }
 
 type Provider interface {

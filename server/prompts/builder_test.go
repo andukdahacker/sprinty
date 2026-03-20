@@ -28,6 +28,7 @@ func setupTestSections(t *testing.T) string {
 		"context-injection.md": "Coach name: {{coach_name}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
 		"mode-transitions.md": "Mode transitions: analyze user intent.",
 		"challenger.md":       "Challenger capability: push back constructively.",
+		"summarize.md":        "Summarize the coaching conversation.",
 	}
 
 	for name, content := range files {
@@ -47,8 +48,8 @@ func TestNewBuilder_LoadsSections(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	if len(b.sections) != 10 {
-		t.Errorf("expected 10 sections, got %d", len(b.sections))
+	if len(b.sections) != 11 {
+		t.Errorf("expected 11 sections, got %d", len(b.sections))
 	}
 
 	if b.contentHash == "" {
@@ -294,6 +295,21 @@ func TestBuilder_Build_WithUserState_InjectsContext(t *testing.T) {
 	}
 	if !strings.Contains(prompt, "Intensity: moderate") {
 		t.Error("expected session intensity in prompt")
+	}
+}
+
+// --- Story 3.1 Tests ---
+
+func TestBuilder_SummarizePrompt_Loads(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	prompt := b.SummarizePrompt()
+	if !strings.Contains(prompt, "Summarize") {
+		t.Error("expected summarize prompt content")
 	}
 }
 

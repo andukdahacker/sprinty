@@ -56,6 +56,56 @@ var toolSchema = anthropic.ToolParam{
 	},
 }
 
+// summarizeToolSchema defines the structured output schema for conversation summarization.
+var summarizeToolSchema = anthropic.ToolParam{
+	Name:        "summarize_conversation",
+	Description: anthropic.String("Extract a structured summary from a coaching conversation."),
+	InputSchema: anthropic.ToolInputSchemaParam{
+		Properties: map[string]any{
+			"summary": map[string]any{
+				"type":        "string",
+				"description": "2-4 sentence substantive summary capturing the essence of the exchange.",
+			},
+			"keyMoments": map[string]any{
+				"type":        "array",
+				"items":       map[string]any{"type": "string"},
+				"description": "1-5 turning points, breakthroughs, or important realizations.",
+			},
+			"domainTags": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "string",
+					"enum": []string{
+						"career", "relationships", "health", "finance",
+						"personal-growth", "creativity", "education", "family",
+					},
+				},
+				"description": "1-3 life domains this conversation touches.",
+			},
+			"emotionalMarkers": map[string]any{
+				"type":        "array",
+				"items":       map[string]any{"type": "string"},
+				"description": "Emotional trajectory markers (e.g., frustrated, hopeful, relieved).",
+			},
+			"keyDecisions": map[string]any{
+				"type":        "array",
+				"items":       map[string]any{"type": "string"},
+				"description": "Decisions or commitments the user made during the session.",
+			},
+		},
+		Required: []string{"summary", "keyMoments", "domainTags"},
+	},
+}
+
+// summarizeResult is the parsed output from the summarize tool call.
+type summarizeResult struct {
+	Summary          string   `json:"summary"`
+	KeyMoments       []string `json:"keyMoments"`
+	DomainTags       []string `json:"domainTags"`
+	EmotionalMarkers []string `json:"emotionalMarkers,omitempty"`
+	KeyDecisions     []string `json:"keyDecisions,omitempty"`
+}
+
 // toolResult is the parsed structured output from the model's tool call.
 type toolResult struct {
 	Coaching         string   `json:"coaching"`
@@ -100,14 +150,22 @@ func (p *AnthropicProvider) StreamChat(ctx context.Context, req ChatRequest) (<-
 		}
 	}
 
+	// Select tool schema based on mode
+	activeToolSchema := toolSchema
+	activeToolName := "respond"
+	if req.Mode == "summarize" {
+		activeToolSchema = summarizeToolSchema
+		activeToolName = "summarize_conversation"
+	}
+
 	params := anthropic.MessageNewParams{
 		Model:     p.model,
 		MaxTokens: int64(1024),
 		Messages:  messages,
-		Tools:     []anthropic.ToolUnionParam{{OfTool: &toolSchema}},
+		Tools:     []anthropic.ToolUnionParam{{OfTool: &activeToolSchema}},
 		ToolChoice: anthropic.ToolChoiceUnionParam{
 			OfTool: &anthropic.ToolChoiceToolParam{
-				Name: "respond",
+				Name: activeToolName,
 			},
 		},
 	}
@@ -118,6 +176,7 @@ func (p *AnthropicProvider) StreamChat(ctx context.Context, req ChatRequest) (<-
 		}
 	}
 
+	isSummarize := req.Mode == "summarize"
 	stream := p.client.Messages.NewStreaming(ctx, params)
 
 	// Check for immediate errors (e.g. 429, 500) before starting the goroutine.
@@ -154,38 +213,53 @@ func (p *AnthropicProvider) StreamChat(ctx context.Context, req ChatRequest) (<-
 				if delta.Delta.PartialJSON != "" {
 					jsonBuf.WriteString(delta.Delta.PartialJSON)
 
-					text := extractCoachingChunk(jsonBuf.String(), &lastCoachingLen)
-					if text != "" {
-						select {
-						case <-ctx.Done():
-							return
-						case ch <- ChatEvent{Type: "token", Text: text}:
+					if !isSummarize {
+						text := extractCoachingChunk(jsonBuf.String(), &lastCoachingLen)
+						if text != "" {
+							select {
+							case <-ctx.Done():
+								return
+							case ch <- ChatEvent{Type: "token", Text: text}:
+							}
 						}
 					}
 				}
 
 			case anthropic.MessageStopEvent:
-				result := parseFinalResult(&message)
+				if isSummarize {
+					summaryData := parseSummarizeResult(&message)
 
-				usage := &Usage{}
-				if message.Usage.InputTokens > 0 || message.Usage.OutputTokens > 0 {
-					usage.InputTokens = int(message.Usage.InputTokens)
-					usage.OutputTokens = int(message.Usage.OutputTokens)
-				}
+					select {
+					case <-ctx.Done():
+						return
+					case ch <- ChatEvent{
+						Type:        "done",
+						SummaryData: summaryData,
+					}:
+					}
+				} else {
+					result := parseFinalResult(&message)
 
-				select {
-				case <-ctx.Done():
-					return
-				case ch <- ChatEvent{
-					Type:             "done",
-					SafetyLevel:      result.SafetyLevel,
-					DomainTags:       result.DomainTags,
-					Mood:             result.Mood,
-					Mode:             func() string { if result.Mode != "" { return result.Mode }; return req.Mode }(),
-					MemoryReferenced: result.MemoryReferenced,
-					ChallengerUsed:   result.ChallengerUsed,
-					Usage:            usage,
-				}:
+					usage := &Usage{}
+					if message.Usage.InputTokens > 0 || message.Usage.OutputTokens > 0 {
+						usage.InputTokens = int(message.Usage.InputTokens)
+						usage.OutputTokens = int(message.Usage.OutputTokens)
+					}
+
+					select {
+					case <-ctx.Done():
+						return
+					case ch <- ChatEvent{
+						Type:             "done",
+						SafetyLevel:      result.SafetyLevel,
+						DomainTags:       result.DomainTags,
+						Mood:             result.Mood,
+						Mode:             func() string { if result.Mode != "" { return result.Mode }; return req.Mode }(),
+						MemoryReferenced: result.MemoryReferenced,
+						ChallengerUsed:   result.ChallengerUsed,
+						Usage:            usage,
+					}:
+					}
 				}
 			}
 		}
@@ -208,6 +282,23 @@ func (p *AnthropicProvider) StreamChat(ctx context.Context, req ChatRequest) (<-
 	}()
 
 	return ch, nil
+}
+
+// parseSummarizeResult extracts structured summary output from the final accumulated message.
+func parseSummarizeResult(message *anthropic.Message) *summarizeResult {
+	for _, block := range message.Content {
+		if block.Type == "tool_use" {
+			var result summarizeResult
+			if err := json.Unmarshal(block.Input, &result); err != nil {
+				slog.Warn("anthropic.parseSummarizeResult: failed to parse tool result", "error", err)
+				return nil
+			}
+			return &result
+		}
+	}
+
+	slog.Warn("anthropic.parseSummarizeResult: no tool_use block found in response")
+	return nil
 }
 
 // extractCoachingChunk extracts new coaching text from the partial JSON buffer.

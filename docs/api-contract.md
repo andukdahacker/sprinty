@@ -112,7 +112,7 @@ JWT required. Streams response via Server-Sent Events (SSE).
 ```
 
 - `messages` (array): Conversation messages with `role` (`user`|`assistant`) and `content`
-- `mode` (string): Coaching mode. Values: `discovery`, `directive`
+- `mode` (string): Coaching mode. Values: `discovery`, `directive`, `summarize`
 - `promptVersion` (string): System prompt version for reproducibility
 - `userState` (object, optional): User engagement state computed on-device for adaptive tone
   - `engagementLevel` (string): `high`, `medium`, `low`
@@ -125,6 +125,27 @@ JWT required. Streams response via Server-Sent Events (SSE).
 **Response** `200 OK` — `Content-Type: text/event-stream`
 
 SSE stream of events (see SSE Event Format below).
+
+#### Summarize Mode
+
+When `mode` is `"summarize"`, the endpoint returns a **single JSON response** (not SSE) with the conversation summary.
+
+**Response** `200 OK` — `Content-Type: application/json`
+```json
+{
+  "summary": "The user explored career concerns and identified a pattern of avoidance.",
+  "keyMoments": ["realized avoidance pattern", "committed to having the conversation"],
+  "domainTags": ["career", "personal-growth"],
+  "emotionalMarkers": ["anxious", "determined"],
+  "keyDecisions": ["will schedule the meeting this week"]
+}
+```
+
+- `summary` (string): 2-4 sentence substantive summary
+- `keyMoments` (array of strings): 1-5 turning points or breakthroughs
+- `domainTags` (array of strings): 1-3 life domains from: `career`, `relationships`, `health`, `finance`, `personal-growth`, `creativity`, `education`, `family`
+- `emotionalMarkers` (array of strings, optional): Emotional trajectory markers
+- `keyDecisions` (array of strings, optional): Decisions or commitments made
 
 **Errors**
 - `401` — `invalid_jwt` / `token_expired`: Auth failure

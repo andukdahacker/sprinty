@@ -89,6 +89,45 @@ final class ChatService: ChatServiceProtocol, Sendable {
         }
     }
 
+    func summarize(messages: [ChatRequestMessage]) async throws -> SummaryResponse {
+        let token = try authService.getToken()
+        let chatRequest = ChatRequest(messages: messages, mode: "summarize", promptVersion: "1.0", profile: nil)
+
+        let url = baseURL.appendingPathComponent("v1/chat")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let jsonData = try JSONEncoder().encode(chatRequest)
+
+        if let compressed = try? (jsonData as NSData).compressed(using: .zlib) as Data {
+            request.httpBody = compressed
+            request.setValue("deflate", forHTTPHeaderField: "Content-Encoding")
+        } else {
+            request.httpBody = jsonData
+        }
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AppError.networkUnavailable
+        }
+
+        if httpResponse.statusCode == 401 {
+            throw AppError.authExpired
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw AppError.providerError(
+                message: "Summary generation failed.",
+                retryAfter: nil
+            )
+        }
+
+        return try JSONDecoder().decode(SummaryResponse.self, from: data)
+    }
+
     private static func parseRetryAfter(from bytes: URLSession.AsyncBytes) async -> Int? {
         // Collect error response body and parse retryAfter from JSON
         do {

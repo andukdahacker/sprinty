@@ -4,10 +4,13 @@ import Foundation
 final class MockChatService: ChatServiceProtocol, @unchecked Sendable {
     var stubbedEvents: [ChatEvent] = []
     var stubbedError: Error?
+    var stubbedSummaryResponse: SummaryResponse?
+    var stubbedSummaryError: Error?
     var lastMessages: [ChatRequestMessage]?
     var lastMode: String?
     var lastProfile: ChatProfile?
     var lastUserState: UserState?
+    var summarizeCallCount: Int = 0
 
     func streamChat(messages: [ChatRequestMessage], mode: String, profile: ChatProfile?, userState: UserState? = nil) -> AsyncThrowingStream<ChatEvent, Error> {
         lastMessages = messages
@@ -31,5 +34,22 @@ final class MockChatService: ChatServiceProtocol, @unchecked Sendable {
                 continuation.finish()
             }
         }
+    }
+
+    func summarize(messages: [ChatRequestMessage]) async throws -> SummaryResponse {
+        summarizeCallCount += 1
+        lastMessages = messages
+
+        if let error = stubbedSummaryError {
+            throw error
+        }
+
+        return stubbedSummaryResponse ?? SummaryResponse(
+            summary: "Test summary",
+            keyMoments: ["key moment"],
+            domainTags: ["career"],
+            emotionalMarkers: nil,
+            keyDecisions: nil
+        )
     }
 }

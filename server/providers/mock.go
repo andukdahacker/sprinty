@@ -17,6 +17,25 @@ func (m *MockProvider) StreamChat(ctx context.Context, req ChatRequest) (<-chan 
 	go func() {
 		defer close(ch)
 
+		// Handle summarize mode with a direct JSON response
+		if req.Mode == "summarize" {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- ChatEvent{
+				Type: "done",
+				SummaryData: map[string]any{
+					"summary":          "The user explored career concerns and identified a pattern of avoiding difficult conversations.",
+					"keyMoments":       []string{"realized avoidance pattern", "committed to having the conversation"},
+					"domainTags":       []string{"career", "personal-growth"},
+					"emotionalMarkers": []string{"anxious", "determined"},
+					"keyDecisions":     []string{"will schedule the meeting this week"},
+				},
+			}:
+			}
+			return
+		}
+
 		tokens := []string{
 			"Hey there — I'm your coach, not your therapist. ",
 			"Everything we talk about stays right here on your device, just between us. ",

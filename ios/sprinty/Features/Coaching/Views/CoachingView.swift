@@ -89,6 +89,9 @@ struct CoachingView: View {
         }
         .onDisappear {
             viewModel.cancelStreaming()
+            Task {
+                await viewModel.endSession()
+            }
         }
     }
 

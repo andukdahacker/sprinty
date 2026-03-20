@@ -58,5 +58,23 @@ enum DatabaseMigrations {
                 t.add(column: "moodHistory", .text)
             }
         }
+
+        migrator.registerMigration("v5") { db in
+            try db.create(table: "ConversationSummary") { t in
+                t.primaryKey("id", .text).notNull()
+                t.column("sessionId", .text).notNull()
+                    .references("ConversationSession", onDelete: .cascade)
+                t.column("summary", .text).notNull()
+                t.column("keyMoments", .text).notNull()      // JSON array
+                t.column("domainTags", .text).notNull()       // JSON array
+                t.column("emotionalMarkers", .text)           // Phase 2, nullable
+                t.column("keyDecisions", .text)               // Phase 2, nullable
+                t.column("goalReferences", .text)             // Phase 2, nullable
+                t.column("embedding", .blob)                  // 384-dim, nullable until 3.2
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.create(index: "ConversationSummary_sessionId",
+                          on: "ConversationSummary", columns: ["sessionId"])
+        }
     }
 }

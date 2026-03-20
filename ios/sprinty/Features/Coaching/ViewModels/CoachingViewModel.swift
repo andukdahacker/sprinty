@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import GRDB
+import OSLog
 
 @MainActor
 @Observable
@@ -169,6 +170,80 @@ final class CoachingViewModel {
         streamingTask = nil
         isStreaming = false
         streamingText = ""
+    }
+
+    func endSession() async {
+        guard let session = currentSession, session.endedAt == nil else { return }
+        guard messages.count >= 2 else { return }
+
+        var updated = session
+        updated.endedAt = Date()
+        let sessionToSave = updated
+        do {
+            try await databaseManager.dbPool.write { db in
+                try sessionToSave.update(db)
+            }
+        } catch {
+            handleError(error)
+            return
+        }
+
+        let sessionId = session.id
+        currentSession = nil
+
+        // Fire-and-forget summary generation
+        Task { [weak self] in
+            await self?.generateSummary(for: sessionId)
+        }
+    }
+
+    private nonisolated func generateSummary(for sessionId: UUID) async {
+        do {
+            let msgs = try await databaseManager.dbPool.read { db in
+                try Message.forSession(id: sessionId).fetchAll(db)
+            }
+            guard msgs.count >= 2 else { return }
+
+            let chatMessages = msgs.map { ChatRequestMessage(role: $0.role == .user ? "user" : "assistant", content: $0.content) }
+            let response = try await chatService.summarize(messages: chatMessages)
+
+            let summary = ConversationSummary(
+                id: UUID(),
+                sessionId: sessionId,
+                summary: response.summary,
+                keyMoments: ConversationSummary.encodeArray(response.keyMoments),
+                domainTags: ConversationSummary.encodeArray(response.domainTags),
+                emotionalMarkers: response.emotionalMarkers.map { ConversationSummary.encodeArray($0) },
+                keyDecisions: response.keyDecisions.map { ConversationSummary.encodeArray($0) },
+                goalReferences: nil,
+                embedding: nil,
+                createdAt: Date()
+            )
+
+            try await databaseManager.dbPool.write { db in
+                try summary.insert(db)
+            }
+        } catch {
+            Logger(subsystem: Bundle.main.bundleIdentifier ?? "sprinty", category: "memory").error("Summary generation failed for session \(sessionId): \(error)")
+        }
+    }
+
+    func retryMissingSummaries() async {
+        do {
+            let sessionsWithoutSummaries: [ConversationSession] = try await databaseManager.dbPool.read { db in
+                try ConversationSession.fetchAll(db, sql: """
+                    SELECT s.* FROM ConversationSession s
+                    LEFT JOIN ConversationSummary cs ON cs.sessionId = s.id
+                    WHERE s.endedAt IS NOT NULL AND cs.id IS NULL
+                    """)
+            }
+
+            for session in sessionsWithoutSummaries {
+                await generateSummary(for: session.id)
+            }
+        } catch {
+            Logger(subsystem: Bundle.main.bundleIdentifier ?? "sprinty", category: "memory").error("Retry missing summaries failed: \(error)")
+        }
     }
 
     private func loadChatProfile() async throws -> ChatProfile? {

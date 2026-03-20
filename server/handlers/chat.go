@@ -41,6 +41,12 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 			return
 		}
 
+		// Route summarize mode to non-streaming handler
+		if req.Mode == "summarize" {
+			handleSummarize(w, r, req, provider, promptBuilder)
+			return
+		}
+
 		// Assemble system prompt
 		coachName := ""
 		if req.Profile != nil {
@@ -102,6 +108,48 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 			flusher.Flush()
 		}
 	}
+}
+
+// handleSummarize processes summarize mode requests, returning a single JSON response.
+func handleSummarize(w http.ResponseWriter, r *http.Request, req providers.ChatRequest, provider providers.Provider, promptBuilder *prompts.Builder) {
+	req.SystemPrompt = promptBuilder.SummarizePrompt()
+	req.Mode = "summarize"
+
+	logArgs := []any{
+		"mode", "summarize",
+		"messageCount", len(req.Messages),
+	}
+	if claims, ok := middleware.ClaimsFromContext(r.Context()); ok {
+		logArgs = append(logArgs, "deviceId", claims.DeviceID)
+	}
+	slog.Info("chat.summarize", logArgs...)
+
+	ch, err := provider.StreamChat(r.Context(), req)
+	if err != nil {
+		handleProviderError(w, err)
+		return
+	}
+
+	// Collect the done event which contains the structured summary
+	var lastEvent providers.ChatEvent
+	for event := range ch {
+		if event.Type == "done" {
+			lastEvent = event
+		}
+	}
+
+	// For mock provider and real provider, the summary data is in SummaryData
+	if lastEvent.SummaryData != nil {
+		WriteJSON(w, http.StatusOK, lastEvent.SummaryData)
+		return
+	}
+
+	// Fallback: return empty summary
+	WriteJSON(w, http.StatusOK, map[string]any{
+		"summary":    "",
+		"keyMoments": []string{},
+		"domainTags": []string{},
+	})
 }
 
 // handleProviderError translates provider errors into warm user-facing JSON responses.

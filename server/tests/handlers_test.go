@@ -42,6 +42,7 @@ func createTestPromptBuilder(t *testing.T) *prompts.Builder {
 		"context-injection.md": "Coach: {{coach_name}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
 		"mode-transitions.md": "Mode transitions: analyze user intent.",
 		"challenger.md":       "Challenger capability: push back constructively.",
+		"summarize.md":        "Summarize the coaching conversation.",
 	}
 	for name, content := range files {
 		os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
@@ -77,6 +78,7 @@ func setupMuxWithBuilder(builder *prompts.Builder) *http.ServeMux {
 			"context-injection.md": "Coach: {{coach_name}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
 			"mode-transitions.md": "Mode transitions: analyze user intent.",
 			"challenger.md":       "Challenger capability: push back constructively.",
+			"summarize.md":        "Summarize the coaching conversation.",
 		}
 		for name, content := range files {
 			os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
@@ -862,6 +864,68 @@ func TestChatHandler_ValidRequest_WithUserState(t *testing.T) {
 	}
 	if !strings.Contains(body, "event: done") {
 		t.Error("expected SSE done event with userState request")
+	}
+}
+
+// --- Story 3.1 Tests ---
+
+func TestChatHandler_SummarizeMode_ReturnsJSON(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+
+	payload := `{"messages":[{"role":"user","content":"I'm stressed about my job"},{"role":"assistant","content":"What's driving that stress?"}],"mode":"summarize","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d. Body: %s", w.Code, w.Body.String())
+	}
+
+	ct := w.Header().Get("Content-Type")
+	if !strings.HasPrefix(ct, "application/json") {
+		t.Errorf("expected application/json content type, got %q", ct)
+	}
+
+	var body map[string]any
+	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if body["summary"] == nil || body["summary"] == "" {
+		t.Error("expected non-empty summary in response")
+	}
+	if body["keyMoments"] == nil {
+		t.Error("expected keyMoments in response")
+	}
+	if body["domainTags"] == nil {
+		t.Error("expected domainTags in response")
+	}
+}
+
+func TestChatHandler_SummarizeMode_EmptyMessages(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+
+	payload := `{"messages":[],"mode":"summarize","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	var body map[string]any
+	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	// Should still return a valid response structure
+	if body["summary"] == nil {
+		t.Error("expected summary field in response")
 	}
 }
 

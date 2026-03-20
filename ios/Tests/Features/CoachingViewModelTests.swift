@@ -314,4 +314,214 @@ struct CoachingViewModelTests {
         #expect(viewModel.isStreaming == false)
         #expect(viewModel.streamingText.isEmpty)
     }
+
+    // MARK: - Story 3.1 — Session Lifecycle
+
+    @Test("endSession sets endedAt and clears currentSession")
+    @MainActor
+    func test_endSession_setsEndedAt() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Response."),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+        ]
+
+        let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
+        let session = try await createSession(in: db)
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        // Send message to reach 2 messages (user + assistant)
+        await viewModel.sendMessage("Hello")
+        try await Task.sleep(for: .milliseconds(500))
+
+        #expect(viewModel.messages.count == 2)
+
+        await viewModel.endSession()
+
+        // Verify session endedAt is set in DB
+        let updated = try await db.dbPool.read { dbConn in
+            try ConversationSession.fetchOne(dbConn, key: session.id)
+        }
+        #expect(updated?.endedAt != nil)
+    }
+
+    @Test("endSession with fewer than 2 messages does not end session")
+    @MainActor
+    func test_endSession_fewerThan2Messages_skips() async throws {
+        let (viewModel, _, db, _) = try await makeViewModel()
+        let session = try await createSession(in: db)
+
+        // Add only 1 user message directly
+        let msg = Message(id: UUID(), sessionId: session.id, role: .user, content: "Hi", timestamp: Date())
+        try await db.dbPool.write { dbConn in
+            try msg.save(dbConn)
+        }
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        #expect(viewModel.messages.count == 1)
+
+        await viewModel.endSession()
+
+        // Session should NOT be ended
+        let updated = try await db.dbPool.read { dbConn in
+            try ConversationSession.fetchOne(dbConn, key: session.id)
+        }
+        #expect(updated?.endedAt == nil)
+    }
+
+    @Test("endSession triggers summary generation and persists")
+    @MainActor
+    func test_endSession_triggersAndPersistsSummary() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Response."),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+        ]
+        mockChat.stubbedSummaryResponse = SummaryResponse(
+            summary: "Explored career stress.",
+            keyMoments: ["identified pattern"],
+            domainTags: ["career"],
+            emotionalMarkers: ["stressed"],
+            keyDecisions: nil
+        )
+
+        let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
+        let session = try await createSession(in: db)
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        await viewModel.sendMessage("I'm stressed")
+        try await Task.sleep(for: .milliseconds(500))
+
+        await viewModel.endSession()
+        // Wait for fire-and-forget summary generation
+        try await Task.sleep(for: .milliseconds(500))
+
+        let summaries = try await db.dbPool.read { dbConn in
+            try ConversationSummary.forSession(id: session.id).fetchAll(dbConn)
+        }
+
+        #expect(summaries.count == 1)
+        #expect(summaries[0].summary == "Explored career stress.")
+        #expect(summaries[0].decodedDomainTags == ["career"])
+        #expect(mockChat.summarizeCallCount == 1)
+    }
+
+    @Test("endSession with summary error logs but does not crash")
+    @MainActor
+    func test_endSession_summaryError_graceful() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Hi."),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+        ]
+        mockChat.stubbedSummaryError = AppError.networkUnavailable
+
+        let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
+        let session = try await createSession(in: db)
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        await viewModel.sendMessage("Hello")
+        try await Task.sleep(for: .milliseconds(500))
+
+        await viewModel.endSession()
+        try await Task.sleep(for: .milliseconds(500))
+
+        // No summary persisted due to error
+        let summaries = try await db.dbPool.read { dbConn in
+            try ConversationSummary.forSession(id: session.id).fetchAll(dbConn)
+        }
+        #expect(summaries.isEmpty)
+        #expect(mockChat.summarizeCallCount == 1)
+    }
+
+    @Test("retryMissingSummaries generates for sessions without summaries")
+    @MainActor
+    func test_retryMissingSummaries() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedSummaryResponse = SummaryResponse(
+            summary: "Retry summary.",
+            keyMoments: ["moment"],
+            domainTags: ["health"],
+            emotionalMarkers: nil,
+            keyDecisions: nil
+        )
+
+        let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
+
+        // Create an ended session with messages but no summary
+        let session = ConversationSession(
+            id: UUID(),
+            startedAt: Date(timeIntervalSinceNow: -3600),
+            endedAt: Date(timeIntervalSinceNow: -1800),
+            type: .coaching,
+            mode: .discovery,
+            safetyLevel: .green,
+            promptVersion: "1.0"
+        )
+        try await db.dbPool.write { dbConn in
+            try session.save(dbConn)
+        }
+
+        let msg1 = Message(id: UUID(), sessionId: session.id, role: .user, content: "I need to exercise more", timestamp: Date(timeIntervalSinceNow: -3500))
+        let msg2 = Message(id: UUID(), sessionId: session.id, role: .assistant, content: "What's been stopping you?", timestamp: Date(timeIntervalSinceNow: -3400))
+        try await db.dbPool.write { dbConn in
+            try msg1.save(dbConn)
+            try msg2.save(dbConn)
+        }
+
+        await viewModel.retryMissingSummaries()
+        try await Task.sleep(for: .milliseconds(500))
+
+        let summaries = try await db.dbPool.read { dbConn in
+            try ConversationSummary.forSession(id: session.id).fetchAll(dbConn)
+        }
+
+        #expect(summaries.count == 1)
+        #expect(summaries[0].summary == "Retry summary.")
+        #expect(mockChat.summarizeCallCount == 1)
+    }
+
+    @Test("getOrCreateSession creates new session after previous was ended")
+    @MainActor
+    func test_getOrCreateSession_afterEndSession_createsNew() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Hi."),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+        ]
+
+        let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
+        let session = try await createSession(in: db)
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        await viewModel.sendMessage("Hello")
+        try await Task.sleep(for: .milliseconds(500))
+
+        let originalSessionId = session.id
+
+        await viewModel.endSession()
+
+        // Load messages again — should create a new session
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        // Verify a new session was created (different from original)
+        let sessions = try await db.dbPool.read { dbConn in
+            try ConversationSession.fetchAll(dbConn)
+        }
+        #expect(sessions.count == 2)
+        let newSession = sessions.first(where: { $0.id != originalSessionId })
+        #expect(newSession != nil)
+        #expect(newSession?.endedAt == nil)
+    }
 }
