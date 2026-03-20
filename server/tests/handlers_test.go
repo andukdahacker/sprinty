@@ -40,6 +40,7 @@ func createTestPromptBuilder(t *testing.T) *prompts.Builder {
 		"tagging.md":           "Domain tagging.",
 		"cultural.md":          "Cultural.",
 		"context-injection.md": "Coach: {{coach_name}}.",
+		"mode-transitions.md": "Mode transitions: analyze user intent.",
 	}
 	for name, content := range files {
 		os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
@@ -73,6 +74,7 @@ func setupMuxWithBuilder(builder *prompts.Builder) *http.ServeMux {
 			"tagging.md":           "Tags.",
 			"cultural.md":          "Cultural.",
 			"context-injection.md": "Coach: {{coach_name}}.",
+			"mode-transitions.md": "Mode transitions: analyze user intent.",
 		}
 		for name, content := range files {
 			os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
@@ -714,5 +716,85 @@ func TestChatHandler_DoneEvent_IncludesMode(t *testing.T) {
 	}
 	if doneData["mode"] != "discovery" {
 		t.Errorf("expected mode 'discovery', got %v", doneData["mode"])
+	}
+}
+
+// --- Story 2.3 Tests ---
+
+func TestChatHandler_DoneEvent_ModeTransition(t *testing.T) {
+	builder := createTestPromptBuilder(t)
+	mockProvider := &providers.MockProvider{StubbedMode: "directive"}
+	authMW := middleware.AuthMiddleware(testSecret)
+
+	mux := http.NewServeMux()
+	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(mockProvider, builder))))
+
+	token := createValidToken(t)
+	chatPayload := `{"messages":[{"role":"user","content":"I want a plan"}],"mode":"discovery","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(chatPayload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	var doneData map[string]any
+	scanner := bufio.NewScanner(w.Body)
+	var currentType string
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "event: ") {
+			currentType = strings.TrimPrefix(line, "event: ")
+		} else if strings.HasPrefix(line, "data: ") && currentType == "done" {
+			json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &doneData)
+		}
+	}
+
+	if doneData == nil {
+		t.Fatal("no done event found in SSE output")
+	}
+	if doneData["mode"] != "directive" {
+		t.Errorf("expected mode 'directive' from stubbed provider, got %v", doneData["mode"])
+	}
+}
+
+func TestChatHandler_DoneEvent_ModeFallbackWhenEmpty(t *testing.T) {
+	builder := createTestPromptBuilder(t)
+	mockProvider := &providers.MockProvider{} // StubbedMode empty, should fall back to req.Mode
+	authMW := middleware.AuthMiddleware(testSecret)
+
+	mux := http.NewServeMux()
+	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(mockProvider, builder))))
+
+	token := createValidToken(t)
+	chatPayload := `{"messages":[{"role":"user","content":"hello"}],"mode":"directive","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(chatPayload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	var doneData map[string]any
+	scanner := bufio.NewScanner(w.Body)
+	var currentType string
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "event: ") {
+			currentType = strings.TrimPrefix(line, "event: ")
+		} else if strings.HasPrefix(line, "data: ") && currentType == "done" {
+			json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &doneData)
+		}
+	}
+
+	if doneData == nil {
+		t.Fatal("no done event found in SSE output")
+	}
+	if doneData["mode"] != "directive" {
+		t.Errorf("expected mode 'directive' (fallback to req.Mode), got %v", doneData["mode"])
 	}
 }

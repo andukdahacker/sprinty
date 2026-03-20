@@ -16,6 +16,11 @@ enum SafetyLevel: String, Codable, Sendable, DatabaseValueConvertible {
     case red
 }
 
+struct ModeSegment: Codable, Sendable {
+    let mode: CoachingMode
+    let messageIndex: Int
+}
+
 struct ConversationSession: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable {
     var id: UUID
     var startedAt: Date
@@ -24,6 +29,7 @@ struct ConversationSession: Codable, FetchableRecord, PersistableRecord, Identif
     var mode: CoachingMode
     var safetyLevel: SafetyLevel
     var promptVersion: String?
+    var modeHistory: String?
 
     static let databaseTableName = "ConversationSession"
 }

@@ -12,6 +12,7 @@ final class CoachingViewModel {
     var localError: AppError?
     var retryAfterSeconds: Int = 0
     var coachingMode: CoachingMode = .discovery
+    var modeSegments: [ModeSegment] = []
 
     private let appState: AppState
     private let chatService: ChatServiceProtocol
@@ -38,6 +39,7 @@ final class CoachingViewModel {
             let session = try await getOrCreateSession()
             currentSession = session
             coachingMode = session.mode
+            modeSegments = [ModeSegment(mode: session.mode, messageIndex: 0)]
             let loaded = try await databaseManager.dbPool.read { db in
                 try Message.forSession(id: session.id).fetchAll(db)
             }
@@ -203,6 +205,10 @@ final class CoachingViewModel {
     private func updateSessionMode(_ newMode: CoachingMode) async {
         guard var session = currentSession else { return }
         session.mode = newMode
+        modeSegments.append(ModeSegment(mode: newMode, messageIndex: messages.count))
+        if let encoded = try? JSONEncoder().encode(modeSegments) {
+            session.modeHistory = String(data: encoded, encoding: .utf8)
+        }
         let updatedSession = session
         do {
             try await databaseManager.dbPool.write { db in

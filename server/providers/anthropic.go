@@ -42,8 +42,13 @@ var toolSchema = anthropic.ToolParam{
 				"type":        "boolean",
 				"description": "Whether prior memory/context was referenced.",
 			},
+			"mode": map[string]any{
+				"type":        "string",
+				"enum":        []string{"discovery", "directive"},
+				"description": "The coaching mode for this response. Set to 'discovery' when user is exploring or uncertain, 'directive' when user has clear goals or wants action steps. Default to current mode if unclear.",
+			},
 		},
-		Required: []string{"coaching", "safetyLevel", "domainTags", "mood", "memoryReferenced"},
+		Required: []string{"coaching", "safetyLevel", "domainTags", "mood", "memoryReferenced", "mode"},
 	},
 }
 
@@ -54,6 +59,7 @@ type toolResult struct {
 	DomainTags       []string `json:"domainTags"`
 	Mood             string   `json:"mood"`
 	MemoryReferenced bool     `json:"memoryReferenced"`
+	Mode             string   `json:"mode"`
 }
 
 // AnthropicProvider implements Provider using the Anthropic API.
@@ -170,7 +176,7 @@ func (p *AnthropicProvider) StreamChat(ctx context.Context, req ChatRequest) (<-
 					SafetyLevel:      result.SafetyLevel,
 					DomainTags:       result.DomainTags,
 					Mood:             result.Mood,
-					Mode:             req.Mode,
+					Mode:             func() string { if result.Mode != "" { return result.Mode }; return req.Mode }(),
 					MemoryReferenced: result.MemoryReferenced,
 					Usage:            usage,
 				}:

@@ -104,7 +104,7 @@ JWT required. Streams response via Server-Sent Events (SSE).
 ```
 
 - `messages` (array): Conversation messages with `role` (`user`|`assistant`) and `content`
-- `mode` (string): Coaching mode. Values: `discovery`, `directive`, `challenger`
+- `mode` (string): Coaching mode. Values: `discovery`, `directive`
 - `promptVersion` (string): System prompt version for reproducibility
 
 **Response** `200 OK` — `Content-Type: text/event-stream`
@@ -154,12 +154,13 @@ Emitted once when the LLM response is complete.
 
 ```
 event: done
-data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "usage": {"inputTokens": 50, "outputTokens": 12}}
+data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "mode": "discovery", "usage": {"inputTokens": 50, "outputTokens": 12}, "promptVersion": "a1b2c3d4"}
 ```
 
 - `safetyLevel` (string): Safety classification. Values: `green`, `yellow`, `orange`, `red`
 - `domainTags` (array of strings): Life domain tags extracted from conversation. Always an array (empty `[]` if none)
 - `mood` (string): Coach expression mood. Values: `welcoming`, `thinking`, `warm`, `focused`, `gentle`
+- `mode` (string): Coaching mode for this response. Values: `discovery`, `directive`. May differ from request mode when the LLM decides to transition.
 - `usage` (object): Token consumption
   - `inputTokens` (number): Input token count
   - `outputTokens` (number): Output token count

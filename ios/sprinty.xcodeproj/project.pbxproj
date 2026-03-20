@@ -52,6 +52,7 @@
 		A0294AB4E2D48B41E2A9A2D7 /* CoachingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5646233B571BC711F37C6139 /* CoachingView.swift */; };
 		A0D03501B56F6D396263F29D /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF56B5696C0F46E58DA13A2E /* OnboardingViewModel.swift */; };
 		A5F9AF7C4F1A0908B9F837AA /* CoachingViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DA8B59EBCF256355B9FD40C /* CoachingViewModelTests.swift */; };
+		B23A4C91D7E84F20A1C3B5E7 /* ModeSegmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C45D6E82F3A94B10D2E8A7F9 /* ModeSegmentTests.swift */; };
 		A71E7C0745A10B00A442CE22 /* SprintyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AC2695EF5FF35084115B265 /* SprintyApp.swift */; };
 		AEF9781D42E2635A5D512238 /* AuthServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2746A34C3922F033BB500514 /* AuthServiceTests.swift */; };
 		AFA2579FC8F3DACCB8443105 /* DateSeparatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16B18C0954831C590B949907 /* DateSeparatorView.swift */; };
@@ -97,6 +98,7 @@
 		0A6D2BD3D7BC6808159973DC /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
 		0C5FCFCC4C0883E93FA0BA1E /* ChatEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatEvent.swift; sourceTree = "<group>"; };
 		0DA8B59EBCF256355B9FD40C /* CoachingViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachingViewModelTests.swift; sourceTree = "<group>"; };
+		C45D6E82F3A94B10D2E8A7F9 /* ModeSegmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModeSegmentTests.swift; sourceTree = "<group>"; };
 		1335966586968DE7E9F7461D /* SpacingScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacingScaleTests.swift; sourceTree = "<group>"; };
 		16B18C0954831C590B949907 /* DateSeparatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateSeparatorView.swift; sourceTree = "<group>"; };
 		1832DB3AB733A3F6820A0B8C /* TypographyScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypographyScaleTests.swift; sourceTree = "<group>"; };
@@ -306,6 +308,7 @@
 			isa = PBXGroup;
 			children = (
 				0DA8B59EBCF256355B9FD40C /* CoachingViewModelTests.swift */,
+				C45D6E82F3A94B10D2E8A7F9 /* ModeSegmentTests.swift */,
 				D885763E185163AA39ACC9A2 /* OnboardingRoutingTests.swift */,
 				56DBC44430B90A334A5DC206 /* OnboardingViewModelTests.swift */,
 				E1C7F4F2D50BCFEB0389DC6B /* Home */,
@@ -668,6 +671,7 @@
 				AEF9781D42E2635A5D512238 /* AuthServiceTests.swift in Sources */,
 				41716DEACCB5067311D9F990 /* ChatEventCodableTests.swift in Sources */,
 				A5F9AF7C4F1A0908B9F837AA /* CoachingViewModelTests.swift in Sources */,
+				B23A4C91D7E84F20A1C3B5E7 /* ModeSegmentTests.swift in Sources */,
 				8816B3BC4C2342F936003204 /* CodableRoundtripTests.swift in Sources */,
 				F26D7C04F6B152359F9181F5 /* ColorPaletteTests.swift in Sources */,
 				B1E9E9B9384D5CAC5D7EDB82 /* CopyStandardsTests.swift in Sources */,

@@ -46,5 +46,11 @@ enum DatabaseMigrations {
                 t.column("updatedAt", .text).notNull()
             }
         }
+
+        migrator.registerMigration("v3") { db in
+            try db.alter(table: "ConversationSession") { t in
+                t.add(column: "modeHistory", .text)
+            }
+        }
     }
 }

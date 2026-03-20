@@ -2,7 +2,9 @@ package providers
 
 import "context"
 
-type MockProvider struct{}
+type MockProvider struct {
+	StubbedMode string
+}
 
 func NewMockProvider() *MockProvider {
 	return &MockProvider{}
@@ -36,7 +38,7 @@ func (m *MockProvider) StreamChat(ctx context.Context, req ChatRequest) (<-chan 
 			SafetyLevel: "green",
 			DomainTags:  []string{},
 			Mood:        "welcoming",
-			Mode:        req.Mode,
+			Mode:        func() string { if m.StubbedMode != "" { return m.StubbedMode }; return req.Mode }(),
 			Usage:       &Usage{InputTokens: 50, OutputTokens: 12},
 		}:
 		}
