@@ -52,5 +52,11 @@ enum DatabaseMigrations {
                 t.add(column: "modeHistory", .text)
             }
         }
+
+        migrator.registerMigration("v4") { db in
+            try db.alter(table: "ConversationSession") { t in
+                t.add(column: "moodHistory", .text)
+            }
+        }
     }
 }

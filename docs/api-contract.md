@@ -99,13 +99,28 @@ JWT required. Streams response via Server-Sent Events (SSE).
     {"role": "user", "content": "I've been feeling stuck at work lately."}
   ],
   "mode": "discovery",
-  "promptVersion": "1.0"
+  "promptVersion": "1.0",
+  "userState": {
+    "engagementLevel": "medium",
+    "recentMoods": ["warm", "focused"],
+    "avgMessageLength": "medium",
+    "sessionCount": 5,
+    "lastSessionGapHours": 12,
+    "recentSessionIntensity": "moderate"
+  }
 }
 ```
 
 - `messages` (array): Conversation messages with `role` (`user`|`assistant`) and `content`
 - `mode` (string): Coaching mode. Values: `discovery`, `directive`
 - `promptVersion` (string): System prompt version for reproducibility
+- `userState` (object, optional): User engagement state computed on-device for adaptive tone
+  - `engagementLevel` (string): `high`, `medium`, `low`
+  - `recentMoods` (array of strings): Last 3-5 mood values from recent sessions
+  - `avgMessageLength` (string): `short`, `medium`, `long`
+  - `sessionCount` (number): Total recent sessions
+  - `lastSessionGapHours` (number, optional): Hours since last session
+  - `recentSessionIntensity` (string): `light`, `moderate`, `deep`
 
 **Response** `200 OK` — `Content-Type: text/event-stream`
 

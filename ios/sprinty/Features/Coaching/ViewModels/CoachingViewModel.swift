@@ -14,6 +14,7 @@ final class CoachingViewModel {
     var coachingMode: CoachingMode = .discovery
     var challengerActive: Bool = false
     var modeSegments: [ModeSegment] = []
+    private(set) var sessionMoods: [String] = []
 
     private let appState: AppState
     private let chatService: ChatServiceProtocol
@@ -88,7 +89,12 @@ final class CoachingViewModel {
             // Load user profile for coach name
             let profile = try await loadChatProfile()
 
-            let stream = chatService.streamChat(messages: chatMessages, mode: session.mode.rawValue, profile: profile)
+            // Compute engagement snapshot for adaptive tone
+            let calculator = EngagementCalculator(dbPool: databaseManager.dbPool)
+            let snapshot = try? await calculator.compute()
+            let userState = snapshot.map { UserState(from: $0) }
+
+            let stream = chatService.streamChat(messages: chatMessages, mode: session.mode.rawValue, profile: profile, userState: userState)
             let dbManager = databaseManager
 
             streamingTask = Task { [weak self] in
@@ -124,6 +130,10 @@ final class CoachingViewModel {
 
                             self.messages.append(assistantMessage)
                             self.coachExpression = CoachExpression(mood: mood)
+                            if let mood {
+                                self.sessionMoods.append(mood)
+                                await self.persistMoodHistory()
+                            }
                             self.streamingText = ""
                             self.isStreaming = false
 
@@ -219,6 +229,22 @@ final class CoachingViewModel {
             }
             currentSession = updatedSession
             coachingMode = newMode
+        } catch {
+            handleError(error)
+        }
+    }
+
+    private func persistMoodHistory() async {
+        guard var session = currentSession else { return }
+        if let encoded = try? JSONEncoder().encode(sessionMoods) {
+            session.moodHistory = String(data: encoded, encoding: .utf8)
+        }
+        let updatedSession = session
+        do {
+            try await databaseManager.dbPool.write { db in
+                try updatedSession.update(db)
+            }
+            currentSession = updatedSession
         } catch {
             handleError(error)
         }

@@ -55,6 +55,28 @@ struct CodableRoundtripTests {
         #expect(decoded.safetyLevel == .yellow)
     }
 
+    @Test("ConversationSession moodHistory encodes and decodes correctly")
+    func test_conversationSession_moodHistory_encodesDecodes() throws {
+        var session = ConversationSession(
+            id: UUID(),
+            startedAt: Date(timeIntervalSince1970: 1710000000),
+            endedAt: nil,
+            type: .coaching,
+            mode: .discovery,
+            safetyLevel: .green,
+            promptVersion: "1.0"
+        )
+        let moods = ["warm", "focused", "gentle"]
+        session.moodHistory = String(data: try encoder.encode(moods), encoding: .utf8)
+
+        let data = try encoder.encode(session)
+        let decoded = try decoder.decode(ConversationSession.self, from: data)
+        #expect(decoded.moodHistory != nil)
+
+        let decodedMoods = try JSONDecoder().decode([String].self, from: Data(decoded.moodHistory!.utf8))
+        #expect(decodedMoods == moods)
+    }
+
     @Test("Message encodes and decodes correctly")
     func messageRoundtrip() throws {
         let message = Message(

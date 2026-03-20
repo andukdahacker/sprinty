@@ -46,7 +46,7 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 		if req.Profile != nil {
 			coachName = req.Profile.CoachName
 		}
-		req.SystemPrompt = promptBuilder.Build(req.Mode, coachName)
+		req.SystemPrompt = promptBuilder.Build(req.Mode, coachName, req.UserState)
 
 		logArgs := []any{
 			"mode", req.Mode,

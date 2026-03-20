@@ -11,12 +11,22 @@ type ChatProfile struct {
 	CoachName string `json:"coachName"`
 }
 
+type UserState struct {
+	EngagementLevel        string   `json:"engagementLevel"`
+	RecentMoods            []string `json:"recentMoods"`
+	AvgMessageLength       string   `json:"avgMessageLength"`
+	SessionCount           int      `json:"sessionCount"`
+	LastSessionGapHours    *int     `json:"lastSessionGapHours,omitempty"`
+	RecentSessionIntensity string   `json:"recentSessionIntensity"`
+}
+
 type ChatRequest struct {
 	Messages      []ChatMessage `json:"messages"`
 	Mode          string        `json:"mode"`
 	PromptVersion string        `json:"promptVersion"`
 	SystemPrompt  string        `json:"systemPrompt,omitempty"`
 	Profile       *ChatProfile  `json:"profile,omitempty"`
+	UserState     *UserState    `json:"userState,omitempty"`
 }
 
 type Usage struct {

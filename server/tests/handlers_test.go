@@ -39,7 +39,7 @@ func createTestPromptBuilder(t *testing.T) *prompts.Builder {
 		"mood.md":              "Mood selection.",
 		"tagging.md":           "Domain tagging.",
 		"cultural.md":          "Cultural.",
-		"context-injection.md": "Coach: {{coach_name}}.",
+		"context-injection.md": "Coach: {{coach_name}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
 		"mode-transitions.md": "Mode transitions: analyze user intent.",
 		"challenger.md":       "Challenger capability: push back constructively.",
 	}
@@ -74,7 +74,7 @@ func setupMuxWithBuilder(builder *prompts.Builder) *http.ServeMux {
 			"mood.md":              "Mood.",
 			"tagging.md":           "Tags.",
 			"cultural.md":          "Cultural.",
-			"context-injection.md": "Coach: {{coach_name}}.",
+			"context-injection.md": "Coach: {{coach_name}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
 			"mode-transitions.md": "Mode transitions: analyze user intent.",
 			"challenger.md":       "Challenger capability: push back constructively.",
 		}
@@ -837,5 +837,50 @@ func TestChatHandler_DoneEvent_ModeFallbackWhenEmpty(t *testing.T) {
 	}
 	if doneData["mode"] != "directive" {
 		t.Errorf("expected mode 'directive' (fallback to req.Mode), got %v", doneData["mode"])
+	}
+}
+
+// --- Story 2.5 Tests ---
+
+func TestChatHandler_ValidRequest_WithUserState(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0","userState":{"engagementLevel":"high","recentMoods":["warm","focused"],"avgMessageLength":"medium","sessionCount":5,"lastSessionGapHours":12,"recentSessionIntensity":"moderate"}}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d. Body: %s", w.Code, w.Body.String())
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "event: token") {
+		t.Error("expected SSE token events with userState request")
+	}
+	if !strings.Contains(body, "event: done") {
+		t.Error("expected SSE done event with userState request")
+	}
+}
+
+func TestChatHandler_ValidRequest_WithoutUserState(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "event: done") {
+		t.Error("expected SSE done event without userState")
 	}
 }

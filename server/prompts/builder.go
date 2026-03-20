@@ -6,7 +6,10 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+
+	"github.com/ducdo/sprinty/server/providers"
 )
 
 // Builder assembles system prompts from modular section files.
@@ -63,8 +66,8 @@ func (b *Builder) ContentHash() string {
 	return b.contentHash
 }
 
-// Build assembles a system prompt for the given mode and coach name.
-func (b *Builder) Build(mode string, coachName string) string {
+// Build assembles a system prompt for the given mode, coach name, and user state.
+func (b *Builder) Build(mode string, coachName string, userState *providers.UserState) string {
 	var prompt strings.Builder
 
 	// Always include base persona
@@ -110,6 +113,27 @@ func (b *Builder) Build(mode string, coachName string) string {
 		result = strings.ReplaceAll(result, "{{coach_name}}", coachName)
 	} else {
 		result = strings.ReplaceAll(result, "{{coach_name}}", "Coach")
+	}
+
+	// Replace user state template variables
+	if userState != nil {
+		result = strings.ReplaceAll(result, "{{engagement_level}}", userState.EngagementLevel)
+		result = strings.ReplaceAll(result, "{{recent_moods}}", strings.Join(userState.RecentMoods, ", "))
+		result = strings.ReplaceAll(result, "{{avg_message_length}}", userState.AvgMessageLength)
+		result = strings.ReplaceAll(result, "{{session_count}}", strconv.Itoa(userState.SessionCount))
+		if userState.LastSessionGapHours != nil {
+			result = strings.ReplaceAll(result, "{{last_session_gap}}", strconv.Itoa(*userState.LastSessionGapHours)+"h")
+		} else {
+			result = strings.ReplaceAll(result, "{{last_session_gap}}", "unknown")
+		}
+		result = strings.ReplaceAll(result, "{{recent_session_intensity}}", userState.RecentSessionIntensity)
+	} else {
+		result = strings.ReplaceAll(result, "{{engagement_level}}", "unknown")
+		result = strings.ReplaceAll(result, "{{recent_moods}}", "unknown")
+		result = strings.ReplaceAll(result, "{{avg_message_length}}", "unknown")
+		result = strings.ReplaceAll(result, "{{session_count}}", "unknown")
+		result = strings.ReplaceAll(result, "{{last_session_gap}}", "unknown")
+		result = strings.ReplaceAll(result, "{{recent_session_intensity}}", "unknown")
 	}
 
 	return result

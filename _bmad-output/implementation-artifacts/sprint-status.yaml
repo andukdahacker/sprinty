@@ -36,6 +36,9 @@
 
 generated: 2026-03-17
 last_updated: 2026-03-20
+# Story 2.5 code review completed: 2026-03-20
+# Story 2.5 dev completed: 2026-03-20
+# Story 2.5 context created: 2026-03-20
 # Story 2.4 dev completed: 2026-03-20
 # Story 2.4 context created: 2026-03-20
 # Story 2.3 dev started: 2026-03-20
@@ -79,7 +82,7 @@ development_status:
   2-2-directive-mode-with-contingency-plans: done
   2-3-natural-mode-transitions: done
   2-4-challenger-capability: review
-  2-5-adaptive-coaching-tone: backlog
+  2-5-adaptive-coaching-tone: done
   epic-2-retrospective: optional
 
   # Epic 3: Memory, Continuity & Understanding

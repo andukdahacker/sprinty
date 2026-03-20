@@ -30,6 +30,7 @@ struct ConversationSession: Codable, FetchableRecord, PersistableRecord, Identif
     var safetyLevel: SafetyLevel
     var promptVersion: String?
     var modeHistory: String?
+    var moodHistory: String?
 
     static let databaseTableName = "ConversationSession"
 }

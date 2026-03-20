@@ -258,6 +258,49 @@ struct CoachingViewModelTests {
         #expect(viewModel.challengerActive == false)
     }
 
+    @Test("Send message includes userState in request")
+    @MainActor
+    func test_sendMessage_includesUserStateInRequest() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Hi."),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+        ]
+
+        let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
+        let _ = try await createSession(in: db)
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        await viewModel.sendMessage("Hello coach")
+        try await Task.sleep(for: .milliseconds(500))
+
+        // UserState should be populated (even if defaults for a fresh session)
+        #expect(mockChat.lastUserState != nil)
+    }
+
+    @Test("Done event with mood appends to sessionMoods")
+    @MainActor
+    func test_sendMessage_appendsMoodToSessionMoods() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Hi."),
+            .done(safetyLevel: "green", domainTags: [], mood: "warm", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+        ]
+
+        let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
+        let _ = try await createSession(in: db)
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        await viewModel.sendMessage("Hello")
+        try await Task.sleep(for: .milliseconds(500))
+
+        #expect(viewModel.sessionMoods == ["warm"])
+    }
+
     @Test("Cancel streaming stops the task")
     @MainActor
     func test_cancelStreaming_stopsTask() async throws {
