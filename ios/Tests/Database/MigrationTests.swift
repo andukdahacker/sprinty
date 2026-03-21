@@ -177,6 +177,198 @@ struct MigrationTests {
         #expect(results.first?.id == newer.id)
     }
 
+    // --- Story 3.5 Tests ---
+
+    @Test("v6 migration creates timestamp index on Message")
+    func v6TimestampIndexExists() throws {
+        let db = try createInMemoryDatabase()
+        try db.read { db in
+            let indexes = try db.indexes(on: "Message")
+            let indexNames = indexes.map(\.name)
+            #expect(indexNames.contains("idx_message_timestamp"))
+        }
+    }
+
+    @Test("v6 migration creates FTS5 virtual table")
+    func v6FTS5TableCreated() throws {
+        let db = try createInMemoryDatabase()
+        try db.read { db in
+            let tables = try String.fetchAll(db, sql: "SELECT name FROM sqlite_master WHERE type='table' AND name='MessageFTS'")
+            #expect(tables.contains("MessageFTS"))
+        }
+    }
+
+    @Test("v6 FTS5 populated from existing messages")
+    func v6FTS5PopulatedFromExistingData() throws {
+        // Create DB with v1-v5 only, insert data, then run v6
+        let dbQueue = try DatabaseQueue(configuration: Configuration())
+        var partialMigrator = DatabaseMigrator()
+
+        // Register only v1-v5
+        partialMigrator.registerMigration("v1") { db in
+            try db.create(table: "ConversationSession") { t in
+                t.column("id", .text).primaryKey().notNull()
+                t.column("startedAt", .text).notNull()
+                t.column("endedAt", .text)
+                t.column("type", .text).notNull().defaults(to: "coaching")
+                t.column("mode", .text).notNull().defaults(to: "discovery")
+                t.column("safetyLevel", .text).notNull().defaults(to: "green")
+                t.column("promptVersion", .text)
+            }
+            try db.create(table: "Message") { t in
+                t.column("id", .text).primaryKey().notNull()
+                t.column("sessionId", .text).notNull()
+                    .references("ConversationSession", onDelete: .cascade)
+                t.column("role", .text).notNull()
+                t.column("content", .text).notNull()
+                t.column("timestamp", .text).notNull()
+            }
+            try db.create(index: "idx_message_sessionId", on: "Message", columns: ["sessionId"])
+        }
+        try partialMigrator.migrate(dbQueue)
+
+        // Insert test data
+        let sessionId = UUID()
+        try dbQueue.write { db in
+            try db.execute(sql: "INSERT INTO ConversationSession (id, startedAt, type, mode, safetyLevel) VALUES (?, ?, 'coaching', 'discovery', 'green')",
+                           arguments: [sessionId.uuidString, Date().databaseValue])
+            try db.execute(sql: "INSERT INTO Message (id, sessionId, role, content, timestamp) VALUES (?, ?, 'user', 'Hello world', ?)",
+                           arguments: [UUID().uuidString, sessionId.uuidString, Date().databaseValue])
+        }
+
+        // Now run full migrations (v6 will run on top)
+        var fullMigrator = DatabaseMigrator()
+        DatabaseMigrations.registerMigrations(&fullMigrator)
+        try fullMigrator.migrate(dbQueue)
+
+        // Verify FTS is populated
+        let ftsCount = try dbQueue.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM MessageFTS WHERE content MATCH 'Hello'")
+        }
+        #expect(ftsCount == 1)
+    }
+
+    @Test("v6 FTS5 INSERT trigger keeps sync")
+    func v6FTS5InsertTrigger() throws {
+        let db = try createInMemoryDatabase()
+        let sessionId = UUID()
+        try db.write { db in
+            try db.execute(sql: "INSERT INTO ConversationSession (id, startedAt, type, mode, safetyLevel) VALUES (?, ?, 'coaching', 'discovery', 'green')",
+                           arguments: [sessionId.uuidString, Date().databaseValue])
+            try db.execute(sql: "INSERT INTO Message (id, sessionId, role, content, timestamp) VALUES (?, ?, 'user', 'New message for search', ?)",
+                           arguments: [UUID().uuidString, sessionId.uuidString, Date().databaseValue])
+        }
+        let ftsCount = try db.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM MessageFTS WHERE content MATCH 'search'")
+        }
+        #expect(ftsCount == 1)
+    }
+
+    @Test("v6 FTS5 DELETE trigger keeps sync")
+    func v6FTS5DeleteTrigger() throws {
+        let db = try createInMemoryDatabase()
+        let sessionId = UUID()
+        let messageId = UUID()
+        try db.write { db in
+            try db.execute(sql: "INSERT INTO ConversationSession (id, startedAt, type, mode, safetyLevel) VALUES (?, ?, 'coaching', 'discovery', 'green')",
+                           arguments: [sessionId.uuidString, Date().databaseValue])
+            try db.execute(sql: "INSERT INTO Message (id, sessionId, role, content, timestamp) VALUES (?, ?, 'user', 'Deletable content', ?)",
+                           arguments: [messageId.uuidString, sessionId.uuidString, Date().databaseValue])
+        }
+        // Verify exists
+        let beforeCount = try db.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM MessageFTS WHERE content MATCH 'Deletable'")
+        }
+        #expect(beforeCount == 1)
+
+        // Delete the message
+        try db.write { db in
+            try db.execute(sql: "DELETE FROM Message WHERE id = ?", arguments: [messageId.uuidString])
+        }
+        let afterCount = try db.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM MessageFTS WHERE content MATCH 'Deletable'")
+        }
+        #expect(afterCount == 0)
+    }
+
+    @Test("v6 FTS5 UPDATE trigger keeps sync")
+    func v6FTS5UpdateTrigger() throws {
+        let db = try createInMemoryDatabase()
+        let sessionId = UUID()
+        let messageId = UUID()
+        try db.write { db in
+            try db.execute(sql: "INSERT INTO ConversationSession (id, startedAt, type, mode, safetyLevel) VALUES (?, ?, 'coaching', 'discovery', 'green')",
+                           arguments: [sessionId.uuidString, Date().databaseValue])
+            try db.execute(sql: "INSERT INTO Message (id, sessionId, role, content, timestamp) VALUES (?, ?, 'user', 'Original content', ?)",
+                           arguments: [messageId.uuidString, sessionId.uuidString, Date().databaseValue])
+        }
+        // Verify original content searchable
+        let beforeCount = try db.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM MessageFTS WHERE content MATCH 'Original'")
+        }
+        #expect(beforeCount == 1)
+
+        // Update the message content
+        try db.write { db in
+            try db.execute(sql: "UPDATE Message SET content = 'Updated content' WHERE id = ?", arguments: [messageId.uuidString])
+        }
+
+        // Old content should no longer match
+        let oldCount = try db.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM MessageFTS WHERE content MATCH 'Original'")
+        }
+        #expect(oldCount == 0)
+
+        // New content should be searchable
+        let newCount = try db.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM MessageFTS WHERE content MATCH 'Updated'")
+        }
+        #expect(newCount == 1)
+    }
+
+    @Test("Message.allConversations returns messages across sessions with pagination")
+    func allConversationsPagination() throws {
+        let db = try createInMemoryDatabase()
+        let session1 = ConversationSession(id: UUID(), startedAt: Date(timeIntervalSinceNow: -7200), endedAt: Date(timeIntervalSinceNow: -3600), type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: nil)
+        let session2 = ConversationSession(id: UUID(), startedAt: Date(timeIntervalSinceNow: -3600), endedAt: nil, type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: nil)
+
+        try db.write { db in
+            try session1.insert(db)
+            try session2.insert(db)
+        }
+
+        let msg1 = Message(id: UUID(), sessionId: session1.id, role: .user, content: "First", timestamp: Date(timeIntervalSinceNow: -7000))
+        let msg2 = Message(id: UUID(), sessionId: session1.id, role: .assistant, content: "Second", timestamp: Date(timeIntervalSinceNow: -6900))
+        let msg3 = Message(id: UUID(), sessionId: session2.id, role: .user, content: "Third", timestamp: Date(timeIntervalSinceNow: -3500))
+
+        try db.write { db in
+            try msg1.insert(db)
+            try msg2.insert(db)
+            try msg3.insert(db)
+        }
+
+        // First page (newest first)
+        let page1 = try db.read { db in
+            try Message.allConversations(limit: 2, offset: 0).fetchAll(db)
+        }
+        #expect(page1.count == 2)
+        #expect(page1[0].content == "Third") // newest
+        #expect(page1[1].content == "Second")
+
+        // Second page
+        let page2 = try db.read { db in
+            try Message.allConversations(limit: 2, offset: 2).fetchAll(db)
+        }
+        #expect(page2.count == 1)
+        #expect(page2[0].content == "First") // oldest
+
+        // Empty page at end
+        let page3 = try db.read { db in
+            try Message.allConversations(limit: 2, offset: 3).fetchAll(db)
+        }
+        #expect(page3.isEmpty)
+    }
+
     @Test("Message.forSession query filters correctly")
     func messagesForSessionQuery() throws {
         let db = try createInMemoryDatabase()

@@ -31,6 +31,32 @@ struct CoachingView: View {
                             }
 
                             ForEach(Array(viewModel.messages.enumerated()), id: \.element.id) { index, message in
+                                // Scroll-triggered pagination: load more when near top (single trigger at index 0)
+                                if index == 0 {
+                                    Color.clear
+                                        .frame(height: 0)
+                                        .onAppear {
+                                            if viewModel.hasMoreHistory && !viewModel.isLoadingHistory {
+                                                let anchorId = viewModel.messages.first?.id
+                                                Task {
+                                                    let countBefore = viewModel.messages.count
+                                                    await viewModel.loadHistoryPage()
+                                                    if viewModel.messages.count > countBefore, let anchorId {
+                                                        proxy.scrollTo(anchorId, anchor: .top)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                }
+
+                                // Summary card for previous session at session boundary
+                                if isSessionBoundary(at: index) {
+                                    let previousSessionId = viewModel.messages[index - 1].sessionId
+                                    if let summary = viewModel.summariesBySession[previousSessionId] {
+                                        SessionSummaryCardView(summary: summary)
+                                    }
+                                }
+
                                 if shouldShowDateSeparator(at: index) {
                                     DateSeparatorView(date: message.timestamp)
                                 }
@@ -48,7 +74,9 @@ struct CoachingView: View {
                         .contentColumn()
                     }
                     .onChange(of: viewModel.messages.count) {
-                        scrollToBottom(proxy: proxy)
+                        if !viewModel.isLoadingHistory {
+                            scrollToBottom(proxy: proxy)
+                        }
                     }
                     .onChange(of: viewModel.streamingText) {
                         if viewModel.isStreaming {
@@ -122,7 +150,14 @@ struct CoachingView: View {
         guard index > 0 else { return true }
         let current = viewModel.messages[index]
         let previous = viewModel.messages[index - 1]
+        // Show separator at session boundaries (even same day) or different days
+        if current.sessionId != previous.sessionId { return true }
         return !Calendar.current.isDate(current.timestamp, inSameDayAs: previous.timestamp)
+    }
+
+    private func isSessionBoundary(at index: Int) -> Bool {
+        guard index > 0 else { return false }
+        return viewModel.messages[index].sessionId != viewModel.messages[index - 1].sessionId
     }
 
     private func errorView(for error: AppError) -> some View {

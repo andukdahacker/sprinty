@@ -39,4 +39,5 @@ extension ConversationSession {
     static func recent(limit: Int = 10) -> QueryInterfaceRequest<ConversationSession> {
         order(Column("startedAt").desc).limit(limit)
     }
+
 }

@@ -345,6 +345,54 @@ struct ConversationSummaryTests {
         #expect(healthResults[0].id == healthSummary.id)
     }
 
+    // MARK: - Story 3.5 — Batch Query
+
+    @Test("forSessionIds returns summaries for multiple sessions")
+    func forSessionIds_multipleResults() throws {
+        let db = try createInMemoryDatabase()
+        let session1 = try createSession(in: db)
+        let session2 = try createSession(in: db)
+        let session3 = try createSession(in: db)
+
+        let summary1 = makeSummary(sessionId: session1.id, summary: "Session 1 summary")
+        let summary2 = makeSummary(sessionId: session2.id, summary: "Session 2 summary")
+        let summary3 = makeSummary(sessionId: session3.id, summary: "Session 3 summary")
+
+        try db.write { dbConn in
+            try summary1.insert(dbConn)
+            try summary2.insert(dbConn)
+            try summary3.insert(dbConn)
+        }
+
+        let results = try db.read { dbConn in
+            try ConversationSummary.forSessionIds([session1.id, session3.id]).fetchAll(dbConn)
+        }
+
+        #expect(results.count == 2)
+        let resultSessionIds = Set(results.map(\.sessionId))
+        #expect(resultSessionIds.contains(session1.id))
+        #expect(resultSessionIds.contains(session3.id))
+        #expect(!resultSessionIds.contains(session2.id))
+    }
+
+    @Test("forSessionIds returns empty for empty input")
+    func forSessionIds_emptyInput() throws {
+        let db = try createInMemoryDatabase()
+        let results = try db.read { dbConn in
+            try ConversationSummary.forSessionIds([]).fetchAll(dbConn)
+        }
+        #expect(results.isEmpty)
+    }
+
+    @Test("forSessionIds returns empty when no summaries exist for sessions")
+    func forSessionIds_noMatches() throws {
+        let db = try createInMemoryDatabase()
+        let results = try db.read { dbConn in
+            try ConversationSummary.forSessionIds([UUID(), UUID()]).fetchAll(dbConn)
+        }
+        #expect(results.isEmpty)
+    }
+
     // MARK: - Performance
 
     @Test("Query performance with 100+ summaries")

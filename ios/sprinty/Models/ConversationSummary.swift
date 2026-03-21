@@ -95,4 +95,8 @@ extension ConversationSummary {
     static func withoutEmbedding() -> QueryInterfaceRequest<ConversationSummary> {
         filter(Column("embedding") == nil)
     }
+
+    static func forSessionIds(_ ids: [UUID]) -> QueryInterfaceRequest<ConversationSummary> {
+        filter(ids.contains(Column("sessionId")))
+    }
 }

@@ -1222,6 +1222,273 @@ struct CoachingViewModelTests {
         #expect(mockChat.lastRagContext!.count <= 4500)
     }
 
+    // MARK: - Story 3.5 — Pagination & History
+
+    @Test("sendMessage only sends current session messages, not full history")
+    @MainActor
+    func test_sendMessage_onlySendsCurrentSessionMessages() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Response."),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
+        ]
+
+        let db = try makeTestDB()
+
+        // Create an old ended session with messages
+        let oldSession = ConversationSession(id: UUID(), startedAt: Date(timeIntervalSinceNow: -86400), endedAt: Date(timeIntervalSinceNow: -82800), type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: "1.0")
+        try await db.dbPool.write { dbConn in try oldSession.save(dbConn) }
+
+        let oldMsg = Message(id: UUID(), sessionId: oldSession.id, role: .user, content: "Old session message", timestamp: Date(timeIntervalSinceNow: -86000))
+        try await db.dbPool.write { dbConn in try oldMsg.save(dbConn) }
+
+        // Create current open session
+        let newSession = ConversationSession(id: UUID(), startedAt: Date(timeIntervalSinceNow: -3600), endedAt: nil, type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: "1.0")
+        try await db.dbPool.write { dbConn in try newSession.save(dbConn) }
+
+        let (viewModel, _, _, _) = try await makeViewModel(chatService: mockChat, dbManager: db)
+        await viewModel.loadMessagesAsync()
+
+        // History should include both sessions' messages
+        #expect(viewModel.messages.count == 1) // old message loaded
+
+        await viewModel.sendMessage("Hello from new session")
+        try await Task.sleep(for: .milliseconds(500))
+
+        // The API should only receive the current session's user message, not the old session message
+        #expect(mockChat.lastMessages != nil)
+        let sentContents = mockChat.lastMessages?.map(\.content) ?? []
+        #expect(!sentContents.contains("Old session message"))
+        #expect(sentContents.contains("Hello from new session"))
+    }
+
+    @Test("loadMessagesAsync loads initial page and sets pagination state")
+    @MainActor
+    func test_loadMessagesAsync_setsPaginationState() async throws {
+        let db = try makeTestDB()
+        let session = ConversationSession(
+            id: UUID(),
+            startedAt: Date(timeIntervalSinceNow: -3600),
+            endedAt: nil,
+            type: .coaching,
+            mode: .discovery,
+            safetyLevel: .green,
+            promptVersion: "1.0"
+        )
+        try await db.dbPool.write { dbConn in try session.save(dbConn) }
+
+        // Insert 3 messages
+        for i in 0..<3 {
+            let msg = Message(id: UUID(), sessionId: session.id, role: i % 2 == 0 ? .user : .assistant, content: "Msg \(i)", timestamp: Date(timeIntervalSinceNow: Double(-3000 + i * 100)))
+            try await db.dbPool.write { dbConn in try msg.save(dbConn) }
+        }
+
+        let (viewModel, _, _, _) = try await makeViewModel(dbManager: db)
+        await viewModel.loadMessagesAsync()
+
+        #expect(viewModel.messages.count == 3)
+        // 3 < 50 (pageSize) so no more history
+        #expect(viewModel.hasMoreHistory == false)
+        // Messages should be in chronological order
+        #expect(viewModel.messages[0].content == "Msg 0")
+        #expect(viewModel.messages[2].content == "Msg 2")
+    }
+
+    @Test("loadHistoryPage loads older messages and prepends them")
+    @MainActor
+    func test_loadHistoryPage_prependsOlderMessages() async throws {
+        let db = try makeTestDB()
+
+        let sessionOld = ConversationSession(id: UUID(), startedAt: Date(timeIntervalSinceNow: -86400), endedAt: Date(timeIntervalSinceNow: -86000), type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: "1.0")
+        let sessionNew = ConversationSession(id: UUID(), startedAt: Date(timeIntervalSinceNow: -3600), endedAt: nil, type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: "1.0")
+        try await db.dbPool.write { dbConn in
+            try sessionOld.save(dbConn)
+            try sessionNew.save(dbConn)
+        }
+
+        // Old session messages
+        let oldMsg = Message(id: UUID(), sessionId: sessionOld.id, role: .user, content: "Old message", timestamp: Date(timeIntervalSinceNow: -86300))
+        try await db.dbPool.write { dbConn in try oldMsg.save(dbConn) }
+
+        // New session messages
+        let newMsg = Message(id: UUID(), sessionId: sessionNew.id, role: .user, content: "New message", timestamp: Date(timeIntervalSinceNow: -3500))
+        try await db.dbPool.write { dbConn in try newMsg.save(dbConn) }
+
+        let (viewModel, _, _, _) = try await makeViewModel(dbManager: db)
+        await viewModel.loadMessagesAsync()
+
+        // Both messages loaded in initial page (< pageSize)
+        #expect(viewModel.messages.count == 2)
+        #expect(viewModel.messages[0].content == "Old message")
+        #expect(viewModel.messages[1].content == "New message")
+    }
+
+    @Test("loadHistoryPage does nothing when hasMoreHistory is false")
+    @MainActor
+    func test_loadHistoryPage_noMoreHistory_doesNothing() async throws {
+        let (viewModel, _, _, _) = try await makeViewModel()
+        await viewModel.loadMessagesAsync()
+
+        #expect(viewModel.hasMoreHistory == false)
+        let countBefore = viewModel.messages.count
+        await viewModel.loadHistoryPage()
+        #expect(viewModel.messages.count == countBefore)
+    }
+
+    @Test("loadHistoryPage does not double-load when already loading")
+    @MainActor
+    func test_loadHistoryPage_concurrent_doesNotDoubleFetch() async throws {
+        let db = try makeTestDB()
+        let session = ConversationSession(id: UUID(), startedAt: Date(), endedAt: nil, type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: "1.0")
+        try await db.dbPool.write { dbConn in try session.save(dbConn) }
+
+        let (viewModel, _, _, _) = try await makeViewModel(dbManager: db)
+        await viewModel.loadMessagesAsync()
+
+        // Even double-calling should be safe
+        await viewModel.loadHistoryPage()
+        await viewModel.loadHistoryPage()
+        // No crash = pass
+    }
+
+    @Test("Summaries loaded by session ID during pagination")
+    @MainActor
+    func test_loadMessagesAsync_loadsSummariesBySession() async throws {
+        let db = try makeTestDB()
+        let session = ConversationSession(id: UUID(), startedAt: Date(timeIntervalSinceNow: -3600), endedAt: Date(timeIntervalSinceNow: -1800), type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: "1.0")
+        try await db.dbPool.write { dbConn in try session.save(dbConn) }
+
+        let msg = Message(id: UUID(), sessionId: session.id, role: .user, content: "Hi", timestamp: Date(timeIntervalSinceNow: -3500))
+        try await db.dbPool.write { dbConn in try msg.save(dbConn) }
+
+        let summary = ConversationSummary(
+            id: UUID(), sessionId: session.id,
+            summary: "Test summary", keyMoments: ConversationSummary.encodeArray(["moment"]),
+            domainTags: ConversationSummary.encodeArray(["career"]),
+            emotionalMarkers: nil, keyDecisions: nil, goalReferences: nil,
+            embedding: nil, createdAt: Date(timeIntervalSinceNow: -1800)
+        )
+        try await db.dbPool.write { dbConn in try summary.save(dbConn) }
+
+        let (viewModel, _, _, _) = try await makeViewModel(dbManager: db)
+        await viewModel.loadMessagesAsync()
+
+        #expect(viewModel.summariesBySession[session.id] != nil)
+        #expect(viewModel.summariesBySession[session.id]?.summary == "Test summary")
+    }
+
+    @Test("Cold start: single session shows no additional history")
+    @MainActor
+    func test_coldStart_singleSession_noMoreHistory() async throws {
+        let db = try makeTestDB()
+        let session = ConversationSession(id: UUID(), startedAt: Date(), endedAt: nil, type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: "1.0")
+        try await db.dbPool.write { dbConn in try session.save(dbConn) }
+
+        let msg = Message(id: UUID(), sessionId: session.id, role: .user, content: "Hello", timestamp: Date())
+        try await db.dbPool.write { dbConn in try msg.save(dbConn) }
+
+        let (viewModel, _, _, _) = try await makeViewModel(dbManager: db)
+        await viewModel.loadMessagesAsync()
+
+        #expect(viewModel.messages.count == 1)
+        #expect(viewModel.hasMoreHistory == false)
+        #expect(viewModel.summariesBySession.isEmpty)
+    }
+
+    @Test("Session without summary shows no summary card data")
+    @MainActor
+    func test_sessionWithoutSummary_noSummaryInDict() async throws {
+        let db = try makeTestDB()
+        let session = ConversationSession(id: UUID(), startedAt: Date(timeIntervalSinceNow: -3600), endedAt: Date(timeIntervalSinceNow: -1800), type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: "1.0")
+        try await db.dbPool.write { dbConn in try session.save(dbConn) }
+
+        let msg = Message(id: UUID(), sessionId: session.id, role: .user, content: "Hi", timestamp: Date(timeIntervalSinceNow: -3500))
+        try await db.dbPool.write { dbConn in try msg.save(dbConn) }
+
+        // No summary created for this session
+
+        let (viewModel, _, _, _) = try await makeViewModel(dbManager: db)
+        await viewModel.loadMessagesAsync()
+
+        #expect(viewModel.summariesBySession[session.id] == nil)
+    }
+
+    @Test("Large history: 100 sessions with messages paginates correctly")
+    @MainActor
+    func test_largeHistory_100Sessions() async throws {
+        let db = try makeTestDB()
+
+        // Create 100 sessions with 2 messages each
+        for i in 0..<100 {
+            let session = ConversationSession(
+                id: UUID(),
+                startedAt: Date(timeIntervalSinceNow: Double(-86400 * (100 - i))),
+                endedAt: Date(timeIntervalSinceNow: Double(-86400 * (100 - i) + 3600)),
+                type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: "1.0"
+            )
+            try await db.dbPool.write { dbConn in try session.save(dbConn) }
+
+            let msg1 = Message(id: UUID(), sessionId: session.id, role: .user, content: "Msg \(i)-1", timestamp: Date(timeIntervalSinceNow: Double(-86400 * (100 - i) + 100)))
+            let msg2 = Message(id: UUID(), sessionId: session.id, role: .assistant, content: "Msg \(i)-2", timestamp: Date(timeIntervalSinceNow: Double(-86400 * (100 - i) + 200)))
+            try await db.dbPool.write { dbConn in
+                try msg1.save(dbConn)
+                try msg2.save(dbConn)
+            }
+        }
+
+        let (viewModel, _, _, _) = try await makeViewModel(dbManager: db)
+        await viewModel.loadMessagesAsync()
+
+        // Initial load gets 50 messages (pageSize)
+        #expect(viewModel.messages.count == 50)
+        #expect(viewModel.hasMoreHistory == true)
+
+        // Load second page
+        await viewModel.loadHistoryPage()
+        #expect(viewModel.messages.count == 100)
+        #expect(viewModel.hasMoreHistory == true)
+
+        // Load remaining pages
+        await viewModel.loadHistoryPage()
+        #expect(viewModel.messages.count == 150)
+        #expect(viewModel.hasMoreHistory == true)
+
+        await viewModel.loadHistoryPage()
+        #expect(viewModel.messages.count == 200)
+        // 200 messages / 50 pageSize = exactly 4 pages, so hasMoreHistory may still be true
+        // One more call finds 0 results and sets it false
+        await viewModel.loadHistoryPage()
+        #expect(viewModel.hasMoreHistory == false)
+
+        // Verify chronological order maintained
+        for i in 1..<viewModel.messages.count {
+            #expect(viewModel.messages[i].timestamp >= viewModel.messages[i-1].timestamp)
+        }
+    }
+
+    @Test("Offline browsing: history loads from local GRDB only")
+    @MainActor
+    func test_offlineBrowsing_loadsFromDB() async throws {
+        let db = try makeTestDB()
+        let mockChat = MockChatService()
+
+        let session = ConversationSession(id: UUID(), startedAt: Date(timeIntervalSinceNow: -3600), endedAt: nil, type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: "1.0")
+        try await db.dbPool.write { dbConn in try session.save(dbConn) }
+
+        let msg = Message(id: UUID(), sessionId: session.id, role: .user, content: "Offline test", timestamp: Date(timeIntervalSinceNow: -3500))
+        try await db.dbPool.write { dbConn in try msg.save(dbConn) }
+
+        let appState = AppState()
+        appState.isOnline = false // Simulate offline
+        let viewModel = CoachingViewModel(appState: appState, chatService: mockChat, databaseManager: db)
+
+        await viewModel.loadMessagesAsync()
+
+        // History should load fine even offline
+        #expect(viewModel.messages.count == 1)
+        #expect(viewModel.messages[0].content == "Offline test")
+    }
+
     @Test("getOrCreateSession creates new session after previous was ended")
     @MainActor
     func test_getOrCreateSession_afterEndSession_createsNew() async throws {

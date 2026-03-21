@@ -21,4 +21,8 @@ extension Message {
     static func forSession(id: UUID) -> QueryInterfaceRequest<Message> {
         filter(Column("sessionId") == id).order(Column("timestamp").asc)
     }
+
+    static func allConversations(limit: Int, offset: Int) -> QueryInterfaceRequest<Message> {
+        order(Column("timestamp").desc).limit(limit, offset: offset)
+    }
 }

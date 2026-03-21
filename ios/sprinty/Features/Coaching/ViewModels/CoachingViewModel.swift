@@ -18,6 +18,9 @@ final class CoachingViewModel {
     private(set) var sessionMoods: [String] = []
     private(set) var memoryReferencedMessages: [UUID: Bool] = [:]
     var dailyGreeting: String?
+    private(set) var summariesBySession: [UUID: ConversationSummary] = [:]
+    private(set) var hasMoreHistory: Bool = true
+    private(set) var isLoadingHistory: Bool = false
 
     private let appState: AppState
     private let chatService: ChatServiceProtocol
@@ -26,6 +29,8 @@ final class CoachingViewModel {
     private var currentSession: ConversationSession?
     private var retryAfterTask: Task<Void, Never>?
     private var cachedPromptVersion: String?
+    private var historyPageSize: Int = 50
+    private var historyOffset: Int = 0
 
     private let embeddingPipeline: EmbeddingPipelineProtocol?
     private let profileUpdateService: ProfileUpdateServiceProtocol?
@@ -48,17 +53,76 @@ final class CoachingViewModel {
 
     func loadMessagesAsync() async {
         do {
-            let session = try await getOrCreateSession()
-            currentSession = session
-            coachingMode = session.mode
-            modeSegments = [ModeSegment(mode: session.mode, messageIndex: 0)]
-            let loaded = try await databaseManager.dbPool.read { db in
-                try Message.forSession(id: session.id).fetchAll(db)
+            // Load existing session if available — do NOT create one just for browsing history
+            let existingSession: ConversationSession? = try await databaseManager.dbPool.read { db in
+                try ConversationSession.order(Column("startedAt").desc).fetchOne(db)
             }
-            messages = loaded
+            if let session = existingSession, session.endedAt == nil {
+                currentSession = session
+                coachingMode = session.mode
+                modeSegments = [ModeSegment(mode: session.mode, messageIndex: 0)]
+            }
+
+            let pageSize = historyPageSize
+            let loaded = try await databaseManager.dbPool.read { db in
+                // Load newest messages first (reverse chronological), then reverse for display
+                try Message.allConversations(limit: pageSize, offset: 0).fetchAll(db)
+            }
+            messages = loaded.reversed()
+            historyOffset = loaded.count
+            hasMoreHistory = loaded.count == pageSize
+
+            // Batch-load summaries for session IDs in this page
+            let sessionIds = Array(Set(messages.map(\.sessionId)))
+            let summaries = try await databaseManager.dbPool.read { db in
+                try ConversationSummary.forSessionIds(sessionIds).fetchAll(db)
+            }
+            for summary in summaries {
+                summariesBySession[summary.sessionId] = summary
+            }
         } catch {
             handleError(error)
         }
+    }
+
+    func loadHistoryPage() async {
+        guard hasMoreHistory, !isLoadingHistory else { return }
+        isLoadingHistory = true
+
+        do {
+            let pageSize = historyPageSize
+            let offset = historyOffset
+            let older = try await databaseManager.dbPool.read { db in
+                try Message.allConversations(limit: pageSize, offset: offset).fetchAll(db)
+            }
+
+            guard !older.isEmpty else {
+                hasMoreHistory = false
+                isLoadingHistory = false
+                return
+            }
+
+            // Reverse to chronological order, prepend
+            let chronological = older.reversed()
+            messages.insert(contentsOf: chronological, at: 0)
+            historyOffset += older.count
+            hasMoreHistory = older.count == pageSize
+
+            // Batch-load summaries for new session IDs
+            let newSessionIds = Array(Set(chronological.map(\.sessionId)).subtracting(summariesBySession.keys))
+            if !newSessionIds.isEmpty {
+                let summaries = try await databaseManager.dbPool.read { db in
+                    try ConversationSummary.forSessionIds(newSessionIds).fetchAll(db)
+                }
+                for summary in summaries {
+                    summariesBySession[summary.sessionId] = summary
+                }
+            }
+        } catch {
+            handleError(error)
+        }
+
+        isLoadingHistory = false
     }
 
     func sendMessage(_ text: String) async {
@@ -89,7 +153,9 @@ final class CoachingViewModel {
             isStreaming = true
             streamingText = ""
 
-            let chatMessages = messages.map { msg in
+            // Only send current session messages to API (not full history)
+            let currentSessionMessages = messages.filter { $0.sessionId == session.id }
+            let chatMessages = currentSessionMessages.map { msg in
                 ChatRequestMessage(
                     role: msg.role == .user ? "user" : "assistant",
                     content: msg.content

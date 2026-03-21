@@ -22,6 +22,7 @@
 		2431B57094C1580C647D2518 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2473ED69FC7558BC470CACBA /* RootView.swift */; };
 		263F1A9DC03D4707523D0D23 /* RadiusTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6706CAA4E4CA51ACDB15EBF0 /* RadiusTokens.swift */; };
 		27F0F0AB9D89ECA9E374B941 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = E04A3602440724C4E5A41F72 /* GRDB */; };
+		2A32279BFA2E544837292688 /* SessionSummaryCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45C12A88985E3C11A20AB124 /* SessionSummaryCardView.swift */; };
 		2D4BFC04AD12EB3575EABB25 /* SpacingScale.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23BAF2A37F6CC10C19CFF318 /* SpacingScale.swift */; };
 		30B653353FA25E5D5CCACD90 /* AvatarSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC3465A1076C8999C8159F22 /* AvatarSelectionView.swift */; };
 		32381F561F9710BFDE5EFCCF /* TypographyScale.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65D6278FFCC717CBB34CF6E9 /* TypographyScale.swift */; };
@@ -143,6 +144,7 @@
 		3E351427A37F67C0D08891FF /* DatabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManager.swift; sourceTree = "<group>"; };
 		40A893855590161ED0EFD59E /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		421E3610D0DDE7B777581989 /* sprintyTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = sprintyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		45C12A88985E3C11A20AB124 /* SessionSummaryCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSummaryCardView.swift; sourceTree = "<group>"; };
 		490A1A01C9FA3CFF3D053C28 /* OnboardingContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingContainerView.swift; sourceTree = "<group>"; };
 		4C61DFFD602BEF532558B977 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		4CEC3D72D630A47CFF99E988 /* HomeViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModelTests.swift; sourceTree = "<group>"; };
@@ -321,6 +323,7 @@
 				5646233B571BC711F37C6139 /* CoachingView.swift */,
 				16B18C0954831C590B949907 /* DateSeparatorView.swift */,
 				F5AF56D5D4A6AEA0F0C40DAC /* DialogueTurnView.swift */,
+				45C12A88985E3C11A20AB124 /* SessionSummaryCardView.swift */,
 				658500F71B12F942A3A3ADCF /* TextInputView.swift */,
 			);
 			path = Views;
@@ -831,6 +834,7 @@
 				263F1A9DC03D4707523D0D23 /* RadiusTokens.swift in Sources */,
 				2431B57094C1580C647D2518 /* RootView.swift in Sources */,
 				3A0669CB882A41BAB5BAE21D /* SSEParser.swift in Sources */,
+				2A32279BFA2E544837292688 /* SessionSummaryCardView.swift in Sources */,
 				2D4BFC04AD12EB3575EABB25 /* SpacingScale.swift in Sources */,
 				A71E7C0745A10B00A442CE22 /* SprintyApp.swift in Sources */,
 				1903F589882A9EEA3CB6672F /* SummaryGenerator.swift in Sources */,

@@ -76,5 +76,51 @@ enum DatabaseMigrations {
             try db.create(index: "ConversationSummary_sessionId",
                           on: "ConversationSummary", columns: ["sessionId"])
         }
+
+        migrator.registerMigration("v6") { db in
+            // Timestamp index for cross-session ORDER BY performance
+            try db.create(
+                index: "idx_message_timestamp",
+                on: "Message",
+                columns: ["timestamp"]
+            )
+
+            // FTS5 virtual table for Message content (prepares for Story 3.6 search)
+            try db.execute(sql: """
+                CREATE VIRTUAL TABLE IF NOT EXISTS MessageFTS USING fts5(
+                    content,
+                    content='Message',
+                    content_rowid='rowid'
+                )
+                """)
+
+            // Populate FTS from existing messages
+            try db.execute(sql: """
+                INSERT INTO MessageFTS(rowid, content)
+                SELECT rowid, content FROM Message
+                """)
+
+            // Keep FTS in sync on INSERT
+            try db.execute(sql: """
+                CREATE TRIGGER IF NOT EXISTS message_fts_insert AFTER INSERT ON Message BEGIN
+                    INSERT INTO MessageFTS(rowid, content) VALUES (new.rowid, new.content);
+                END
+                """)
+
+            // Keep FTS in sync on UPDATE
+            try db.execute(sql: """
+                CREATE TRIGGER IF NOT EXISTS message_fts_update AFTER UPDATE OF content ON Message BEGIN
+                    INSERT INTO MessageFTS(MessageFTS, rowid, content) VALUES('delete', old.rowid, old.content);
+                    INSERT INTO MessageFTS(rowid, content) VALUES (new.rowid, new.content);
+                END
+                """)
+
+            // Keep FTS in sync on DELETE
+            try db.execute(sql: """
+                CREATE TRIGGER IF NOT EXISTS message_fts_delete AFTER DELETE ON Message BEGIN
+                    INSERT INTO MessageFTS(MessageFTS, rowid, content) VALUES('delete', old.rowid, old.content);
+                END
+                """)
+        }
     }
 }
