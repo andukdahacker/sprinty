@@ -36,6 +36,10 @@
 
 generated: 2026-03-17
 last_updated: 2026-03-21
+# Story 3.4 code review completed: 2026-03-21
+# Story 3.4 dev completed: 2026-03-21
+# Story 3.4 dev started: 2026-03-21
+# Story 3.4 context created: 2026-03-21
 # Story 3.3 code review completed: 2026-03-21
 # Story 3.3 dev started: 2026-03-21
 # Story 3.3 context created: 2026-03-21
@@ -98,7 +102,7 @@ development_status:
   3-1-conversation-summaries-and-key-moments: done
   3-2-embedding-pipeline-and-vector-storage: done
   3-3-user-profile-and-domain-state: done
-  3-4-rag-powered-contextual-coaching: backlog
+  3-4-rag-powered-contextual-coaching: done
   3-5-conversation-history-browsing: backlog
   3-6-in-conversation-search: backlog
   3-7-memory-view-and-profile-editing: backlog

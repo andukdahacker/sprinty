@@ -76,7 +76,7 @@ func (b *Builder) SummarizePrompt() string {
 }
 
 // Build assembles a system prompt for the given mode, coach name, profile, and user state.
-func (b *Builder) Build(mode string, coachName string, profile *providers.ChatProfile, userState *providers.UserState) string {
+func (b *Builder) Build(mode string, coachName string, profile *providers.ChatProfile, userState *providers.UserState, ragContext string) string {
 	var prompt strings.Builder
 
 	// Always include base persona
@@ -184,6 +184,9 @@ func (b *Builder) Build(mode string, coachName string, profile *providers.ChatPr
 		result = strings.ReplaceAll(result, "{{last_session_gap}}", "unknown")
 		result = strings.ReplaceAll(result, "{{recent_session_intensity}}", "unknown")
 	}
+
+	// Replace RAG context
+	result = strings.ReplaceAll(result, "{{retrieved_memories}}", ragContext)
 
 	return result
 }

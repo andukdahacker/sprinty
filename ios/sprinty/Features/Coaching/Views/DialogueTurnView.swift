@@ -3,6 +3,7 @@ import SwiftUI
 struct DialogueTurnView: View {
     let content: String
     let role: MessageRole
+    var memoryReferenced: Bool = false
     @Environment(\.coachingTheme) private var theme
 
     var body: some View {
@@ -20,7 +21,10 @@ struct DialogueTurnView: View {
         paragraphStack(content)
             .coachVoiceStyle()
             .foregroundStyle(theme.palette.coachDialogue)
+            .italic(memoryReferenced)
+            .opacity(memoryReferenced ? 0.7 : 1.0)
             .accessibilityLabel("Coach says: \(content)")
+            .accessibilityHint(memoryReferenced ? "Referencing a past conversation." : "")
     }
 
     private var userTurn: some View {

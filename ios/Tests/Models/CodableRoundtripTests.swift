@@ -268,6 +268,64 @@ struct CodableRoundtripTests {
         #expect(profile.decodedDomainStates == nil)
     }
 
+    // MARK: - Story 3.4 — ChatRequest ragContext
+
+    @Test("ChatRequest encodes ragContext when present")
+    func test_chatRequest_withRagContext_encodes() throws {
+        let request = ChatRequest(
+            messages: [ChatRequestMessage(role: "user", content: "Hello")],
+            mode: "discovery",
+            promptVersion: "1.0",
+            profile: nil,
+            ragContext: "## Past Conversations\n**2026-03-20** — career\nSummary: Discussed career goals"
+        )
+        let data = try encoder.encode(request)
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        #expect(json?["ragContext"] as? String == "## Past Conversations\n**2026-03-20** — career\nSummary: Discussed career goals")
+        #expect(json?["mode"] as? String == "discovery")
+    }
+
+    @Test("ChatRequest omits ragContext when nil")
+    func test_chatRequest_withoutRagContext_omitsField() throws {
+        let request = ChatRequest(
+            messages: [ChatRequestMessage(role: "user", content: "Hello")],
+            mode: "discovery",
+            promptVersion: "1.0",
+            profile: nil
+        )
+        let data = try encoder.encode(request)
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        #expect(json?["ragContext"] == nil)
+        #expect(json?["messages"] != nil)
+    }
+
+    @Test("ChatRequest decodes ragContext from JSON")
+    func test_chatRequest_decodesRagContext() throws {
+        let jsonStr = """
+        {
+            "messages": [{"role": "user", "content": "Hi"}],
+            "mode": "discovery",
+            "promptVersion": "1.0",
+            "ragContext": "Some past context"
+        }
+        """
+        let decoded = try decoder.decode(ChatRequest.self, from: Data(jsonStr.utf8))
+        #expect(decoded.ragContext == "Some past context")
+    }
+
+    @Test("ChatRequest decodes without ragContext field")
+    func test_chatRequest_decodesWithoutRagContext() throws {
+        let jsonStr = """
+        {
+            "messages": [{"role": "user", "content": "Hi"}],
+            "mode": "discovery",
+            "promptVersion": "1.0"
+        }
+        """
+        let decoded = try decoder.decode(ChatRequest.self, from: Data(jsonStr.utf8))
+        #expect(decoded.ragContext == nil)
+    }
+
     // MARK: - Helpers
 
     private func loadFixture(_ filename: String) throws -> String {

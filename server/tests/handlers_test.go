@@ -39,7 +39,7 @@ func createTestPromptBuilder(t *testing.T) *prompts.Builder {
 		"mood.md":              "Mood selection.",
 		"tagging.md":           "Domain tagging.",
 		"cultural.md":          "Cultural.",
-		"context-injection.md": "Coach: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
+		"context-injection.md": "{{retrieved_memories}} Coach: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
 		"mode-transitions.md": "Mode transitions: analyze user intent.",
 		"challenger.md":       "Challenger capability: push back constructively.",
 		"summarize.md":        "Summarize the coaching conversation.",
@@ -75,7 +75,7 @@ func setupMuxWithBuilder(builder *prompts.Builder) *http.ServeMux {
 			"mood.md":              "Mood.",
 			"tagging.md":           "Tags.",
 			"cultural.md":          "Cultural.",
-			"context-injection.md": "Coach: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
+			"context-injection.md": "{{retrieved_memories}} Coach: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
 			"mode-transitions.md": "Mode transitions: analyze user intent.",
 			"challenger.md":       "Challenger capability: push back constructively.",
 			"summarize.md":        "Summarize the coaching conversation.",
@@ -946,5 +946,87 @@ func TestChatHandler_ValidRequest_WithoutUserState(t *testing.T) {
 	body := w.Body.String()
 	if !strings.Contains(body, "event: done") {
 		t.Error("expected SSE done event without userState")
+	}
+}
+
+// --- Story 3.4 Tests ---
+
+func TestChatHandler_WithRagContext_ParsesAndStreams(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0","ragContext":"## Past Conversations\n**2026-03-20** — career\nSummary: Discussed goals"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "event: done") {
+		t.Error("expected SSE done event with ragContext present")
+	}
+}
+
+func TestChatHandler_WithoutRagContext_StreamsNormally(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "event: done") {
+		t.Error("expected SSE done event without ragContext")
+	}
+}
+
+func TestChatHandler_WithEmptyRagContext_StreamsNormally(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0","ragContext":""}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "event: done") {
+		t.Error("expected SSE done event with empty ragContext")
+	}
+}
+
+func TestChatHandler_DoneEvent_IncludesMemoryReferenced(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "memoryReferenced") {
+		t.Error("expected memoryReferenced field in done event")
 	}
 }

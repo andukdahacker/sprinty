@@ -30,7 +30,7 @@ struct ChatEventCodableTests {
         #expect(events.count == 1)
         let chatEvent = try ChatEvent.from(sseEvent: events[0])
 
-        if case .done(let safetyLevel, let domainTags, let mood, let mode, let challengerUsed, let usage, let promptVersion, _) = chatEvent {
+        if case .done(let safetyLevel, let domainTags, let mood, let mode, _, let challengerUsed, let usage, let promptVersion, _) = chatEvent {
             #expect(safetyLevel == "green")
             #expect(domainTags.isEmpty)
             #expect(mood == "welcoming")
@@ -78,7 +78,7 @@ struct ChatEventCodableTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(_, let domainTags, _, _, _, _, _, _) = chatEvent {
+        if case .done(_, let domainTags, _, _, _, _, _, _, _) = chatEvent {
             #expect(domainTags.isEmpty)
         } else {
             Issue.record("Expected done event")
@@ -93,7 +93,7 @@ struct ChatEventCodableTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(_, _, let mood, _, _, _, _, _) = chatEvent {
+        if case .done(_, _, let mood, _, _, _, _, _, _) = chatEvent {
             #expect(mood == nil)
         } else {
             Issue.record("Expected done event")
@@ -108,7 +108,7 @@ struct ChatEventCodableTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(_, _, _, let mode, _, _, _, _) = chatEvent {
+        if case .done(_, _, _, let mode, _, _, _, _, _) = chatEvent {
             #expect(mode == "discovery")
         } else {
             Issue.record("Expected done event")
@@ -123,7 +123,7 @@ struct ChatEventCodableTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(_, _, _, let mode, _, _, _, _) = chatEvent {
+        if case .done(_, _, _, let mode, _, _, _, _, _) = chatEvent {
             #expect(mode == nil)
         } else {
             Issue.record("Expected done event")
@@ -138,8 +138,55 @@ struct ChatEventCodableTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(_, _, _, _, let challengerUsed, _, _, _) = chatEvent {
+        if case .done(_, _, _, _, _, let challengerUsed, _, _, _) = chatEvent {
             #expect(challengerUsed == true)
+        } else {
+            Issue.record("Expected done event")
+        }
+    }
+
+    // MARK: - Story 3.4 — Memory Reference
+
+    @Test("Decodes done event with memoryReferenced true")
+    func test_fromSSE_doneEvent_memoryReferencedTrue() throws {
+        let json = """
+        {"safetyLevel": "green", "domainTags": [], "mood": "warm", "mode": "discovery", "memoryReferenced": true, "challengerUsed": false, "usage": {"inputTokens": 30, "outputTokens": 20}}
+        """
+        let sseEvent = SSEEvent(type: "done", data: json)
+        let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
+
+        if case .done(_, _, _, _, let memoryReferenced, _, _, _, _) = chatEvent {
+            #expect(memoryReferenced == true)
+        } else {
+            Issue.record("Expected done event")
+        }
+    }
+
+    @Test("Decodes done event with memoryReferenced false")
+    func test_fromSSE_doneEvent_memoryReferencedFalse() throws {
+        let json = """
+        {"safetyLevel": "green", "domainTags": [], "mood": "warm", "memoryReferenced": false, "usage": {"inputTokens": 10, "outputTokens": 5}}
+        """
+        let sseEvent = SSEEvent(type: "done", data: json)
+        let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
+
+        if case .done(_, _, _, _, let memoryReferenced, _, _, _, _) = chatEvent {
+            #expect(memoryReferenced == false)
+        } else {
+            Issue.record("Expected done event")
+        }
+    }
+
+    @Test("Decodes done event with nil memoryReferenced for backward compat")
+    func test_fromSSE_doneEvent_nilMemoryReferenced() throws {
+        let json = """
+        {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "usage": {"inputTokens": 10, "outputTokens": 5}}
+        """
+        let sseEvent = SSEEvent(type: "done", data: json)
+        let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
+
+        if case .done(_, _, _, _, let memoryReferenced, _, _, _, _) = chatEvent {
+            #expect(memoryReferenced == nil)
         } else {
             Issue.record("Expected done event")
         }

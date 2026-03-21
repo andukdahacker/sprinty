@@ -181,7 +181,7 @@ struct RootView: View {
 }
 
 private struct FailingChatService: ChatServiceProtocol {
-    func streamChat(messages: [ChatRequestMessage], mode: String, profile: ChatProfile?, userState: UserState? = nil) -> AsyncThrowingStream<ChatEvent, Error> {
+    func streamChat(messages: [ChatRequestMessage], mode: String, profile: ChatProfile?, userState: UserState? = nil, ragContext: String? = nil) -> AsyncThrowingStream<ChatEvent, Error> {
         AsyncThrowingStream { continuation in
             continuation.finish(throwing: AppError.networkUnavailable)
         }

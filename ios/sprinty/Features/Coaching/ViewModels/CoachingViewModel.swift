@@ -16,6 +16,8 @@ final class CoachingViewModel {
     var challengerActive: Bool = false
     var modeSegments: [ModeSegment] = []
     private(set) var sessionMoods: [String] = []
+    private(set) var memoryReferencedMessages: [UUID: Bool] = [:]
+    var dailyGreeting: String?
 
     private let appState: AppState
     private let chatService: ChatServiceProtocol
@@ -44,7 +46,7 @@ final class CoachingViewModel {
         }
     }
 
-    private func loadMessagesAsync() async {
+    func loadMessagesAsync() async {
         do {
             let session = try await getOrCreateSession()
             currentSession = session
@@ -102,7 +104,10 @@ final class CoachingViewModel {
             let snapshot = try? await calculator.compute()
             let userState = snapshot.map { UserState(from: $0) }
 
-            let stream = chatService.streamChat(messages: chatMessages, mode: session.mode.rawValue, profile: profile, userState: userState)
+            // Retrieve RAG context (non-blocking — errors fall back to nil)
+            let ragContext = await retrieveRAGContext(for: text, lastSessionGapHours: userState?.lastSessionGapHours)
+
+            let stream = chatService.streamChat(messages: chatMessages, mode: session.mode.rawValue, profile: profile, userState: userState, ragContext: ragContext)
             let dbManager = databaseManager
 
             streamingTask = Task { [weak self] in
@@ -114,7 +119,7 @@ final class CoachingViewModel {
                         switch event {
                         case .token(let tokenText):
                             self.streamingText += tokenText
-                        case .done(let safetyLevel, _, let mood, let mode, let challengerUsed, _, let promptVersion, let profileUpdate):
+                        case .done(let safetyLevel, _, let mood, let mode, let memoryReferenced, let challengerUsed, _, let promptVersion, let profileUpdate):
                             // Cache promptVersion from first done event per session
                             if let promptVersion, self.cachedPromptVersion == nil {
                                 self.cachedPromptVersion = promptVersion
@@ -137,6 +142,9 @@ final class CoachingViewModel {
                             }
 
                             self.messages.append(assistantMessage)
+                            if memoryReferenced == true {
+                                self.memoryReferencedMessages[assistantMessage.id] = true
+                            }
                             self.coachExpression = CoachExpression(mood: mood)
                             if let mood {
                                 self.sessionMoods.append(mood)
@@ -392,6 +400,143 @@ final class CoachingViewModel {
         }
     }
 
+    // MARK: - Daily Greeting
+
+    func generateDailyGreeting() async {
+        let fallback = "What's on your mind?"
+
+        do {
+            let greeting: String = try await withThrowingTaskGroup(of: String.self) { group in
+                group.addTask {
+                    try await self.buildGreetingFromSummaries()
+                }
+                group.addTask {
+                    try await Task.sleep(for: .milliseconds(500))
+                    throw GreetingTimeoutError()
+                }
+
+                if let result = try await group.next() {
+                    group.cancelAll()
+                    return result
+                }
+                return fallback
+            }
+            dailyGreeting = greeting
+        } catch {
+            dailyGreeting = fallback
+        }
+    }
+
+    private nonisolated func buildGreetingFromSummaries() async throws -> String {
+        let summaries: [ConversationSummary] = try await databaseManager.dbPool.read { db in
+            try ConversationSummary.recent(limit: 7).fetchAll(db)
+        }
+
+        guard !summaries.isEmpty else { return "What's on your mind?" }
+
+        let mostRecent = summaries[0]
+        let now = Date()
+        let hoursSinceLastSession = now.timeIntervalSince(mostRecent.createdAt) / 3600
+
+        // Gap-aware (> 72 hours)
+        if hoursSinceLastSession > 72 {
+            return "It's been a few days — what's been on your mind?"
+        }
+
+        // Topic-based (default, when key moments available)
+        let moments = mostRecent.decodedKeyMoments
+        if let firstMoment = moments.first {
+            return "Last time we talked about \(firstMoment). How's that going?"
+        }
+
+        // Emotion-based (when emotional markers available but no key moments)
+        if let markers = mostRecent.decodedEmotionalMarkers, let first = markers.first {
+            return "You seemed \(first) last time — how are things now?"
+        }
+
+        return "What's on your mind?"
+    }
+
+    // MARK: - RAG Context Retrieval
+
+    private nonisolated func retrieveRAGContext(for query: String, lastSessionGapHours: Int?) async -> String? {
+        guard let embeddingPipeline else { return nil }
+
+        let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "sprinty", category: "rag")
+        do {
+            let summaries = try await embeddingPipeline.search(query: query, limit: 5)
+            guard !summaries.isEmpty else { return nil }
+
+            let reranked = applyRecencyWeighting(summaries)
+            var formatted = formatRAGContext(reranked, lastSessionGapHours: lastSessionGapHours)
+            formatted = enforceTokenBudget(formatted, entries: reranked, lastSessionGapHours: lastSessionGapHours)
+            return formatted.isEmpty ? nil : formatted
+        } catch {
+            logger.error("RAG retrieval failed: \(error)")
+            return nil
+        }
+    }
+
+    private nonisolated func applyRecencyWeighting(_ summaries: [ConversationSummary]) -> [ConversationSummary] {
+        let now = Date()
+        let thirtyDays: TimeInterval = 30 * 24 * 3600
+
+        let scored = summaries.enumerated().map { index, summary -> (summary: ConversationSummary, score: Double) in
+            let normalizedDistance = Double(index) / max(Double(summaries.count - 1), 1.0)
+            let semanticScore = 1.0 - normalizedDistance
+
+            let age = now.timeIntervalSince(summary.createdAt)
+            let recencyBonus = max(0.0, 1.0 - (age / thirtyDays))
+
+            let combined = semanticScore * 0.7 + recencyBonus * 0.3
+            return (summary: summary, score: combined)
+        }
+
+        return scored.sorted { $0.score > $1.score }.map { $0.summary }
+    }
+
+    private nonisolated func formatRAGContext(_ summaries: [ConversationSummary], lastSessionGapHours: Int?) -> String {
+        var lines: [String] = ["## Past Conversations (most relevant)"]
+
+        if let gap = lastSessionGapHours, gap > 72 {
+            let days = gap / 24
+            lines.append("")
+            lines.append("User returning after \(days) days away.")
+        }
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+
+        for summary in summaries {
+            lines.append("")
+            let dateStr = dateFormatter.string(from: summary.createdAt)
+            let tags = summary.decodedDomainTags.joined(separator: ", ")
+            lines.append("**\(dateStr)** — \(tags)")
+            lines.append("Summary: \(summary.summary)")
+            let moments = summary.decodedKeyMoments
+            if !moments.isEmpty {
+                lines.append("Key moments: \(moments.joined(separator: ", "))")
+            }
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    private nonisolated func enforceTokenBudget(_ formatted: String, entries: [ConversationSummary], lastSessionGapHours: Int?) -> String {
+        let budget = 4000
+        if formatted.count <= budget { return formatted }
+
+        // Drop least-relevant entries (from the end) until under budget
+        var trimmed = entries
+        while trimmed.count > 1 {
+            trimmed.removeLast()
+            let candidate = formatRAGContext(trimmed, lastSessionGapHours: lastSessionGapHours)
+            if candidate.count <= budget { return candidate }
+        }
+        // Even 1 entry — return it regardless
+        return formatRAGContext(trimmed, lastSessionGapHours: lastSessionGapHours)
+    }
+
     private func handleError(_ error: Error) {
         guard let appError = error as? AppError else {
             localError = .providerError(message: "Something unexpected happened.", retryAfter: nil)
@@ -431,3 +576,5 @@ final class CoachingViewModel {
         }
     }
 }
+
+private struct GreetingTimeoutError: Error {}

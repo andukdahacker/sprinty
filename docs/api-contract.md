@@ -129,6 +129,7 @@ JWT required. Streams response via Server-Sent Events (SSE).
   - `sessionCount` (number): Total recent sessions
   - `lastSessionGapHours` (number, optional): Hours since last session
   - `recentSessionIntensity` (string): `light`, `moderate`, `deep`
+- `ragContext` (string, optional): Pre-formatted past conversation context retrieved via on-device RAG. Contains relevant summaries with dates, domain tags, key moments. Token budget: ~1000 tokens (~4000 characters). Omit if no relevant context or RAG unavailable
 
 **Response** `200 OK` — `Content-Type: text/event-stream`
 
@@ -205,6 +206,7 @@ data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "mode": "d
 - `domainTags` (array of strings): Life domain tags extracted from conversation. Always an array (empty `[]` if none)
 - `mood` (string): Coach expression mood. Values: `welcoming`, `thinking`, `warm`, `focused`, `gentle`
 - `mode` (string): Coaching mode for this response. Values: `discovery`, `directive`. May differ from request mode when the LLM decides to transition.
+- `memoryReferenced` (boolean): Whether this response references past conversations via RAG context. Default: `false`. Set by the LLM when it naturally references retrieved memories.
 - `challengerUsed` (boolean): Whether this response used the Challenger capability (constructive pushback, alternative perspectives). Default: `false`.
 - `profileUpdate` (object, optional): Only present when the LLM detects new user facts or corrections. Omitted for normal conversation.
   - `values` (array of strings, optional): New or updated user values

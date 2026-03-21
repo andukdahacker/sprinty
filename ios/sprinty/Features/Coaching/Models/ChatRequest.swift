@@ -37,13 +37,15 @@ struct ChatRequest: Codable, Sendable {
     let promptVersion: String
     let profile: ChatProfile?
     let userState: UserState?
+    let ragContext: String?
 
-    init(messages: [ChatRequestMessage], mode: String, promptVersion: String, profile: ChatProfile?, userState: UserState? = nil) {
+    init(messages: [ChatRequestMessage], mode: String, promptVersion: String, profile: ChatProfile?, userState: UserState? = nil, ragContext: String? = nil) {
         self.messages = messages
         self.mode = mode
         self.promptVersion = promptVersion
         self.profile = profile
         self.userState = userState
+        self.ragContext = ragContext
     }
 
     enum CodingKeys: String, CodingKey {
@@ -52,5 +54,6 @@ struct ChatRequest: Codable, Sendable {
         case promptVersion
         case profile
         case userState
+        case ragContext
     }
 }

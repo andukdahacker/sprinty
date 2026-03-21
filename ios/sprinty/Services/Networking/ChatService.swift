@@ -19,12 +19,12 @@ final class ChatService: ChatServiceProtocol, Sendable {
         return ChatService(baseURL: url, authService: authService, session: session)
     }
 
-    func streamChat(messages: [ChatRequestMessage], mode: String, profile: ChatProfile?, userState: UserState? = nil) -> AsyncThrowingStream<ChatEvent, Error> {
+    func streamChat(messages: [ChatRequestMessage], mode: String, profile: ChatProfile?, userState: UserState? = nil, ragContext: String? = nil) -> AsyncThrowingStream<ChatEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
                     let token = try authService.getToken()
-                    let chatRequest = ChatRequest(messages: messages, mode: mode, promptVersion: "1.0", profile: profile, userState: userState)
+                    let chatRequest = ChatRequest(messages: messages, mode: mode, promptVersion: "1.0", profile: profile, userState: userState, ragContext: ragContext)
 
                     let url = baseURL.appendingPathComponent("v1/chat")
                     var request = URLRequest(url: url)

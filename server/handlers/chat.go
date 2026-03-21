@@ -52,7 +52,7 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 		if req.Profile != nil {
 			coachName = req.Profile.CoachName
 		}
-		req.SystemPrompt = promptBuilder.Build(req.Mode, coachName, req.Profile, req.UserState)
+		req.SystemPrompt = promptBuilder.Build(req.Mode, coachName, req.Profile, req.UserState, req.RagContext)
 
 		logArgs := []any{
 			"mode", req.Mode,
@@ -92,13 +92,14 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 			case "done":
 				eventType = "done"
 				donePayload := map[string]any{
-					"safetyLevel":    event.SafetyLevel,
-					"domainTags":     event.DomainTags,
-					"mood":           event.Mood,
-					"mode":           event.Mode,
-					"challengerUsed": event.ChallengerUsed,
-					"usage":          event.Usage,
-					"promptVersion":  promptBuilder.ContentHash(),
+					"safetyLevel":      event.SafetyLevel,
+					"domainTags":       event.DomainTags,
+					"mood":             event.Mood,
+					"mode":             event.Mode,
+					"memoryReferenced": event.MemoryReferenced,
+					"challengerUsed":   event.ChallengerUsed,
+					"usage":            event.Usage,
+					"promptVersion":    promptBuilder.ContentHash(),
 				}
 				if len(event.ProfileUpdate) > 0 {
 					donePayload["profileUpdate"] = json.RawMessage(event.ProfileUpdate)

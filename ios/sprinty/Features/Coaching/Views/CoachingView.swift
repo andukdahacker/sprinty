@@ -25,12 +25,17 @@ struct CoachingView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: conversationTheme.spacing.dialogueTurn) {
+                            if let greeting = viewModel.dailyGreeting, viewModel.messages.isEmpty || shouldShowDateSeparator(at: 0) {
+                                DateSeparatorView(date: Date())
+                                DialogueTurnView(content: greeting, role: .assistant)
+                            }
+
                             ForEach(Array(viewModel.messages.enumerated()), id: \.element.id) { index, message in
                                 if shouldShowDateSeparator(at: index) {
                                     DateSeparatorView(date: message.timestamp)
                                 }
 
-                                DialogueTurnView(content: message.content, role: message.role)
+                                DialogueTurnView(content: message.content, role: message.role, memoryReferenced: viewModel.memoryReferencedMessages[message.id] == true)
                                     .id(message.id)
                             }
 
@@ -85,7 +90,8 @@ struct CoachingView: View {
             value: viewModel.challengerActive
         )
         .task {
-            viewModel.loadMessages()
+            await viewModel.loadMessagesAsync()
+            await viewModel.generateDailyGreeting()
             await viewModel.retryMissingSummaries()
             await viewModel.retryMissingEmbeddings()
         }

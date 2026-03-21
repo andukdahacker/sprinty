@@ -40,6 +40,7 @@ type ChatRequest struct {
 	SystemPrompt  string        `json:"systemPrompt,omitempty"`
 	Profile       *ChatProfile  `json:"profile,omitempty"`
 	UserState     *UserState    `json:"userState,omitempty"`
+	RagContext    string        `json:"ragContext,omitempty"`
 }
 
 type Usage struct {
