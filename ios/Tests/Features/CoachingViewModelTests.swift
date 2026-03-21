@@ -22,13 +22,14 @@ struct CoachingViewModelTests {
         dbManager: DatabaseManager? = nil,
         embeddingPipeline: MockEmbeddingPipeline? = nil,
         profileUpdateService: MockProfileUpdateService? = nil,
-        profileEnricher: MockProfileEnricher? = nil
+        profileEnricher: MockProfileEnricher? = nil,
+        searchService: MockSearchService? = nil
     ) async throws -> (CoachingViewModel, MockChatService, DatabaseManager, AppState) {
         let db = try dbManager ?? makeTestDB()
         let appState = AppState()
         appState.isAuthenticated = true
         appState.databaseManager = db
-        let viewModel = CoachingViewModel(appState: appState, chatService: chatService, databaseManager: db, embeddingPipeline: embeddingPipeline, profileUpdateService: profileUpdateService, profileEnricher: profileEnricher)
+        let viewModel = CoachingViewModel(appState: appState, chatService: chatService, databaseManager: db, embeddingPipeline: embeddingPipeline, profileUpdateService: profileUpdateService, profileEnricher: profileEnricher, searchService: searchService)
         return (viewModel, chatService, db, appState)
     }
 
@@ -1511,9 +1512,13 @@ struct CoachingViewModelTests {
 
         await viewModel.endSession()
 
-        // Load messages again — should create a new session
-        viewModel.loadMessages()
-        try await Task.sleep(for: .milliseconds(200))
+        // Send another message — getOrCreateSession should create a new session
+        mockChat.stubbedEvents = [
+            .token(text: "Welcome back."),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
+        ]
+        await viewModel.sendMessage("Hi again")
+        try await Task.sleep(for: .milliseconds(500))
 
         // Verify a new session was created (different from original)
         let sessions = try await db.dbPool.read { dbConn in
@@ -1523,5 +1528,141 @@ struct CoachingViewModelTests {
         let newSession = sessions.first(where: { $0.id != originalSessionId })
         #expect(newSession != nil)
         #expect(newSession?.endedAt == nil)
+    }
+
+    // MARK: - Story 3.6 Search Tests
+
+    @Test("Search lifecycle: activate, search, dismiss clears state")
+    @MainActor
+    func test_search_lifecycle() async throws {
+        let mockSearch = MockSearchService()
+        mockSearch.stubbedResults = [
+            SearchResult(messageId: UUID(), sessionId: UUID(), content: "test", timestamp: Date())
+        ]
+        let (viewModel, _, _, _) = try await makeViewModel(searchService: mockSearch)
+
+        viewModel.activateSearch()
+        #expect(viewModel.isSearchActive == true)
+
+        await viewModel.performSearch("test query")
+        #expect(viewModel.searchResults.count == 1)
+        #expect(mockSearch.lastQuery == "test query")
+        #expect(viewModel.hasSearched == true)
+
+        viewModel.dismissSearch()
+        #expect(viewModel.isSearchActive == false)
+        #expect(viewModel.searchQuery == "")
+        #expect(viewModel.searchResults.isEmpty)
+        #expect(viewModel.currentResultIndex == 0)
+        #expect(viewModel.hasSearched == false)
+    }
+
+    @Test("Search navigation wraps around forward")
+    @MainActor
+    func test_search_navigateNext_wrapsAround() async throws {
+        let mockSearch = MockSearchService()
+        mockSearch.stubbedResults = [
+            SearchResult(messageId: UUID(), sessionId: UUID(), content: "a", timestamp: Date()),
+            SearchResult(messageId: UUID(), sessionId: UUID(), content: "b", timestamp: Date()),
+            SearchResult(messageId: UUID(), sessionId: UUID(), content: "c", timestamp: Date())
+        ]
+        let (viewModel, _, _, _) = try await makeViewModel(searchService: mockSearch)
+
+        await viewModel.performSearch("test")
+        #expect(viewModel.currentResultIndex == 0)
+
+        viewModel.navigateToResult(direction: .next)
+        #expect(viewModel.currentResultIndex == 1)
+
+        viewModel.navigateToResult(direction: .next)
+        #expect(viewModel.currentResultIndex == 2)
+
+        viewModel.navigateToResult(direction: .next)
+        #expect(viewModel.currentResultIndex == 0) // wraps
+    }
+
+    @Test("Search navigation wraps around backward")
+    @MainActor
+    func test_search_navigatePrevious_wrapsAround() async throws {
+        let mockSearch = MockSearchService()
+        mockSearch.stubbedResults = [
+            SearchResult(messageId: UUID(), sessionId: UUID(), content: "a", timestamp: Date()),
+            SearchResult(messageId: UUID(), sessionId: UUID(), content: "b", timestamp: Date())
+        ]
+        let (viewModel, _, _, _) = try await makeViewModel(searchService: mockSearch)
+
+        await viewModel.performSearch("test")
+        #expect(viewModel.currentResultIndex == 0)
+
+        viewModel.navigateToResult(direction: .previous)
+        #expect(viewModel.currentResultIndex == 1) // wraps to last
+    }
+
+    @Test("Search with empty results sets empty state")
+    @MainActor
+    func test_search_emptyResults() async throws {
+        let mockSearch = MockSearchService()
+        mockSearch.stubbedResults = []
+        let (viewModel, _, _, _) = try await makeViewModel(searchService: mockSearch)
+
+        await viewModel.performSearch("nonexistent")
+        #expect(viewModel.searchResults.isEmpty)
+        #expect(viewModel.currentResultIndex == 0)
+    }
+
+    @Test("Search debounce cancels previous query")
+    @MainActor
+    func test_search_debounce_cancelsPrevious() async throws {
+        let mockSearch = MockSearchService()
+        mockSearch.stubbedResults = []
+        let (viewModel, _, _, _) = try await makeViewModel(searchService: mockSearch)
+
+        viewModel.updateSearchQuery("fir")
+        viewModel.updateSearchQuery("first")
+        viewModel.updateSearchQuery("first query")
+
+        // Wait for debounce
+        try await Task.sleep(for: .milliseconds(400))
+
+        // Should only have executed once (the last query)
+        #expect(mockSearch.searchCallCount == 1)
+        #expect(mockSearch.lastQuery == "first query")
+    }
+
+    @Test("Navigate on empty results does nothing")
+    @MainActor
+    func test_search_navigateEmpty_noOp() async throws {
+        let mockSearch = MockSearchService()
+        let (viewModel, _, _, _) = try await makeViewModel(searchService: mockSearch)
+
+        viewModel.navigateToResult(direction: .next)
+        #expect(viewModel.currentResultIndex == 0)
+
+        viewModel.navigateToResult(direction: .previous)
+        #expect(viewModel.currentResultIndex == 0)
+    }
+
+    @Test("Activate search saves pre-search position")
+    @MainActor
+    func test_search_activate_savesPosition() async throws {
+        let mockSearch = MockSearchService()
+        let (viewModel, _, _, _) = try await makeViewModel(searchService: mockSearch)
+
+        let messageId = UUID()
+        viewModel.trackVisibleMessage(messageId)
+        viewModel.activateSearch()
+
+        #expect(viewModel.preSearchScrollTarget == messageId)
+    }
+
+    @Test("Short query returns empty results without calling service")
+    @MainActor
+    func test_search_shortQuery_noServiceCall() async throws {
+        let mockSearch = MockSearchService()
+        let (viewModel, _, _, _) = try await makeViewModel(searchService: mockSearch)
+
+        await viewModel.performSearch("a")
+        #expect(viewModel.searchResults.isEmpty)
+        #expect(mockSearch.searchCallCount == 0)
     }
 }

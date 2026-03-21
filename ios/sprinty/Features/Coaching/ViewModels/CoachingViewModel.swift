@@ -22,6 +22,16 @@ final class CoachingViewModel {
     private(set) var hasMoreHistory: Bool = true
     private(set) var isLoadingHistory: Bool = false
 
+    // MARK: - Search State
+    var isSearchActive: Bool = false
+    var searchQuery: String = ""
+    var searchResults: [SearchResult] = []
+    var currentResultIndex: Int = 0
+    private(set) var hasSearched: Bool = false
+    private(set) var lastVisibleMessageId: UUID?
+    private var preSearchMessageId: UUID?
+    private var searchTask: Task<Void, Never>?
+
     private let appState: AppState
     private let chatService: ChatServiceProtocol
     private let databaseManager: DatabaseManager
@@ -35,14 +45,16 @@ final class CoachingViewModel {
     private let embeddingPipeline: EmbeddingPipelineProtocol?
     private let profileUpdateService: ProfileUpdateServiceProtocol?
     private let profileEnricher: ProfileEnricherProtocol?
+    private let searchService: SearchServiceProtocol?
 
-    init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager, embeddingPipeline: EmbeddingPipelineProtocol? = nil, profileUpdateService: ProfileUpdateServiceProtocol? = nil, profileEnricher: ProfileEnricherProtocol? = nil) {
+    init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager, embeddingPipeline: EmbeddingPipelineProtocol? = nil, profileUpdateService: ProfileUpdateServiceProtocol? = nil, profileEnricher: ProfileEnricherProtocol? = nil, searchService: SearchServiceProtocol? = nil) {
         self.appState = appState
         self.chatService = chatService
         self.databaseManager = databaseManager
         self.embeddingPipeline = embeddingPipeline
         self.profileUpdateService = profileUpdateService
         self.profileEnricher = profileEnricher
+        self.searchService = searchService
     }
 
     func loadMessages() {
@@ -523,6 +535,76 @@ final class CoachingViewModel {
         return "What's on your mind?"
     }
 
+    // MARK: - Search
+
+    func updateSearchQuery(_ query: String) {
+        searchQuery = query
+        hasSearched = false
+        searchTask?.cancel()
+        searchTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled, let self else { return }
+            await self.performSearch(query)
+        }
+    }
+
+    func performSearch(_ query: String) async {
+        guard let searchService else { return }
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else {
+            searchResults = []
+            currentResultIndex = 0
+            hasSearched = true
+            return
+        }
+
+        do {
+            let results = try await searchService.search(query: trimmed)
+            searchResults = results
+            currentResultIndex = 0
+            hasSearched = true
+        } catch {
+            searchResults = []
+            currentResultIndex = 0
+            hasSearched = true
+            Logger(subsystem: Bundle.main.bundleIdentifier ?? "sprinty", category: "search")
+                .error("Search failed: \(error)")
+        }
+    }
+
+    func navigateToResult(direction: SearchNavigationDirection) {
+        guard !searchResults.isEmpty else { return }
+        switch direction {
+        case .next:
+            currentResultIndex = (currentResultIndex + 1) % searchResults.count
+        case .previous:
+            currentResultIndex = (currentResultIndex - 1 + searchResults.count) % searchResults.count
+        }
+    }
+
+    func activateSearch() {
+        preSearchMessageId = lastVisibleMessageId
+        isSearchActive = true
+    }
+
+    func dismissSearch() {
+        isSearchActive = false
+        searchQuery = ""
+        searchResults = []
+        currentResultIndex = 0
+        hasSearched = false
+        searchTask?.cancel()
+        searchTask = nil
+    }
+
+    func trackVisibleMessage(_ messageId: UUID) {
+        lastVisibleMessageId = messageId
+    }
+
+    var preSearchScrollTarget: UUID? {
+        preSearchMessageId
+    }
+
     // MARK: - RAG Context Retrieval
 
     private nonisolated func retrieveRAGContext(for query: String, lastSessionGapHours: Int?) async -> String? {
@@ -644,3 +726,38 @@ final class CoachingViewModel {
 }
 
 private struct GreetingTimeoutError: Error {}
+
+// MARK: - Preview Helpers
+
+#if DEBUG
+extension CoachingViewModel {
+    @MainActor
+    static func previewInstance() -> CoachingViewModel {
+        let dbPool = try! DatabasePool(path: NSTemporaryDirectory() + "preview_\(UUID().uuidString).sqlite")
+        var migrator = DatabaseMigrator()
+        DatabaseMigrations.registerMigrations(&migrator)
+        try! migrator.migrate(dbPool)
+        let dbManager = DatabaseManager(dbPool: dbPool)
+        let appState = AppState()
+        return CoachingViewModel(appState: appState, chatService: PreviewChatService(), databaseManager: dbManager)
+    }
+
+    @MainActor
+    static func previewSearchInstance(query: String, results: [SearchResult]) -> CoachingViewModel {
+        let vm = previewInstance()
+        vm.isSearchActive = true
+        vm.searchQuery = query
+        vm.searchResults = results
+        return vm
+    }
+}
+
+private struct PreviewChatService: ChatServiceProtocol {
+    func streamChat(messages: [ChatRequestMessage], mode: String, profile: ChatProfile?, userState: UserState?, ragContext: String?) -> AsyncThrowingStream<ChatEvent, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+    func summarize(messages: [ChatRequestMessage]) async throws -> SummaryResponse {
+        SummaryResponse(summary: "Preview", keyMoments: [], domainTags: [], emotionalMarkers: nil, keyDecisions: nil)
+    }
+}
+#endif

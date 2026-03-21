@@ -22,6 +22,10 @@ struct CoachingView: View {
                 CoachCharacterView(expression: viewModel.coachExpression)
                     .padding(.bottom, conversationTheme.spacing.coachCharacterBottom)
 
+                SearchOverlayView(viewModel: viewModel)
+                    .padding(.horizontal, margin)
+                    .padding(.bottom, 4)
+
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: conversationTheme.spacing.dialogueTurn) {
@@ -61,8 +65,17 @@ struct CoachingView: View {
                                     DateSeparatorView(date: message.timestamp)
                                 }
 
-                                DialogueTurnView(content: message.content, role: message.role, memoryReferenced: viewModel.memoryReferencedMessages[message.id] == true)
-                                    .id(message.id)
+                                DialogueTurnView(
+                                    content: message.content,
+                                    role: message.role,
+                                    memoryReferenced: viewModel.memoryReferencedMessages[message.id] == true,
+                                    highlightQuery: viewModel.isSearchActive ? viewModel.searchQuery : nil,
+                                    isCurrentResult: isCurrentSearchResult(messageId: message.id)
+                                )
+                                .id(message.id)
+                                .onAppear {
+                                    viewModel.trackVisibleMessage(message.id)
+                                }
                             }
 
                             if viewModel.isStreaming && !viewModel.streamingText.isEmpty {
@@ -81,6 +94,20 @@ struct CoachingView: View {
                     .onChange(of: viewModel.streamingText) {
                         if viewModel.isStreaming {
                             proxy.scrollTo("streaming", anchor: .bottom)
+                        }
+                    }
+                    .onChange(of: viewModel.currentResultIndex) {
+                        scrollToCurrentSearchResult(proxy: proxy)
+                    }
+                    .onChange(of: viewModel.searchResults.count) {
+                        if !viewModel.searchResults.isEmpty {
+                            scrollToCurrentSearchResult(proxy: proxy)
+                        }
+                    }
+                    .scrollDismissesKeyboard(.interactively)
+                    .onChange(of: viewModel.isSearchActive) {
+                        if !viewModel.isSearchActive, let target = viewModel.preSearchScrollTarget {
+                            proxy.scrollTo(target, anchor: .center)
                         }
                     }
                 }
@@ -143,6 +170,34 @@ struct CoachingView: View {
         guard let lastMessage = viewModel.messages.last else { return }
         withAnimation {
             proxy.scrollTo(lastMessage.id, anchor: .bottom)
+        }
+    }
+
+    private func isCurrentSearchResult(messageId: UUID) -> Bool {
+        guard viewModel.isSearchActive, !viewModel.searchResults.isEmpty else { return false }
+        return viewModel.searchResults[viewModel.currentResultIndex].messageId == messageId
+    }
+
+    private func scrollToCurrentSearchResult(proxy: ScrollViewProxy) {
+        guard !viewModel.searchResults.isEmpty else { return }
+        let targetId = viewModel.searchResults[viewModel.currentResultIndex].messageId
+
+        // Check if message is already loaded
+        if viewModel.messages.contains(where: { $0.id == targetId }) {
+            withAnimation {
+                proxy.scrollTo(targetId, anchor: .center)
+            }
+        } else {
+            // Load pagination until found
+            Task {
+                while viewModel.hasMoreHistory {
+                    await viewModel.loadHistoryPage()
+                    if viewModel.messages.contains(where: { $0.id == targetId }) {
+                        proxy.scrollTo(targetId, anchor: .center)
+                        break
+                    }
+                }
+            }
         }
     }
 

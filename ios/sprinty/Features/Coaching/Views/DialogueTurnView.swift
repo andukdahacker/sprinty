@@ -4,6 +4,8 @@ struct DialogueTurnView: View {
     let content: String
     let role: MessageRole
     var memoryReferenced: Bool = false
+    var highlightQuery: String? = nil
+    var isCurrentResult: Bool = false
     @Environment(\.coachingTheme) private var theme
 
     var body: some View {
@@ -45,9 +47,32 @@ struct DialogueTurnView: View {
 
         return VStack(alignment: .leading, spacing: theme.spacing.dialogueBreath) {
             ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, paragraph in
-                Text(paragraph)
+                if let query = highlightQuery, !query.isEmpty {
+                    Text(highlightedText(paragraph, query: query))
+                } else {
+                    Text(paragraph)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func highlightedText(_ text: String, query: String) -> AttributedString {
+        var attributed = AttributedString(text)
+        let searchStr = text.lowercased()
+        let queryLower = query.lowercased()
+        var searchStart = searchStr.startIndex
+
+        while let range = searchStr.range(of: queryLower, range: searchStart..<searchStr.endIndex) {
+            if let attrStart = AttributedString.Index(range.lowerBound, within: attributed),
+               let attrEnd = AttributedString.Index(range.upperBound, within: attributed) {
+                attributed[attrStart..<attrEnd].backgroundColor = isCurrentResult
+                    ? theme.palette.userAccent.opacity(0.4)
+                    : theme.palette.userAccent.opacity(0.15)
+            }
+            searchStart = range.upperBound
+        }
+
+        return attributed
     }
 }

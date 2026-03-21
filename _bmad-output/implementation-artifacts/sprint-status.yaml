@@ -36,6 +36,10 @@
 
 generated: 2026-03-17
 last_updated: 2026-03-21
+# Story 3.6 code review completed: 2026-03-21
+# Story 3.6 dev completed: 2026-03-21
+# Story 3.6 dev started: 2026-03-21
+# Story 3.6 context created: 2026-03-21
 # Story 3.5 code review completed: 2026-03-21
 # Story 3.5 dev completed: 2026-03-21
 # Story 3.5 dev started: 2026-03-21
@@ -108,7 +112,7 @@ development_status:
   3-3-user-profile-and-domain-state: done
   3-4-rag-powered-contextual-coaching: done
   3-5-conversation-history-browsing: done
-  3-6-in-conversation-search: backlog
+  3-6-in-conversation-search: done
   3-7-memory-view-and-profile-editing: backlog
   epic-3-retrospective: optional
 
