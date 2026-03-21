@@ -26,12 +26,16 @@ final class CoachingViewModel {
     private var cachedPromptVersion: String?
 
     private let embeddingPipeline: EmbeddingPipelineProtocol?
+    private let profileUpdateService: ProfileUpdateServiceProtocol?
+    private let profileEnricher: ProfileEnricherProtocol?
 
-    init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager, embeddingPipeline: EmbeddingPipelineProtocol? = nil) {
+    init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager, embeddingPipeline: EmbeddingPipelineProtocol? = nil, profileUpdateService: ProfileUpdateServiceProtocol? = nil, profileEnricher: ProfileEnricherProtocol? = nil) {
         self.appState = appState
         self.chatService = chatService
         self.databaseManager = databaseManager
         self.embeddingPipeline = embeddingPipeline
+        self.profileUpdateService = profileUpdateService
+        self.profileEnricher = profileEnricher
     }
 
     func loadMessages() {
@@ -110,7 +114,7 @@ final class CoachingViewModel {
                         switch event {
                         case .token(let tokenText):
                             self.streamingText += tokenText
-                        case .done(let safetyLevel, _, let mood, let mode, let challengerUsed, _, let promptVersion):
+                        case .done(let safetyLevel, _, let mood, let mode, let challengerUsed, _, let promptVersion, let profileUpdate):
                             // Cache promptVersion from first done event per session
                             if let promptVersion, self.cachedPromptVersion == nil {
                                 self.cachedPromptVersion = promptVersion
@@ -150,6 +154,23 @@ final class CoachingViewModel {
                             }
 
                             self.challengerActive = challengerUsed ?? false
+
+                            if let profileUpdate, let profileUpdateService = self.profileUpdateService {
+                                Task { [weak self] in
+                                    guard let self else { return }
+                                    do {
+                                        let profileId = try await self.databaseManager.dbPool.read { db in
+                                            try UserProfile.current().fetchOne(db)?.id
+                                        }
+                                        if let profileId {
+                                            try await profileUpdateService.applyUpdate(profileUpdate, to: profileId)
+                                        }
+                                    } catch {
+                                        Logger(subsystem: Bundle.main.bundleIdentifier ?? "sprinty", category: "profile")
+                                            .error("Profile update failed: \(error)")
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -236,6 +257,15 @@ final class CoachingViewModel {
                         .error("Embedding failed for summary \(summary.id): \(error)")
                 }
             }
+
+            if let profileEnricher {
+                do {
+                    try await profileEnricher.enrich(from: summary)
+                } catch {
+                    Logger(subsystem: Bundle.main.bundleIdentifier ?? "sprinty", category: "profile")
+                        .error("Profile enrichment failed for summary \(summary.id): \(error)")
+                }
+            }
         } catch {
             Logger(subsystem: Bundle.main.bundleIdentifier ?? "sprinty", category: "memory").error("Summary generation failed for session \(sessionId): \(error)")
         }
@@ -268,7 +298,13 @@ final class CoachingViewModel {
             try UserProfile.current().fetchOne(db)
         }
         guard let userProfile else { return nil }
-        return ChatProfile(coachName: userProfile.coachName)
+        return ChatProfile(
+            coachName: userProfile.coachName,
+            values: userProfile.decodedValues,
+            goals: userProfile.decodedGoals,
+            personalityTraits: userProfile.decodedPersonalityTraits,
+            domainStates: userProfile.decodedDomainStates
+        )
     }
 
     private func getOrCreateSession() async throws -> ConversationSession {

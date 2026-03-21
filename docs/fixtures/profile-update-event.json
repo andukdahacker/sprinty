@@ -1,0 +1,13 @@
+{
+  "values": ["authenticity", "growth"],
+  "goals": ["career transition"],
+  "personalityTraits": ["analytical"],
+  "domainStates": {
+    "career": {
+      "status": "transitioning",
+      "conversationCount": 5,
+      "lastUpdated": "2026-03-21T10:00:00Z"
+    }
+  },
+  "corrections": ["Actually I left that job last month"]
+}

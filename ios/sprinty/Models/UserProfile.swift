@@ -21,6 +21,52 @@ struct UserProfile: Codable, FetchableRecord, PersistableRecord, Identifiable, S
     static let databaseTableName = "UserProfile"
 }
 
+// MARK: - JSON Decode/Encode Helpers
+
+extension UserProfile {
+    var decodedValues: [String]? {
+        guard let raw = values,
+              let data = raw.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([String].self, from: data)
+        else { return nil }
+        return decoded
+    }
+
+    var decodedGoals: [String]? {
+        guard let raw = goals,
+              let data = raw.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([String].self, from: data)
+        else { return nil }
+        return decoded
+    }
+
+    var decodedPersonalityTraits: [String]? {
+        guard let raw = personalityTraits,
+              let data = raw.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([String].self, from: data)
+        else { return nil }
+        return decoded
+    }
+
+    var decodedDomainStates: [String: DomainState]? {
+        guard let raw = domainStates,
+              let data = raw.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([String: DomainState].self, from: data)
+        else { return nil }
+        return decoded
+    }
+
+    static func encodeArray(_ array: [String]) -> String {
+        guard let data = try? JSONEncoder().encode(array) else { return "[]" }
+        return String(data: data, encoding: .utf8) ?? "[]"
+    }
+
+    static func encodeDomainStates(_ states: [String: DomainState]) -> String {
+        guard let data = try? JSONEncoder().encode(states) else { return "{}" }
+        return String(data: data, encoding: .utf8) ?? "{}"
+    }
+}
+
 // MARK: - Query Extensions
 
 extension UserProfile {

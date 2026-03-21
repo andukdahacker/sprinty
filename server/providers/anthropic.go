@@ -51,6 +51,17 @@ var toolSchema = anthropic.ToolParam{
 				"type":        "boolean",
 				"description": "Set to true when this response includes constructive pushback, alternative perspectives, or stress-testing of the user's assumptions. Set to false for normal coaching responses.",
 			},
+			"profileUpdate": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"values":            map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "New or updated user values to add to profile."},
+					"goals":             map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "New or updated user goals to add to profile."},
+					"personalityTraits": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "New personality traits observed."},
+					"domainStates":      map[string]any{"type": "object", "description": "Domain state updates as {domain: {key: value}}."},
+					"corrections":       map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Explicit corrections the user made about their situation."},
+				},
+				"description": "Only emit when the user reveals new facts about themselves or corrects your understanding. Do NOT emit for normal conversation.",
+			},
 		},
 		Required: []string{"coaching", "safetyLevel", "domainTags", "mood", "memoryReferenced", "mode", "challengerUsed"},
 	},
@@ -108,13 +119,14 @@ type summarizeResult struct {
 
 // toolResult is the parsed structured output from the model's tool call.
 type toolResult struct {
-	Coaching         string   `json:"coaching"`
-	SafetyLevel      string   `json:"safetyLevel"`
-	DomainTags       []string `json:"domainTags"`
-	Mood             string   `json:"mood"`
-	MemoryReferenced bool     `json:"memoryReferenced"`
-	Mode             string   `json:"mode"`
-	ChallengerUsed   bool     `json:"challengerUsed"`
+	Coaching         string           `json:"coaching"`
+	SafetyLevel      string           `json:"safetyLevel"`
+	DomainTags       []string         `json:"domainTags"`
+	Mood             string           `json:"mood"`
+	MemoryReferenced bool             `json:"memoryReferenced"`
+	Mode             string           `json:"mode"`
+	ChallengerUsed   bool             `json:"challengerUsed"`
+	ProfileUpdate    json.RawMessage  `json:"profileUpdate,omitempty"`
 }
 
 // AnthropicProvider implements Provider using the Anthropic API.
@@ -258,6 +270,7 @@ func (p *AnthropicProvider) StreamChat(ctx context.Context, req ChatRequest) (<-
 						MemoryReferenced: result.MemoryReferenced,
 						ChallengerUsed:   result.ChallengerUsed,
 						Usage:            usage,
+						ProfileUpdate:    result.ProfileUpdate,
 					}:
 					}
 				}

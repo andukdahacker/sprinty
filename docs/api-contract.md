@@ -114,6 +114,14 @@ JWT required. Streams response via Server-Sent Events (SSE).
 - `messages` (array): Conversation messages with `role` (`user`|`assistant`) and `content`
 - `mode` (string): Coaching mode. Values: `discovery`, `directive`, `summarize`
 - `promptVersion` (string): System prompt version for reproducibility
+- `profile` (object, optional): User profile data for personalized coaching
+  - `coachName` (string): Selected coach name
+  - `values` (array of strings, optional): User's core values (e.g., "authenticity", "growth")
+  - `goals` (array of strings, optional): User's active goals
+  - `personalityTraits` (array of strings, optional): Observed personality traits
+  - `domainStates` (object, optional): Life domain context, keyed by domain name
+    - Each domain has: `status` (string, optional), `conversationCount` (number, optional), `lastUpdated` (string, optional ISO 8601)
+    - Valid domain keys: `career`, `relationships`, `health`, `finance`, `personal-growth`, `creativity`, `education`, `family`
 - `userState` (object, optional): User engagement state computed on-device for adaptive tone
   - `engagementLevel` (string): `high`, `medium`, `low`
   - `recentMoods` (array of strings): Last 3-5 mood values from recent sessions
@@ -198,6 +206,12 @@ data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "mode": "d
 - `mood` (string): Coach expression mood. Values: `welcoming`, `thinking`, `warm`, `focused`, `gentle`
 - `mode` (string): Coaching mode for this response. Values: `discovery`, `directive`. May differ from request mode when the LLM decides to transition.
 - `challengerUsed` (boolean): Whether this response used the Challenger capability (constructive pushback, alternative perspectives). Default: `false`.
+- `profileUpdate` (object, optional): Only present when the LLM detects new user facts or corrections. Omitted for normal conversation.
+  - `values` (array of strings, optional): New or updated user values
+  - `goals` (array of strings, optional): New or updated user goals
+  - `personalityTraits` (array of strings, optional): Newly observed personality traits
+  - `domainStates` (object, optional): Domain state updates as `{domain: {status?, conversationCount?, lastUpdated?}}`
+  - `corrections` (array of strings, optional): Explicit corrections the user made about their situation (audit-only)
 - `usage` (object): Token consumption
   - `inputTokens` (number): Input token count
   - `outputTokens` (number): Output token count

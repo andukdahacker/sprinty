@@ -93,11 +93,15 @@ struct RootView: View {
         guard coachingViewModel == nil else { return }
         let chatService = makeChatService()
         let embeddingPipeline = makeEmbeddingPipeline(databaseManager: databaseManager)
+        let profileUpdateService = ProfileUpdateService(databaseManager: databaseManager)
+        let profileEnricher = ProfileEnricher(databaseManager: databaseManager)
         coachingViewModel = CoachingViewModel(
             appState: appState,
             chatService: chatService,
             databaseManager: databaseManager,
-            embeddingPipeline: embeddingPipeline
+            embeddingPipeline: embeddingPipeline,
+            profileUpdateService: profileUpdateService,
+            profileEnricher: profileEnricher
         )
     }
 

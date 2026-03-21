@@ -75,8 +75,8 @@ func (b *Builder) SummarizePrompt() string {
 	return ""
 }
 
-// Build assembles a system prompt for the given mode, coach name, and user state.
-func (b *Builder) Build(mode string, coachName string, userState *providers.UserState) string {
+// Build assembles a system prompt for the given mode, coach name, profile, and user state.
+func (b *Builder) Build(mode string, coachName string, profile *providers.ChatProfile, userState *providers.UserState) string {
 	var prompt strings.Builder
 
 	// Always include base persona
@@ -122,6 +122,46 @@ func (b *Builder) Build(mode string, coachName string, userState *providers.User
 		result = strings.ReplaceAll(result, "{{coach_name}}", coachName)
 	} else {
 		result = strings.ReplaceAll(result, "{{coach_name}}", "Coach")
+	}
+
+	// Replace profile template variables
+	if profile != nil {
+		if len(profile.Values) > 0 {
+			result = strings.ReplaceAll(result, "{{user_values}}", strings.Join(profile.Values, ", "))
+		} else {
+			result = strings.ReplaceAll(result, "{{user_values}}", "not yet known")
+		}
+		if len(profile.Goals) > 0 {
+			result = strings.ReplaceAll(result, "{{user_goals}}", strings.Join(profile.Goals, ", "))
+		} else {
+			result = strings.ReplaceAll(result, "{{user_goals}}", "not yet known")
+		}
+		if len(profile.PersonalityTraits) > 0 {
+			result = strings.ReplaceAll(result, "{{user_traits}}", strings.Join(profile.PersonalityTraits, ", "))
+		} else {
+			result = strings.ReplaceAll(result, "{{user_traits}}", "not yet known")
+		}
+		if len(profile.DomainStates) > 0 {
+			var parts []string
+			for domain, state := range profile.DomainStates {
+				part := domain
+				if state.Status != "" {
+					part += " (" + state.Status + ")"
+				}
+				if state.ConversationCount > 0 {
+					part += fmt.Sprintf(" [%d conversations]", state.ConversationCount)
+				}
+				parts = append(parts, part)
+			}
+			result = strings.ReplaceAll(result, "{{domain_states}}", strings.Join(parts, "; "))
+		} else {
+			result = strings.ReplaceAll(result, "{{domain_states}}", "not yet known")
+		}
+	} else {
+		result = strings.ReplaceAll(result, "{{user_values}}", "not yet known")
+		result = strings.ReplaceAll(result, "{{user_goals}}", "not yet known")
+		result = strings.ReplaceAll(result, "{{user_traits}}", "not yet known")
+		result = strings.ReplaceAll(result, "{{domain_states}}", "not yet known")
 	}
 
 	// Replace user state template variables

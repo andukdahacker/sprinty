@@ -25,7 +25,7 @@ func setupTestSections(t *testing.T) string {
 		"mood.md":              "Select mood: welcoming/warm/focused/gentle.",
 		"tagging.md":           "Tag domains: career, finance, etc.",
 		"cultural.md":          "Cultural context.",
-		"context-injection.md": "Coach name: {{coach_name}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
+		"context-injection.md": "Coach name: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
 		"mode-transitions.md": "Mode transitions: analyze user intent.",
 		"challenger.md":       "Challenger capability: push back constructively.",
 		"summarize.md":        "Summarize the coaching conversation.",
@@ -114,7 +114,7 @@ func TestBuilder_Build_DiscoveryMode(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("discovery", "Luna", nil)
+	prompt := b.Build("discovery", "Luna", nil, nil)
 
 	if !strings.Contains(prompt, "You are Luna, a coach.") {
 		t.Error("expected base persona with coach name injected")
@@ -143,7 +143,7 @@ func TestBuilder_Build_DefaultCoachName(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("discovery", "", nil)
+	prompt := b.Build("discovery", "", nil, nil)
 
 	if !strings.Contains(prompt, "You are Coach, a coach.") {
 		t.Error("expected default coach name 'Coach'")
@@ -157,7 +157,7 @@ func TestBuilder_Build_UnknownModeDefaultsToDiscovery(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("unknown_mode", "Luna", nil)
+	prompt := b.Build("unknown_mode", "Luna", nil, nil)
 
 	if !strings.Contains(prompt, "Discovery mode") {
 		t.Error("expected unknown mode to fall back to discovery")
@@ -171,7 +171,7 @@ func TestBuilder_Build_DiscoveryMode_IncludesDiscoverySection(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("discovery", "Luna", nil)
+	prompt := b.Build("discovery", "Luna", nil, nil)
 
 	if !strings.Contains(prompt, "Discovery mode") {
 		t.Error("expected discovery section in discovery mode prompt")
@@ -185,7 +185,7 @@ func TestBuilder_Build_DirectiveMode(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("directive", "Luna", nil)
+	prompt := b.Build("directive", "Luna", nil, nil)
 
 	if !strings.Contains(prompt, "Directive mode") {
 		t.Error("expected directive mode section in directive mode prompt")
@@ -205,7 +205,7 @@ func TestBuilder_Build_DirectiveMode_ExcludesDiscovery(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("directive", "Luna", nil)
+	prompt := b.Build("directive", "Luna", nil, nil)
 
 	if strings.Contains(prompt, "Discovery mode") {
 		t.Error("expected discovery section to be absent in directive mode")
@@ -223,7 +223,7 @@ func TestBuilder_Build_IncludesModeTransitions(t *testing.T) {
 	}
 
 	for _, mode := range []string{"discovery", "directive", "unknown"} {
-		prompt := b.Build(mode, "Luna", nil)
+		prompt := b.Build(mode, "Luna", nil, nil)
 		if !strings.Contains(prompt, "Mode transitions") {
 			t.Errorf("expected mode-transitions section in %s mode prompt", mode)
 		}
@@ -238,7 +238,7 @@ func TestBuilder_Build_IncludesChallenger(t *testing.T) {
 	}
 
 	for _, mode := range []string{"discovery", "directive", "unknown"} {
-		prompt := b.Build(mode, "Luna", nil)
+		prompt := b.Build(mode, "Luna", nil, nil)
 		if !strings.Contains(prompt, "Challenger capability") {
 			t.Errorf("expected challenger section in %s mode prompt", mode)
 		}
@@ -252,7 +252,7 @@ func TestBuilder_Build_IncludesCulturalSection(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("discovery", "Luna", nil)
+	prompt := b.Build("discovery", "Luna", nil, nil)
 
 	if !strings.Contains(prompt, "Cultural context") {
 		t.Error("expected cultural section in assembled prompt")
@@ -276,7 +276,7 @@ func TestBuilder_Build_WithUserState_InjectsContext(t *testing.T) {
 		RecentSessionIntensity: "moderate",
 	}
 
-	prompt := b.Build("discovery", "Luna", us)
+	prompt := b.Build("discovery", "Luna", nil, us)
 
 	if !strings.Contains(prompt, "Engagement: high") {
 		t.Error("expected engagement level in prompt")
@@ -320,12 +320,91 @@ func TestBuilder_Build_WithNilUserState_UsesDefaults(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("discovery", "Luna", nil)
+	prompt := b.Build("discovery", "Luna", nil, nil)
 
 	if !strings.Contains(prompt, "Engagement: unknown") {
 		t.Error("expected unknown engagement level when userState is nil")
 	}
 	if !strings.Contains(prompt, "Gap: unknown") {
 		t.Error("expected unknown gap when userState is nil")
+	}
+}
+
+// --- Story 3.3 Tests ---
+
+func TestBuilder_Build_WithProfile_InjectsFields(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	profile := &providers.ChatProfile{
+		CoachName:        "Luna",
+		Values:           []string{"authenticity", "growth"},
+		Goals:            []string{"career change"},
+		PersonalityTraits: []string{"analytical", "introverted"},
+		DomainStates: map[string]providers.DomainState{
+			"career": {Status: "transitioning", ConversationCount: 5},
+		},
+	}
+
+	prompt := b.Build("discovery", "Luna", profile, nil)
+
+	if !strings.Contains(prompt, "Values: authenticity, growth") {
+		t.Error("expected user values in prompt")
+	}
+	if !strings.Contains(prompt, "Goals: career change") {
+		t.Error("expected user goals in prompt")
+	}
+	if !strings.Contains(prompt, "Traits: analytical, introverted") {
+		t.Error("expected user traits in prompt")
+	}
+	if !strings.Contains(prompt, "career") {
+		t.Error("expected domain states in prompt")
+	}
+}
+
+func TestBuilder_Build_WithNilProfile_UsesNotYetKnown(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	prompt := b.Build("discovery", "Luna", nil, nil)
+
+	if !strings.Contains(prompt, "Values: not yet known") {
+		t.Error("expected 'not yet known' for values when profile is nil")
+	}
+	if !strings.Contains(prompt, "Goals: not yet known") {
+		t.Error("expected 'not yet known' for goals when profile is nil")
+	}
+	if !strings.Contains(prompt, "Traits: not yet known") {
+		t.Error("expected 'not yet known' for traits when profile is nil")
+	}
+	if !strings.Contains(prompt, "Domains: not yet known") {
+		t.Error("expected 'not yet known' for domains when profile is nil")
+	}
+}
+
+func TestBuilder_Build_WithEmptyProfileFields_UsesNotYetKnown(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	profile := &providers.ChatProfile{
+		CoachName: "Luna",
+	}
+
+	prompt := b.Build("discovery", "Luna", profile, nil)
+
+	if !strings.Contains(prompt, "Values: not yet known") {
+		t.Error("expected 'not yet known' for empty values")
+	}
+	if !strings.Contains(prompt, "Goals: not yet known") {
+		t.Error("expected 'not yet known' for empty goals")
 	}
 }

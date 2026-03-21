@@ -7,6 +7,10 @@ struct ChatRequestMessage: Codable, Sendable {
 
 struct ChatProfile: Codable, Sendable {
     let coachName: String
+    let values: [String]?
+    let goals: [String]?
+    let personalityTraits: [String]?
+    let domainStates: [String: DomainState]?
 }
 
 struct UserState: Codable, Sendable {

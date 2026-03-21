@@ -30,7 +30,7 @@ struct ChatEventCodableTests {
         #expect(events.count == 1)
         let chatEvent = try ChatEvent.from(sseEvent: events[0])
 
-        if case .done(let safetyLevel, let domainTags, let mood, let mode, let challengerUsed, let usage, let promptVersion) = chatEvent {
+        if case .done(let safetyLevel, let domainTags, let mood, let mode, let challengerUsed, let usage, let promptVersion, _) = chatEvent {
             #expect(safetyLevel == "green")
             #expect(domainTags.isEmpty)
             #expect(mood == "welcoming")
@@ -78,7 +78,7 @@ struct ChatEventCodableTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(_, let domainTags, _, _, _, _, _) = chatEvent {
+        if case .done(_, let domainTags, _, _, _, _, _, _) = chatEvent {
             #expect(domainTags.isEmpty)
         } else {
             Issue.record("Expected done event")
@@ -93,7 +93,7 @@ struct ChatEventCodableTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(_, _, let mood, _, _, _, _) = chatEvent {
+        if case .done(_, _, let mood, _, _, _, _, _) = chatEvent {
             #expect(mood == nil)
         } else {
             Issue.record("Expected done event")
@@ -108,7 +108,7 @@ struct ChatEventCodableTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(_, _, _, let mode, _, _, _) = chatEvent {
+        if case .done(_, _, _, let mode, _, _, _, _) = chatEvent {
             #expect(mode == "discovery")
         } else {
             Issue.record("Expected done event")
@@ -123,7 +123,7 @@ struct ChatEventCodableTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(_, _, _, let mode, _, _, _) = chatEvent {
+        if case .done(_, _, _, let mode, _, _, _, _) = chatEvent {
             #expect(mode == nil)
         } else {
             Issue.record("Expected done event")
@@ -138,7 +138,7 @@ struct ChatEventCodableTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(_, _, _, _, let challengerUsed, _, _) = chatEvent {
+        if case .done(_, _, _, _, let challengerUsed, _, _, _) = chatEvent {
             #expect(challengerUsed == true)
         } else {
             Issue.record("Expected done event")

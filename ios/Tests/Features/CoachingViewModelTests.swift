@@ -20,13 +20,15 @@ struct CoachingViewModelTests {
     private func makeViewModel(
         chatService: MockChatService = MockChatService(),
         dbManager: DatabaseManager? = nil,
-        embeddingPipeline: MockEmbeddingPipeline? = nil
+        embeddingPipeline: MockEmbeddingPipeline? = nil,
+        profileUpdateService: MockProfileUpdateService? = nil,
+        profileEnricher: MockProfileEnricher? = nil
     ) async throws -> (CoachingViewModel, MockChatService, DatabaseManager, AppState) {
         let db = try dbManager ?? makeTestDB()
         let appState = AppState()
         appState.isAuthenticated = true
         appState.databaseManager = db
-        let viewModel = CoachingViewModel(appState: appState, chatService: chatService, databaseManager: db, embeddingPipeline: embeddingPipeline)
+        let viewModel = CoachingViewModel(appState: appState, chatService: chatService, databaseManager: db, embeddingPipeline: embeddingPipeline, profileUpdateService: profileUpdateService, profileEnricher: profileEnricher)
         return (viewModel, chatService, db, appState)
     }
 
@@ -77,7 +79,7 @@ struct CoachingViewModelTests {
         mockChat.stubbedEvents = [
             .token(text: "Response "),
             .token(text: "text."),
-            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil)
         ]
 
         let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
@@ -102,7 +104,7 @@ struct CoachingViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Hi."),
-            .done(safetyLevel: "green", domainTags: [], mood: "warm", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "warm", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
         ]
 
         let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
@@ -189,7 +191,7 @@ struct CoachingViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Let's focus."),
-            .done(safetyLevel: "green", domainTags: [], mood: "focused", mode: "directive", challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "focused", mode: "directive", challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil)
         ]
 
         let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
@@ -212,7 +214,7 @@ struct CoachingViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Have you considered..."),
-            .done(safetyLevel: "green", domainTags: ["career"], mood: "focused", mode: "discovery", challengerUsed: true, usage: ChatUsage(inputTokens: 20, outputTokens: 15), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: ["career"], mood: "focused", mode: "discovery", challengerUsed: true, usage: ChatUsage(inputTokens: 20, outputTokens: 15), promptVersion: nil, profileUpdate: nil)
         ]
 
         let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
@@ -233,7 +235,7 @@ struct CoachingViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Have you considered..."),
-            .done(safetyLevel: "green", domainTags: [], mood: "focused", mode: "discovery", challengerUsed: true, usage: ChatUsage(inputTokens: 20, outputTokens: 15), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "focused", mode: "discovery", challengerUsed: true, usage: ChatUsage(inputTokens: 20, outputTokens: 15), promptVersion: nil, profileUpdate: nil)
         ]
 
         let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
@@ -250,7 +252,7 @@ struct CoachingViewModelTests {
         // Now send again with challengerUsed false
         mockChat.stubbedEvents = [
             .token(text: "That makes sense."),
-            .done(safetyLevel: "green", domainTags: [], mood: "warm", mode: "discovery", challengerUsed: false, usage: ChatUsage(inputTokens: 20, outputTokens: 15), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "warm", mode: "discovery", challengerUsed: false, usage: ChatUsage(inputTokens: 20, outputTokens: 15), promptVersion: nil, profileUpdate: nil)
         ]
 
         await viewModel.sendMessage("I've thought it through")
@@ -265,7 +267,7 @@ struct CoachingViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Hi."),
-            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
         ]
 
         let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
@@ -287,7 +289,7 @@ struct CoachingViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Hi."),
-            .done(safetyLevel: "green", domainTags: [], mood: "warm", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "warm", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
         ]
 
         let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
@@ -324,7 +326,7 @@ struct CoachingViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Response."),
-            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
         ]
 
         let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
@@ -380,7 +382,7 @@ struct CoachingViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Response."),
-            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
         ]
         mockChat.stubbedSummaryResponse = SummaryResponse(
             summary: "Explored career stress.",
@@ -419,7 +421,7 @@ struct CoachingViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Hi."),
-            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
         ]
         mockChat.stubbedSummaryError = AppError.networkUnavailable
 
@@ -498,7 +500,7 @@ struct CoachingViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Response."),
-            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
         ]
         mockChat.stubbedSummaryResponse = SummaryResponse(
             summary: "Explored career stress.",
@@ -532,7 +534,7 @@ struct CoachingViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Response."),
-            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
         ]
         mockChat.stubbedSummaryResponse = SummaryResponse(
             summary: "Career chat.",
@@ -579,13 +581,188 @@ struct CoachingViewModelTests {
         #expect(mockPipeline.retryCallCount == 1)
     }
 
+    // MARK: - Story 3.3 — Profile Update Integration
+
+    @Test("Done event with profileUpdate triggers ProfileUpdateService")
+    @MainActor
+    func test_sendMessage_doneWithProfileUpdate_triggersService() async throws {
+        let mockChat = MockChatService()
+        let profileUpdate = ProfileUpdate(
+            values: ["creativity"],
+            goals: nil,
+            personalityTraits: nil,
+            domainStates: nil,
+            corrections: nil
+        )
+        mockChat.stubbedEvents = [
+            .token(text: "Great."),
+            .done(safetyLevel: "green", domainTags: [], mood: "warm", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: profileUpdate)
+        ]
+
+        let mockProfileService = MockProfileUpdateService()
+        let db = try makeTestDB()
+
+        // Create a user profile in the DB
+        let userProfile = UserProfile(
+            id: UUID(),
+            avatarId: "default",
+            coachAppearanceId: "default",
+            coachName: "Luna",
+            onboardingStep: 5,
+            onboardingCompleted: true,
+            values: nil,
+            goals: nil,
+            personalityTraits: nil,
+            domainStates: nil,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        try await db.dbPool.write { dbConn in
+            try userProfile.save(dbConn)
+        }
+
+        let (viewModel, _, _, _) = try await makeViewModel(chatService: mockChat, dbManager: db, profileUpdateService: mockProfileService)
+        let _ = try await createSession(in: db)
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        await viewModel.sendMessage("I value creativity")
+        try await Task.sleep(for: .milliseconds(800))
+
+        #expect(mockProfileService.applyUpdateCallCount == 1)
+        #expect(mockProfileService.lastUpdate?.values == ["creativity"])
+        #expect(mockProfileService.lastProfileId == userProfile.id)
+    }
+
+    @Test("Done event without profileUpdate does not trigger service")
+    @MainActor
+    func test_sendMessage_doneWithoutProfileUpdate_noServiceCall() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Hi."),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
+        ]
+
+        let mockProfileService = MockProfileUpdateService()
+        let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat, profileUpdateService: mockProfileService)
+        let _ = try await createSession(in: db)
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        await viewModel.sendMessage("Hello")
+        try await Task.sleep(for: .milliseconds(500))
+
+        #expect(mockProfileService.applyUpdateCallCount == 0)
+    }
+
+    @Test("Cold start: nil profile fields don't crash request assembly")
+    @MainActor
+    func test_sendMessage_coldStart_nilProfileFields() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Welcome!"),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
+        ]
+
+        // No UserProfile created — cold start scenario
+        let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)
+        let _ = try await createSession(in: db)
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        await viewModel.sendMessage("Hello")
+        try await Task.sleep(for: .milliseconds(500))
+
+        // Should complete without crash, profile should be nil
+        #expect(viewModel.messages.count == 2)
+        #expect(mockChat.lastProfile == nil)
+    }
+
+    @Test("Partial profile: some fields populated works correctly")
+    @MainActor
+    func test_sendMessage_partialProfile_works() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Hi."),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
+        ]
+
+        let db = try makeTestDB()
+        let profile = UserProfile(
+            id: UUID(),
+            avatarId: "default",
+            coachAppearanceId: "default",
+            coachName: "Luna",
+            onboardingStep: 5,
+            onboardingCompleted: true,
+            values: UserProfile.encodeArray(["honesty"]),
+            goals: nil,
+            personalityTraits: nil,
+            domainStates: nil,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        try await db.dbPool.write { dbConn in
+            try profile.save(dbConn)
+        }
+
+        let (viewModel, _, _, _) = try await makeViewModel(chatService: mockChat, dbManager: db)
+        let _ = try await createSession(in: db)
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        await viewModel.sendMessage("Hello")
+        try await Task.sleep(for: .milliseconds(500))
+
+        #expect(viewModel.messages.count == 2)
+        #expect(mockChat.lastProfile?.values == ["honesty"])
+        #expect(mockChat.lastProfile?.goals == nil)
+    }
+
+    @Test("endSession triggers profile enrichment after summary")
+    @MainActor
+    func test_endSession_triggersProfileEnrichment() async throws {
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Response."),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
+        ]
+        mockChat.stubbedSummaryResponse = SummaryResponse(
+            summary: "Career chat.",
+            keyMoments: ["moment"],
+            domainTags: ["career"],
+            emotionalMarkers: nil,
+            keyDecisions: nil
+        )
+
+        let mockEnricher = MockProfileEnricher()
+        let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat, profileEnricher: mockEnricher)
+        let _ = try await createSession(in: db)
+
+        viewModel.loadMessages()
+        try await Task.sleep(for: .milliseconds(200))
+
+        await viewModel.sendMessage("Let's talk about career")
+        try await Task.sleep(for: .milliseconds(500))
+
+        await viewModel.endSession()
+        try await Task.sleep(for: .milliseconds(800))
+
+        #expect(mockEnricher.enrichCallCount == 1)
+        #expect(mockEnricher.lastSummary?.summary == "Career chat.")
+    }
+
     @Test("getOrCreateSession creates new session after previous was ended")
     @MainActor
     func test_getOrCreateSession_afterEndSession_createsNew() async throws {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Hi."),
-            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
         ]
 
         let (viewModel, _, db, _) = try await makeViewModel(chatService: mockChat)

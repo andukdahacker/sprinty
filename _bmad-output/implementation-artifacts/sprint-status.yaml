@@ -35,7 +35,10 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-17
-last_updated: 2026-03-20
+last_updated: 2026-03-21
+# Story 3.3 code review completed: 2026-03-21
+# Story 3.3 dev started: 2026-03-21
+# Story 3.3 context created: 2026-03-21
 # Story 3.2 code review completed: 2026-03-20
 # Story 3.2 dev started: 2026-03-20
 # Story 3.2 context created: 2026-03-20
@@ -94,7 +97,7 @@ development_status:
   epic-3: in-progress
   3-1-conversation-summaries-and-key-moments: done
   3-2-embedding-pipeline-and-vector-storage: done
-  3-3-user-profile-and-domain-state: backlog
+  3-3-user-profile-and-domain-state: done
   3-4-rag-powered-contextual-coaching: backlog
   3-5-conversation-history-browsing: backlog
   3-6-in-conversation-search: backlog

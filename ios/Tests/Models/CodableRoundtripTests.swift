@@ -169,6 +169,105 @@ struct CodableRoundtripTests {
         #expect(json?["retryAfter"] as? Int == 10)
     }
 
+    // MARK: - Story 3.3 — ChatProfile & UserProfile Expanded
+
+    @Test("ChatProfile with full profile data roundtrips")
+    func test_chatProfile_expanded_roundtrip() throws {
+        let profile = ChatProfile(
+            coachName: "Luna",
+            values: ["authenticity", "growth"],
+            goals: ["career transition", "better health"],
+            personalityTraits: ["analytical", "introverted"],
+            domainStates: [
+                "career": DomainState(status: "transitioning", conversationCount: 5, lastUpdated: "2026-03-21T10:00:00Z"),
+                "health": DomainState(status: nil, conversationCount: 2, lastUpdated: "2026-03-20T08:00:00Z")
+            ]
+        )
+
+        let data = try encoder.encode(profile)
+        let decoded = try decoder.decode(ChatProfile.self, from: data)
+
+        #expect(decoded.coachName == "Luna")
+        #expect(decoded.values == ["authenticity", "growth"])
+        #expect(decoded.goals == ["career transition", "better health"])
+        #expect(decoded.personalityTraits == ["analytical", "introverted"])
+        #expect(decoded.domainStates?["career"]?.conversationCount == 5)
+        #expect(decoded.domainStates?["health"]?.conversationCount == 2)
+    }
+
+    @Test("ChatProfile with nil optionals roundtrips")
+    func test_chatProfile_nilOptionals_roundtrip() throws {
+        let profile = ChatProfile(
+            coachName: "Luna",
+            values: nil,
+            goals: nil,
+            personalityTraits: nil,
+            domainStates: nil
+        )
+
+        let data = try encoder.encode(profile)
+        let decoded = try decoder.decode(ChatProfile.self, from: data)
+
+        #expect(decoded.coachName == "Luna")
+        #expect(decoded.values == nil)
+        #expect(decoded.goals == nil)
+        #expect(decoded.personalityTraits == nil)
+        #expect(decoded.domainStates == nil)
+    }
+
+    @Test("UserProfile encodes and decodes JSON fields correctly")
+    func test_userProfile_jsonFields_roundtrip() throws {
+        let values = ["authenticity", "growth"]
+        let goals = ["career change"]
+        let traits = ["analytical"]
+        let states: [String: DomainState] = [
+            "career": DomainState(status: "active", conversationCount: 3, lastUpdated: "2026-03-21")
+        ]
+
+        var profile = UserProfile(
+            id: UUID(),
+            avatarId: "default",
+            coachAppearanceId: "default",
+            coachName: "Luna",
+            onboardingStep: 5,
+            onboardingCompleted: true,
+            values: UserProfile.encodeArray(values),
+            goals: UserProfile.encodeArray(goals),
+            personalityTraits: UserProfile.encodeArray(traits),
+            domainStates: UserProfile.encodeDomainStates(states),
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        #expect(profile.decodedValues == values)
+        #expect(profile.decodedGoals == goals)
+        #expect(profile.decodedPersonalityTraits == traits)
+        #expect(profile.decodedDomainStates?["career"]?.conversationCount == 3)
+    }
+
+    @Test("UserProfile with nil JSON fields returns nil decoded values")
+    func test_userProfile_nilJsonFields_returnsNil() throws {
+        let profile = UserProfile(
+            id: UUID(),
+            avatarId: "default",
+            coachAppearanceId: "default",
+            coachName: "Luna",
+            onboardingStep: 5,
+            onboardingCompleted: true,
+            values: nil,
+            goals: nil,
+            personalityTraits: nil,
+            domainStates: nil,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        #expect(profile.decodedValues == nil)
+        #expect(profile.decodedGoals == nil)
+        #expect(profile.decodedPersonalityTraits == nil)
+        #expect(profile.decodedDomainStates == nil)
+    }
+
     // MARK: - Helpers
 
     private func loadFixture(_ filename: String) throws -> String {

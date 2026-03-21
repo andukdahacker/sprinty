@@ -52,7 +52,7 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 		if req.Profile != nil {
 			coachName = req.Profile.CoachName
 		}
-		req.SystemPrompt = promptBuilder.Build(req.Mode, coachName, req.UserState)
+		req.SystemPrompt = promptBuilder.Build(req.Mode, coachName, req.Profile, req.UserState)
 
 		logArgs := []any{
 			"mode", req.Mode,
@@ -91,7 +91,7 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 				data, _ = json.Marshal(map[string]string{"text": event.Text})
 			case "done":
 				eventType = "done"
-				data, _ = json.Marshal(map[string]any{
+				donePayload := map[string]any{
 					"safetyLevel":    event.SafetyLevel,
 					"domainTags":     event.DomainTags,
 					"mood":           event.Mood,
@@ -99,7 +99,11 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 					"challengerUsed": event.ChallengerUsed,
 					"usage":          event.Usage,
 					"promptVersion":  promptBuilder.ContentHash(),
-				})
+				}
+				if len(event.ProfileUpdate) > 0 {
+					donePayload["profileUpdate"] = json.RawMessage(event.ProfileUpdate)
+				}
+				data, _ = json.Marshal(donePayload)
 			default:
 				continue
 			}
