@@ -20,7 +20,7 @@ struct HomeView: View {
             VStack(spacing: 0) {
                 // Stage 1: Avatar + Greeting
                 HStack(alignment: .center, spacing: homeTheme.spacing.homeElement) {
-                    AvatarView(avatarId: viewModel.avatarId, size: avatarSize)
+                    AvatarView(avatarId: viewModel.avatarId, size: avatarSize, state: viewModel.avatarState)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(viewModel.greeting)

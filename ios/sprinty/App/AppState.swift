@@ -8,5 +8,7 @@ final class AppState {
     var needsReauth = false
     var isOnline = true
     var onboardingCompleted = false
+    var avatarState: AvatarState = .active
+    var isPaused: Bool = false
     var databaseManager: DatabaseManager?
 }
