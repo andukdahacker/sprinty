@@ -8,6 +8,7 @@ final class MockVectorSearch: VectorSearchProtocol, @unchecked Sendable {
     var stubbedError: Error?
     var stubbedCount: Int = 0
     var deleteAllCallCount: Int = 0
+    var deletedRowids: [Int64] = []
     var insertFailOnce: Bool = false
 
     func createTable() throws {
@@ -40,6 +41,14 @@ final class MockVectorSearch: VectorSearchProtocol, @unchecked Sendable {
             throw error
         }
         return stubbedCount
+    }
+
+    func delete(rowid: Int64) throws {
+        if let error = stubbedError {
+            throw error
+        }
+        deletedRowids.append(rowid)
+        insertedItems.removeAll { $0.rowid == rowid }
     }
 
     func deleteAll() throws {

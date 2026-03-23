@@ -58,6 +58,10 @@ final class EmbeddingPipeline: EmbeddingPipelineProtocol, @unchecked Sendable {
         return results.compactMap { summaryByRowid[$0.rowid] }
     }
 
+    func deleteEmbedding(summaryRowid: Int64) async throws {
+        try vectorSearch.delete(rowid: summaryRowid)
+    }
+
     func retryMissingEmbeddings() async {
         let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "sprinty", category: "memory")
 

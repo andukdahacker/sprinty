@@ -35,7 +35,10 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-17
-last_updated: 2026-03-21
+last_updated: 2026-03-23
+# Story 3.7 code review completed: 2026-03-23
+# Story 3.7 dev started: 2026-03-23
+# Story 3.7 context created: 2026-03-23
 # Story 3.6 code review completed: 2026-03-21
 # Story 3.6 dev completed: 2026-03-21
 # Story 3.6 dev started: 2026-03-21
@@ -113,7 +116,7 @@ development_status:
   3-4-rag-powered-contextual-coaching: done
   3-5-conversation-history-browsing: done
   3-6-in-conversation-search: done
-  3-7-memory-view-and-profile-editing: backlog
+  3-7-memory-view-and-profile-editing: done
   epic-3-retrospective: optional
 
   # Epic 4: Home Experience & Avatar

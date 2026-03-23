@@ -13,6 +13,7 @@ protocol VectorSearchProtocol: Sendable {
     func query(embedding: [Float], limit: Int) throws -> [VectorSearchResult]
     func count() throws -> Int
     func deleteAll() throws
+    func delete(rowid: Int64) throws
 }
 
 // @unchecked Sendable: thread-safe via NSLock protecting all db access
@@ -99,6 +100,21 @@ final class VectorSearch: VectorSearchProtocol, @unchecked Sendable {
                 throw VectorSearchError.queryFailed(errorMessage())
             }
             return Int(csvk_column_int64(stmt, 0))
+        }
+    }
+
+    func delete(rowid: Int64) throws {
+        let sql = "DELETE FROM vec_items WHERE rowid = ?"
+        try lock.withLock {
+            var stmt: OpaquePointer?
+            defer { csvk_finalize(stmt) }
+            guard csvk_prepare(db, sql, &stmt) == CSVK_OK else {
+                throw VectorSearchError.queryFailed(errorMessage())
+            }
+            csvk_bind_int64(stmt, 1, rowid)
+            guard csvk_step(stmt) == CSVK_DONE else {
+                throw VectorSearchError.queryFailed(errorMessage())
+            }
         }
     }
 

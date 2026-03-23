@@ -8,6 +8,8 @@ struct RootView: View {
     @State private var onboardingViewModel: OnboardingViewModel?
     @State private var onboardingChecked = false
     @State private var showConversation = false
+    @State private var showSettings = false
+    @State private var memoryViewModel: MemoryViewModel?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -50,12 +52,15 @@ struct RootView: View {
     private func authenticatedView(databaseManager: DatabaseManager) -> some View {
         if let homeViewModel {
             ZStack {
-                HomeView(viewModel: homeViewModel) {
+                HomeView(viewModel: homeViewModel, onTalkToCoach: {
                     withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.45)) {
                         ensureCoachingViewModel(databaseManager: databaseManager)
                         showConversation = true
                     }
-                }
+                }, onOpenSettings: {
+                    ensureMemoryViewModel(databaseManager: databaseManager)
+                    showSettings = true
+                })
                 .opacity(showConversation ? 0 : 1)
                 .offset(y: showConversation ? -20 : 0)
 
@@ -79,6 +84,11 @@ struct RootView: View {
                         }
                 }
             }
+            .sheet(isPresented: $showSettings) {
+                if let memoryViewModel {
+                    SettingsView(memoryViewModel: memoryViewModel)
+                }
+            }
         } else {
             Color.clear.onAppear {
                 homeViewModel = HomeViewModel(
@@ -87,6 +97,15 @@ struct RootView: View {
                 )
             }
         }
+    }
+
+    private func ensureMemoryViewModel(databaseManager: DatabaseManager) {
+        guard memoryViewModel == nil else { return }
+        let embeddingPipeline = makeEmbeddingPipeline(databaseManager: databaseManager)
+        memoryViewModel = MemoryViewModel(
+            databaseManager: databaseManager,
+            embeddingPipeline: embeddingPipeline
+        )
     }
 
     private func ensureCoachingViewModel(databaseManager: DatabaseManager) {

@@ -15,6 +15,10 @@ final class MockEmbeddingPipeline: EmbeddingPipelineProtocol, @unchecked Sendabl
 
     var retryCallCount: Int = 0
 
+    var deleteEmbeddingCallCount: Int = 0
+    var lastDeletedRowid: Int64?
+    var stubbedDeleteError: Error?
+
     func embed(summary: ConversationSummary, rowid: Int64) async throws {
         embedCallCount += 1
         lastEmbedSummary = summary
@@ -36,5 +40,13 @@ final class MockEmbeddingPipeline: EmbeddingPipelineProtocol, @unchecked Sendabl
 
     func retryMissingEmbeddings() async {
         retryCallCount += 1
+    }
+
+    func deleteEmbedding(summaryRowid: Int64) async throws {
+        deleteEmbeddingCallCount += 1
+        lastDeletedRowid = summaryRowid
+        if let error = stubbedDeleteError {
+            throw error
+        }
     }
 }

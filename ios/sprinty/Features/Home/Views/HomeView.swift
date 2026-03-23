@@ -6,6 +6,7 @@ struct HomeView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let onTalkToCoach: () -> Void
+    var onOpenSettings: (() -> Void)?
 
     private var homeTheme: CoachingTheme {
         themeFor(context: .home, colorScheme: colorScheme)
@@ -32,6 +33,18 @@ struct HomeView: View {
                     }
 
                     Spacer()
+
+                    if let onOpenSettings {
+                        Button {
+                            onOpenSettings()
+                        } label: {
+                            Image(systemName: "gearshape")
+                                .font(.title3)
+                                .foregroundStyle(homeTheme.palette.textSecondary)
+                                .frame(width: 44, height: 44)
+                        }
+                        .accessibilityLabel("Settings")
+                    }
                 }
                 .padding(.horizontal, margin)
                 .padding(.top, homeTheme.spacing.sectionGap)
