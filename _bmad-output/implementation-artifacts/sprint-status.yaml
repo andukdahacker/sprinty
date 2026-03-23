@@ -36,6 +36,8 @@
 
 generated: 2026-03-17
 last_updated: 2026-03-23
+# Story 4.2 code review completed: 2026-03-23
+# Story 4.2 context created: 2026-03-23
 # Story 4.1 code review completed: 2026-03-23
 # Story 4.1 dev started: 2026-03-23
 # Story 4.1 context created: 2026-03-23
@@ -125,7 +127,7 @@ development_status:
   # Epic 4: Home Experience & Avatar
   epic-4: in-progress
   4-1-full-avatar-state-system: done
-  4-2-home-scene-progressive-disclosure: backlog
+  4-2-home-scene-progressive-disclosure: done
   4-3-daily-coaching-insight: backlog
   4-4-sprint-progress-on-home-screen: backlog
   4-5-avatar-customization: backlog

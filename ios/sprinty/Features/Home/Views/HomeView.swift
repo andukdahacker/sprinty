@@ -18,9 +18,10 @@ struct HomeView: View {
             let avatarSize: CGFloat = geometry.size.width <= 375 ? 56 : 64
 
             VStack(spacing: 0) {
-                // Stage 1: Avatar + Greeting
+                // Greeting + Avatar
                 HStack(alignment: .center, spacing: homeTheme.spacing.homeElement) {
                     AvatarView(avatarId: viewModel.avatarId, size: avatarSize, state: viewModel.avatarState)
+                        .accessibilitySortPriority(4)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(viewModel.greeting)
@@ -31,6 +32,7 @@ struct HomeView: View {
                             .homeGreetingStyle()
                             .foregroundStyle(homeTheme.palette.textSecondary)
                     }
+                    .accessibilitySortPriority(5)
 
                     Spacer()
 
@@ -49,15 +51,52 @@ struct HomeView: View {
                 .padding(.horizontal, margin)
                 .padding(.top, homeTheme.spacing.sectionGap)
 
-                // Stage 2 (future): Insight card — hidden until >= 1 completed conversation
-                // Stage 3 (future): Sprint progress — hidden until active sprint exists
+                // Stage-dependent content
+                Group {
+                    if viewModel.homeStage == .welcome {
+                        HomeEmptyStateView()
+                            .padding(.top, homeTheme.spacing.homeElement)
+                            .transition(.opacity)
+                    }
+
+                    if let insightText = viewModel.insightDisplayText,
+                       viewModel.homeStage != .welcome {
+                        InsightCardView(content: insightText)
+                            .padding(.top, homeTheme.spacing.homeElement)
+                            .transition(.opacity)
+                            .accessibilitySortPriority(3)
+                    }
+
+                    if viewModel.homeStage == .sprintActive || (viewModel.homeStage == .paused && viewModel.hasActiveSprint) {
+                        SprintProgressView(
+                            progress: viewModel.sprintProgress,
+                            currentStep: viewModel.sprintCurrentStep,
+                            totalSteps: viewModel.sprintTotalSteps,
+                            isMuted: viewModel.homeStage == .paused
+                        )
+                        .padding(.top, homeTheme.spacing.homeElement)
+                        .transition(.opacity)
+                        .accessibilitySortPriority(2)
+                    }
+
+                    if let checkIn = viewModel.latestCheckIn,
+                       (viewModel.homeStage == .sprintActive || viewModel.homeStage == .paused) {
+                        CheckInSummaryView(summary: checkIn)
+                            .padding(.top, homeTheme.spacing.homeElement)
+                            .transition(.opacity)
+                    }
+                }
+                .padding(.horizontal, margin)
+                .animation(reduceMotion ? .none : .easeInOut(duration: 0.2), value: viewModel.homeStage)
 
                 Spacer()
 
-                // Primary action
+                // Primary action — always visible, stays fully saturated even in Pause
                 CoachActionButton(action: onTalkToCoach)
+                    .saturation(viewModel.homeStage == .paused ? 1 / 0.7 : 1.0)
                     .padding(.horizontal, margin)
                     .padding(.bottom, homeTheme.spacing.sectionGap)
+                    .accessibilitySortPriority(1)
             }
             .contentColumn()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -69,6 +108,11 @@ struct HomeView: View {
                 )
                 .ignoresSafeArea()
             )
+            .saturation(viewModel.homeStage == .paused ? 0.7 : 1.0)
+            .animation(
+                reduceMotion ? .none : .easeInOut(duration: viewModel.homeStage == .paused ? 1.2 : 0.6),
+                value: viewModel.homeStage == .paused
+            )
         }
         .environment(\.coachingTheme, homeTheme)
         .task {
@@ -78,26 +122,60 @@ struct HomeView: View {
 }
 
 #if DEBUG
-#Preview("Light") {
+#Preview("Stage 1: Welcome") {
     HomeView(viewModel: .preview()) {}
         .environment(AppState())
+}
+
+#Preview("Stage 2: Insight Unlocked") {
+    HomeView(
+        viewModel: .preview(
+            completedConversationCount: 3,
+            latestInsight: "You've been making great progress on career goals this week."
+        )
+    ) {}
+        .environment(AppState())
+}
+
+#Preview("Stage 3: Sprint Active") {
+    HomeView(
+        viewModel: .preview(
+            completedConversationCount: 5,
+            latestInsight: "Your reflection on work-life balance showed real depth.",
+            hasActiveSprint: true,
+            sprintProgress: 0.4,
+            sprintCurrentStep: 2,
+            sprintTotalSteps: 5
+        )
+    ) {}
+        .environment(AppState())
+}
+
+#Preview("Stage 4: Paused") {
+    let appState = AppState()
+    appState.isPaused = true
+    return HomeView(
+        viewModel: .preview(
+            completedConversationCount: 5,
+            latestInsight: "Ignored in pause",
+            hasActiveSprint: true,
+            sprintProgress: 0.4,
+            sprintCurrentStep: 2,
+            sprintTotalSteps: 5,
+            isPaused: true
+        )
+    ) {}
+        .environment(appState)
 }
 
 #Preview("Dark") {
-    HomeView(viewModel: .preview()) {}
+    HomeView(
+        viewModel: .preview(
+            completedConversationCount: 2,
+            latestInsight: "Your coach noticed a pattern in how you approach challenges."
+        )
+    ) {}
         .environment(AppState())
         .preferredColorScheme(.dark)
-}
-
-#Preview("SE 375pt") {
-    HomeView(viewModel: .preview()) {}
-        .environment(AppState())
-        .previewDevice(PreviewDevice(rawValue: "iPhone SE (3rd generation)"))
-}
-
-#Preview("Pro Max 430pt") {
-    HomeView(viewModel: .preview()) {}
-        .environment(AppState())
-        .previewDevice(PreviewDevice(rawValue: "iPhone 15 Pro Max"))
 }
 #endif

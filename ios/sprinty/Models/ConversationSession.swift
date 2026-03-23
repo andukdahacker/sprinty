@@ -40,4 +40,7 @@ extension ConversationSession {
         order(Column("startedAt").desc).limit(limit)
     }
 
+    static func completedCount(_ db: Database) throws -> Int {
+        try filter(Column("endedAt") != nil).fetchCount(db)
+    }
 }
