@@ -34,11 +34,13 @@ final class HomeViewModel {
 
     private let appState: AppState
     private let databaseManager: DatabaseManager
+    private let insightService: InsightServiceProtocol?
     private var celebrationTask: Task<Void, Never>?
 
-    init(appState: AppState, databaseManager: DatabaseManager) {
+    init(appState: AppState, databaseManager: DatabaseManager, insightService: InsightServiceProtocol? = nil) {
         self.appState = appState
         self.databaseManager = databaseManager
+        self.insightService = insightService
     }
 
     func triggerCelebration() {
@@ -90,13 +92,17 @@ final class HomeViewModel {
     }
 
     private func loadLatestInsight() async {
-        do {
-            let summary = try await databaseManager.dbPool.read { db in
-                try ConversationSummary.recent(limit: 1).fetchOne(db)
+        if let insightService {
+            latestInsight = await insightService.generateDailyInsight()
+        } else {
+            do {
+                let summary = try await databaseManager.dbPool.read { db in
+                    try ConversationSummary.recent(limit: 1).fetchOne(db)
+                }
+                latestInsight = summary?.summary
+            } catch {
+                latestInsight = nil
             }
-            latestInsight = summary?.summary
-        } catch {
-            latestInsight = nil
         }
     }
 
@@ -149,7 +155,8 @@ final class HomeViewModel {
         sprintProgress: Double = 0,
         sprintCurrentStep: Int = 0,
         sprintTotalSteps: Int = 0,
-        isPaused: Bool = false
+        isPaused: Bool = false,
+        insightService: InsightServiceProtocol? = nil
     ) -> HomeViewModel {
         let dbPath = NSTemporaryDirectory() + "preview_home.sqlite"
         let dbPool = try! DatabasePool(path: dbPath)
@@ -160,7 +167,7 @@ final class HomeViewModel {
         let appState = AppState()
         appState.avatarState = avatarState
         appState.isPaused = isPaused
-        let vm = HomeViewModel(appState: appState, databaseManager: db)
+        let vm = HomeViewModel(appState: appState, databaseManager: db, insightService: insightService)
         vm.greeting = greeting
         vm.timeOfDayGreeting = timeOfDayGreeting
         vm.avatarId = avatarId

@@ -91,9 +91,15 @@ struct RootView: View {
             }
         } else {
             Color.clear.onAppear {
+                let embeddingPipeline = makeEmbeddingPipeline(databaseManager: databaseManager)
+                let insightService = InsightService(
+                    databaseManager: databaseManager,
+                    embeddingPipeline: embeddingPipeline
+                )
                 homeViewModel = HomeViewModel(
                     appState: appState,
-                    databaseManager: databaseManager
+                    databaseManager: databaseManager,
+                    insightService: insightService
                 )
             }
         }
