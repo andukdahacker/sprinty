@@ -17,6 +17,9 @@ final class HomeViewModel {
     var sprintProgress: Double = 0
     var sprintCurrentStep: Int = 0
     var sprintTotalSteps: Int = 0
+    var sprintName: String = ""
+    var sprintDayNumber: Int = 0
+    var sprintTotalDays: Int = 0
 
     var homeStage: HomeDisclosureStage {
         if appState.isPaused { return .paused }
@@ -114,30 +117,51 @@ final class HomeViewModel {
     private func loadActiveSprint() async {
         // Sprint models deferred to Story 5.1 — gracefully handle missing table
         do {
-            let sprintData: (hasActive: Bool, completed: Int, total: Int) = try await databaseManager.dbPool.read { db in
+            let sprintData: (hasActive: Bool, completed: Int, total: Int, name: String, dayNumber: Int, totalDays: Int) = try await databaseManager.dbPool.read { db in
                 guard try db.tableExists("Sprint") else {
-                    return (false, 0, 0)
+                    return (false, 0, 0, "", 0, 0)
                 }
-                guard let row = try Row.fetchOne(db, sql: "SELECT id FROM Sprint WHERE status = 'active' LIMIT 1") else {
-                    return (false, 0, 0)
+                guard let row = try Row.fetchOne(db, sql: "SELECT id, name, startDate, endDate FROM Sprint WHERE status = 'active' LIMIT 1") else {
+                    return (false, 0, 0, "", 0, 0)
                 }
+
+                let name: String = row["name"] ?? ""
+
+                // Calculate day number and total days from dates
+                var dayNumber = 0
+                var totalDays = 0
+                let formatter = ISO8601DateFormatter()
+                if let startStr: String = row["startDate"],
+                   let endStr: String = row["endDate"],
+                   let startDate = formatter.date(from: startStr),
+                   let endDate = formatter.date(from: endStr) {
+                    dayNumber = (Calendar.current.dateComponents([.day], from: startDate, to: Date()).day ?? 0) + 1
+                    totalDays = (Calendar.current.dateComponents([.day], from: startDate, to: endDate).day ?? 0) + 1
+                }
+
                 guard try db.tableExists("SprintStep") else {
-                    return (true, 0, 0)
+                    return (true, 0, 0, name, dayNumber, totalDays)
                 }
                 let sprintId: String = row["id"]
                 let completed = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM SprintStep WHERE sprintId = ? AND completedAt IS NOT NULL", arguments: [sprintId]) ?? 0
                 let total = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM SprintStep WHERE sprintId = ?", arguments: [sprintId]) ?? 0
-                return (true, completed, total)
+                return (true, completed, total, name, dayNumber, totalDays)
             }
             hasActiveSprint = sprintData.hasActive
             sprintCurrentStep = sprintData.completed
             sprintTotalSteps = sprintData.total
             sprintProgress = sprintData.total > 0 ? Double(sprintData.completed) / Double(sprintData.total) : 0
+            sprintName = sprintData.name
+            sprintDayNumber = sprintData.dayNumber
+            sprintTotalDays = sprintData.totalDays
         } catch {
             hasActiveSprint = false
             sprintProgress = 0
             sprintCurrentStep = 0
             sprintTotalSteps = 0
+            sprintName = ""
+            sprintDayNumber = 0
+            sprintTotalDays = 0
         }
     }
 
@@ -155,6 +179,9 @@ final class HomeViewModel {
         sprintProgress: Double = 0,
         sprintCurrentStep: Int = 0,
         sprintTotalSteps: Int = 0,
+        sprintName: String = "",
+        sprintDayNumber: Int = 0,
+        sprintTotalDays: Int = 0,
         isPaused: Bool = false,
         insightService: InsightServiceProtocol? = nil
     ) -> HomeViewModel {
@@ -178,6 +205,9 @@ final class HomeViewModel {
         vm.sprintProgress = sprintProgress
         vm.sprintCurrentStep = sprintCurrentStep
         vm.sprintTotalSteps = sprintTotalSteps
+        vm.sprintName = sprintName
+        vm.sprintDayNumber = sprintDayNumber
+        vm.sprintTotalDays = sprintTotalDays
         return vm
     }
     #endif

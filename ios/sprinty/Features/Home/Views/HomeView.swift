@@ -72,7 +72,10 @@ struct HomeView: View {
                             progress: viewModel.sprintProgress,
                             currentStep: viewModel.sprintCurrentStep,
                             totalSteps: viewModel.sprintTotalSteps,
-                            isMuted: viewModel.homeStage == .paused
+                            isMuted: viewModel.homeStage == .paused,
+                            sprintName: viewModel.sprintName,
+                            dayNumber: viewModel.sprintDayNumber,
+                            totalDays: viewModel.sprintTotalDays
                         )
                         .padding(.top, homeTheme.spacing.homeElement)
                         .transition(.opacity)
@@ -145,7 +148,10 @@ struct HomeView: View {
             hasActiveSprint: true,
             sprintProgress: 0.4,
             sprintCurrentStep: 2,
-            sprintTotalSteps: 5
+            sprintTotalSteps: 5,
+            sprintName: "Career Growth",
+            sprintDayNumber: 3,
+            sprintTotalDays: 7
         )
     ) {}
         .environment(AppState())
@@ -162,6 +168,9 @@ struct HomeView: View {
             sprintProgress: 0.4,
             sprintCurrentStep: 2,
             sprintTotalSteps: 5,
+            sprintName: "Career Growth",
+            sprintDayNumber: 3,
+            sprintTotalDays: 7,
             isPaused: true
         )
     ) {}
