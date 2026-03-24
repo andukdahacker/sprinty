@@ -40,8 +40,8 @@ struct OnboardingRoutingTests {
         let now = Date()
         let profile = UserProfile(
             id: UUID(),
-            avatarId: "person.circle.fill",
-            coachAppearanceId: "leaf.circle.fill",
+            avatarId: "avatar_classic",
+            coachAppearanceId: "coach_guide",
             coachName: "Guide",
             onboardingStep: OnboardingStep.complete.rawValue,
             onboardingCompleted: true,
@@ -73,7 +73,7 @@ struct OnboardingRoutingTests {
         let now = Date()
         let profile = UserProfile(
             id: UUID(),
-            avatarId: "person.circle.fill",
+            avatarId: "avatar_classic",
             coachAppearanceId: "",
             coachName: "",
             onboardingStep: OnboardingStep.avatarSelection.rawValue,

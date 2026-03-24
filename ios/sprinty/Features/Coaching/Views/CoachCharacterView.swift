@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CoachCharacterView: View {
     let expression: CoachExpression
+    var coachAppearanceId: String = "coach_sage"
     @Environment(\.coachingTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -12,24 +13,14 @@ struct CoachCharacterView: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [theme.palette.coachPortraitGradientStart, theme.palette.coachPortraitGradientEnd],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .frame(width: portraitSize, height: portraitSize)
-
-                Image(systemName: expression.sfSymbolName)
-                    .font(.system(size: portraitSize * 0.5))
-                    .foregroundStyle(.white)
-                    .id(expression)
-                    .transition(.opacity)
-                    .animation(reduceMotion ? .none : .easeInOut(duration: 0.4), value: expression)
-            }
+            Image(expression.assetName(for: coachAppearanceId))
+                .resizable()
+                .scaledToFill()
+                .frame(width: portraitSize, height: portraitSize)
+                .clipShape(Circle())
+                .id(expression)
+                .transition(.opacity)
+                .animation(reduceMotion ? .none : .easeInOut(duration: 0.4), value: expression)
 
             Text("Your Coach")
                 .coachNameStyle()

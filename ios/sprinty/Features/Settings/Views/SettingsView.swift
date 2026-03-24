@@ -22,10 +22,10 @@ struct SettingsView: View {
                         SettingsAvatarSelectionView(viewModel: viewModel)
                     } label: {
                         HStack {
-                            Image(systemName: viewModel.avatarId)
-                                .font(.system(size: 20))
-                                .foregroundStyle(theme.palette.textPrimary)
-                                .frame(width: 32, height: 32)
+                            Image(viewModel.avatarId)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 20, height: 20)
                                 .clipShape(Circle())
                             Text("Your Avatar")
                         }
@@ -35,10 +35,10 @@ struct SettingsView: View {
                         SettingsCoachAppearanceView(viewModel: viewModel)
                     } label: {
                         HStack {
-                            Image(systemName: viewModel.coachAppearanceId)
-                                .font(.system(size: 20))
-                                .foregroundStyle(theme.palette.textPrimary)
-                                .frame(width: 32, height: 32)
+                            Image(viewModel.coachAppearanceId)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 20, height: 20)
                                 .clipShape(Circle())
                             Text(viewModel.coachName)
                                 .insightTextStyle()

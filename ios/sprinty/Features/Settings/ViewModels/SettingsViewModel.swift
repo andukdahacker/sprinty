@@ -6,8 +6,8 @@ import WidgetKit
 @Observable
 final class SettingsViewModel {
     var showMemoryView = false
-    var avatarId: String = "person.circle.fill"
-    var coachAppearanceId: String = "person.circle.fill"
+    var avatarId: String = "avatar_classic"
+    var coachAppearanceId: String = "coach_sage"
     var coachName: String = "Sage"
 
     let databaseManager: DatabaseManager

@@ -54,7 +54,7 @@ struct OnboardingViewModelTests {
         let (viewModel, db, _) = try makeViewModel()
         await viewModel.advanceFromWelcome()
 
-        viewModel.selectAvatar("figure.mind.and.body")
+        viewModel.selectAvatar("avatar_zen")
         await viewModel.confirmAvatar()
 
         #expect(viewModel.currentStep == .coachSelection)
@@ -62,7 +62,7 @@ struct OnboardingViewModelTests {
         let profile = try await db.dbPool.read { dbConn in
             try UserProfile.current().fetchOne(dbConn)
         }
-        #expect(profile?.avatarId == "figure.mind.and.body")
+        #expect(profile?.avatarId == "avatar_zen")
         #expect(profile?.onboardingStep == OnboardingStep.coachSelection.rawValue)
     }
 
@@ -81,10 +81,10 @@ struct OnboardingViewModelTests {
     func confirmCoach() async throws {
         let (viewModel, db, _) = try makeViewModel()
         await viewModel.advanceFromWelcome()
-        viewModel.selectAvatar("person.circle.fill")
+        viewModel.selectAvatar("avatar_classic")
         await viewModel.confirmAvatar()
 
-        viewModel.selectCoachAppearance("leaf.circle.fill")
+        viewModel.selectCoachAppearance("coach_guide")
         viewModel.updateCoachName("Guide")
         await viewModel.confirmCoach()
 
@@ -93,7 +93,7 @@ struct OnboardingViewModelTests {
         let profile = try await db.dbPool.read { dbConn in
             try UserProfile.current().fetchOne(dbConn)
         }
-        #expect(profile?.coachAppearanceId == "leaf.circle.fill")
+        #expect(profile?.coachAppearanceId == "coach_guide")
         #expect(profile?.coachName == "Guide")
         #expect(profile?.onboardingStep == OnboardingStep.complete.rawValue)
     }
@@ -103,7 +103,7 @@ struct OnboardingViewModelTests {
     func confirmCoachWithoutAppearance() async throws {
         let (viewModel, _, _) = try makeViewModel()
         await viewModel.advanceFromWelcome()
-        viewModel.selectAvatar("person.circle.fill")
+        viewModel.selectAvatar("avatar_classic")
         await viewModel.confirmAvatar()
         await viewModel.confirmCoach()
 
@@ -115,10 +115,10 @@ struct OnboardingViewModelTests {
     func confirmCoachWithEmptyName() async throws {
         let (viewModel, _, _) = try makeViewModel()
         await viewModel.advanceFromWelcome()
-        viewModel.selectAvatar("person.circle.fill")
+        viewModel.selectAvatar("avatar_classic")
         await viewModel.confirmAvatar()
 
-        viewModel.selectCoachAppearance("leaf.circle.fill")
+        viewModel.selectCoachAppearance("coach_guide")
         viewModel.updateCoachName("   ")
         await viewModel.confirmCoach()
 
@@ -130,9 +130,9 @@ struct OnboardingViewModelTests {
     func completeOnboarding() async throws {
         let (viewModel, db, appState) = try makeViewModel()
         await viewModel.advanceFromWelcome()
-        viewModel.selectAvatar("person.circle.fill")
+        viewModel.selectAvatar("avatar_classic")
         await viewModel.confirmAvatar()
-        viewModel.selectCoachAppearance("person.circle.fill")
+        viewModel.selectCoachAppearance("coach_sage")
         await viewModel.confirmCoach()
         await viewModel.completeOnboarding()
 
@@ -179,7 +179,7 @@ struct OnboardingViewModelTests {
         let now = Date()
         let profile = UserProfile(
             id: UUID(),
-            avatarId: "figure.mind.and.body",
+            avatarId: "avatar_zen",
             coachAppearanceId: "",
             coachName: "",
             onboardingStep: OnboardingStep.coachSelection.rawValue,
@@ -195,7 +195,7 @@ struct OnboardingViewModelTests {
         await viewModel.resumeFromLastStep()
 
         #expect(viewModel.currentStep == .coachSelection)
-        #expect(viewModel.selectedAvatarId == "figure.mind.and.body")
+        #expect(viewModel.selectedAvatarId == "avatar_zen")
     }
 
     @Test("Resume from completed onboarding sets complete step")
@@ -206,8 +206,8 @@ struct OnboardingViewModelTests {
         let now = Date()
         let profile = UserProfile(
             id: UUID(),
-            avatarId: "person.circle.fill",
-            coachAppearanceId: "leaf.circle.fill",
+            avatarId: "avatar_classic",
+            coachAppearanceId: "coach_guide",
             coachName: "Guide",
             onboardingStep: OnboardingStep.complete.rawValue,
             onboardingCompleted: true,

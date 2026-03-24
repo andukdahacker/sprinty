@@ -122,5 +122,16 @@ enum DatabaseMigrations {
                 END
                 """)
         }
+
+        migrator.registerMigration("v7") { db in
+            // Avatar column: SF Symbol → asset catalog name
+            try db.execute(sql: "UPDATE UserProfile SET avatarId = 'avatar_classic' WHERE avatarId IN ('person.circle.fill', '')")
+            try db.execute(sql: "UPDATE UserProfile SET avatarId = 'avatar_minimal' WHERE avatarId = 'person.circle'")
+            try db.execute(sql: "UPDATE UserProfile SET avatarId = 'avatar_zen' WHERE avatarId = 'figure.mind.and.body'")
+            // Coach column: SF Symbol → asset catalog name
+            try db.execute(sql: "UPDATE UserProfile SET coachAppearanceId = 'coach_sage' WHERE coachAppearanceId IN ('person.circle.fill', '')")
+            try db.execute(sql: "UPDATE UserProfile SET coachAppearanceId = 'coach_mentor' WHERE coachAppearanceId = 'brain.head.profile'")
+            try db.execute(sql: "UPDATE UserProfile SET coachAppearanceId = 'coach_guide' WHERE coachAppearanceId = 'leaf.circle.fill'")
+        }
     }
 }

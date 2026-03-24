@@ -17,6 +17,7 @@ final class CoachingViewModel {
     var modeSegments: [ModeSegment] = []
     private(set) var sessionMoods: [String] = []
     private(set) var memoryReferencedMessages: [UUID: Bool] = [:]
+    var coachAppearanceId: String = "coach_sage"
     var dailyGreeting: String?
     private(set) var summariesBySession: [UUID: ConversationSummary] = [:]
     private(set) var hasMoreHistory: Bool = true
@@ -65,6 +66,14 @@ final class CoachingViewModel {
 
     func loadMessagesAsync() async {
         do {
+            // Load coach appearance from user profile
+            let profile: UserProfile? = try await databaseManager.dbPool.read { db in
+                try UserProfile.current().fetchOne(db)
+            }
+            if let profile {
+                coachAppearanceId = profile.coachAppearanceId.isEmpty ? "coach_sage" : profile.coachAppearanceId
+            }
+
             // Load existing session if available — do NOT create one just for browsing history
             let existingSession: ConversationSession? = try await databaseManager.dbPool.read { db in
                 try ConversationSession.order(Column("startedAt").desc).fetchOne(db)

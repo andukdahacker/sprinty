@@ -19,7 +19,7 @@ struct CoachingView: View {
             let margin = SpacingScale().screenMargin(for: geometry.size.width)
 
             VStack(spacing: 0) {
-                CoachCharacterView(expression: viewModel.coachExpression)
+                CoachCharacterView(expression: viewModel.coachExpression, coachAppearanceId: viewModel.coachAppearanceId)
                     .padding(.bottom, conversationTheme.spacing.coachCharacterBottom)
 
                 SearchOverlayView(viewModel: viewModel)

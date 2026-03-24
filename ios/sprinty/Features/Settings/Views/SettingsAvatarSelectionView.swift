@@ -52,14 +52,10 @@ struct SettingsAvatarSelectionView: View {
             }
         } label: {
             VStack(spacing: 8) {
-                Image(systemName: option.id)
-                    .font(.system(size: 48))
-                    .foregroundStyle(theme.palette.textPrimary)
-                    .frame(width: 80, height: 80)
-                    .background(
-                        Circle()
-                            .fill(theme.palette.insightBackground)
-                    )
+                Image(option.id)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 48, height: 48)
                     .clipShape(Circle())
                     .overlay(
                         Circle()

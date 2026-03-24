@@ -16,11 +16,11 @@ struct HomeViewModelTests {
         return DatabaseManager(dbPool: dbPool)
     }
 
-    private func createProfile(in db: DatabaseManager, avatarId: String = "fox") async throws {
+    private func createProfile(in db: DatabaseManager, avatarId: String = "avatar_classic") async throws {
         let profile = UserProfile(
             id: UUID(),
             avatarId: avatarId,
-            coachAppearanceId: "coach_calm",
+            coachAppearanceId: "coach_sage",
             coachName: "Sage",
             onboardingStep: 5,
             onboardingCompleted: true,
@@ -150,7 +150,7 @@ struct HomeViewModelTests {
 
         await viewModel.load()
 
-        #expect(viewModel.avatarId == "avatar_default")
+        #expect(viewModel.avatarId == "avatar_classic")
     }
 
     @Test("Load sets greeting and timeOfDayGreeting")

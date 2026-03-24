@@ -8,8 +8,12 @@ struct AvatarView: View {
     @Environment(\.coachingTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    private var stateAssetName: String {
+        AvatarOptions.assetName(for: avatarId, state: state)
+    }
+
     var body: some View {
-        Image(avatarId)
+        Image(stateAssetName)
             .resizable()
             .scaledToFill()
             .frame(width: size, height: size)
@@ -27,52 +31,52 @@ struct AvatarView: View {
 
 #if DEBUG
 #Preview("Active - Light") {
-    AvatarView(avatarId: "avatar_default", size: 64, state: .active)
+    AvatarView(avatarId: "avatar_classic", size: 64, state: .active)
         .environment(\.coachingTheme, themeFor(context: .home, colorScheme: .light))
 }
 
 #Preview("Active - Dark") {
-    AvatarView(avatarId: "avatar_default", size: 64, state: .active)
+    AvatarView(avatarId: "avatar_classic", size: 64, state: .active)
         .environment(\.coachingTheme, themeFor(context: .home, colorScheme: .dark))
 }
 
 #Preview("Resting - Light") {
-    AvatarView(avatarId: "avatar_default", size: 64, state: .resting)
+    AvatarView(avatarId: "avatar_classic", size: 64, state: .resting)
         .environment(\.coachingTheme, themeFor(context: .home, colorScheme: .light))
 }
 
 #Preview("Resting - Dark") {
-    AvatarView(avatarId: "avatar_default", size: 64, state: .resting)
+    AvatarView(avatarId: "avatar_classic", size: 64, state: .resting)
         .environment(\.coachingTheme, themeFor(context: .home, colorScheme: .dark))
 }
 
 #Preview("Celebrating - Light") {
-    AvatarView(avatarId: "avatar_default", size: 64, state: .celebrating)
+    AvatarView(avatarId: "avatar_classic", size: 64, state: .celebrating)
         .environment(\.coachingTheme, themeFor(context: .home, colorScheme: .light))
 }
 
 #Preview("Celebrating - Dark") {
-    AvatarView(avatarId: "avatar_default", size: 64, state: .celebrating)
+    AvatarView(avatarId: "avatar_classic", size: 64, state: .celebrating)
         .environment(\.coachingTheme, themeFor(context: .home, colorScheme: .dark))
 }
 
 #Preview("Thinking - Light") {
-    AvatarView(avatarId: "avatar_default", size: 64, state: .thinking)
+    AvatarView(avatarId: "avatar_classic", size: 64, state: .thinking)
         .environment(\.coachingTheme, themeFor(context: .home, colorScheme: .light))
 }
 
 #Preview("Thinking - Dark") {
-    AvatarView(avatarId: "avatar_default", size: 64, state: .thinking)
+    AvatarView(avatarId: "avatar_classic", size: 64, state: .thinking)
         .environment(\.coachingTheme, themeFor(context: .home, colorScheme: .dark))
 }
 
 #Preview("Struggling - Light") {
-    AvatarView(avatarId: "avatar_default", size: 64, state: .struggling)
+    AvatarView(avatarId: "avatar_classic", size: 64, state: .struggling)
         .environment(\.coachingTheme, themeFor(context: .home, colorScheme: .light))
 }
 
 #Preview("Struggling - Dark") {
-    AvatarView(avatarId: "avatar_default", size: 64, state: .struggling)
+    AvatarView(avatarId: "avatar_classic", size: 64, state: .struggling)
         .environment(\.coachingTheme, themeFor(context: .home, colorScheme: .dark))
 }
 #endif

@@ -71,14 +71,10 @@ struct SettingsCoachAppearanceView: View {
             }
         } label: {
             VStack(spacing: 6) {
-                Image(systemName: option.id)
-                    .font(.system(size: 40))
-                    .foregroundStyle(theme.palette.textPrimary)
-                    .frame(width: 72, height: 72)
-                    .background(
-                        Circle()
-                            .fill(theme.palette.insightBackground)
-                    )
+                Image(option.id)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 40, height: 40)
                     .clipShape(Circle())
                     .overlay(
                         Circle()

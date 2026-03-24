@@ -15,14 +15,10 @@ enum CoachExpression: String, Sendable, CaseIterable {
         self = expression
     }
 
-    var sfSymbolName: String {
-        switch self {
-        case .welcoming: "person.circle.fill"
-        case .thinking: "brain.head.profile"
-        case .warm: "heart.circle.fill"
-        case .focused: "eye.circle.fill"
-        case .gentle: "leaf.circle.fill"
-        }
+    /// Builds the asset catalog name for this expression + coach variant.
+    /// e.g., .thinking + "coach_sage" → "coach_sage_thinking"
+    func assetName(for coachAppearanceId: String) -> String {
+        "\(coachAppearanceId)_\(rawValue)"
     }
 
     var statusText: String {

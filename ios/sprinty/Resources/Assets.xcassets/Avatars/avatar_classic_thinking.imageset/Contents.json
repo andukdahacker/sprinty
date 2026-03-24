@@ -1,0 +1,18 @@
+{
+  "images": [
+    {
+      "filename": "avatar_classic_thinking@2x.png",
+      "idiom": "universal",
+      "scale": "2x"
+    },
+    {
+      "filename": "avatar_classic_thinking@3x.png",
+      "idiom": "universal",
+      "scale": "3x"
+    }
+  ],
+  "info": {
+    "version": 1,
+    "author": "xcode"
+  }
+}

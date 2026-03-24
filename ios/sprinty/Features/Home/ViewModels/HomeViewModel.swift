@@ -8,7 +8,7 @@ import GRDB
 final class HomeViewModel {
     var greeting: String = "Welcome back"
     var timeOfDayGreeting: String = ""
-    var avatarId: String = "avatar_default"
+    var avatarId: String = "avatar_classic"
     var avatarState: AvatarState { appState.avatarState }
     var completedConversationCount: Int = 0
     var latestInsight: String?
@@ -170,7 +170,7 @@ final class HomeViewModel {
     static func preview(
         greeting: String = "Welcome back",
         timeOfDayGreeting: String = "Good evening",
-        avatarId: String = "avatar_default",
+        avatarId: String = "avatar_classic",
         avatarState: AvatarState = .active,
         completedConversationCount: Int = 0,
         latestInsight: String? = nil,

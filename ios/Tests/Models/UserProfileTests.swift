@@ -15,8 +15,8 @@ struct UserProfileTests {
 
     private func makeProfile(
         id: UUID = UUID(),
-        avatarId: String = "person.circle.fill",
-        coachAppearanceId: String = "person.circle.fill",
+        avatarId: String = "avatar_classic",
+        coachAppearanceId: String = "coach_sage",
         coachName: String = "Sage",
         onboardingStep: Int = 0,
         onboardingCompleted: Bool = false
@@ -70,7 +70,7 @@ struct UserProfileTests {
         }
         #expect(fetched != nil)
         #expect(fetched?.id == profile.id)
-        #expect(fetched?.avatarId == "person.circle.fill")
+        #expect(fetched?.avatarId == "avatar_classic")
         #expect(fetched?.coachName == "Sage")
         #expect(fetched?.onboardingStep == 0)
         #expect(fetched?.onboardingCompleted == false)
@@ -79,8 +79,8 @@ struct UserProfileTests {
     @Test("Codable roundtrip preserves all fields")
     func codableRoundtrip() throws {
         let profile = makeProfile(
-            avatarId: "figure.mind.and.body",
-            coachAppearanceId: "leaf.circle.fill",
+            avatarId: "avatar_zen",
+            coachAppearanceId: "coach_guide",
             coachName: "Guide",
             onboardingStep: 2,
             onboardingCompleted: false
@@ -92,8 +92,8 @@ struct UserProfileTests {
         decoder.dateDecodingStrategy = .iso8601
         let decoded = try decoder.decode(UserProfile.self, from: data)
         #expect(decoded.id == profile.id)
-        #expect(decoded.avatarId == "figure.mind.and.body")
-        #expect(decoded.coachAppearanceId == "leaf.circle.fill")
+        #expect(decoded.avatarId == "avatar_zen")
+        #expect(decoded.coachAppearanceId == "coach_guide")
         #expect(decoded.coachName == "Guide")
         #expect(decoded.onboardingStep == 2)
         #expect(decoded.onboardingCompleted == false)
