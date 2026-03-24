@@ -7,11 +7,7 @@ struct AvatarSelectionView: View {
 
     @Environment(\.coachingTheme) private var theme
 
-    private let avatarOptions: [(id: String, name: String)] = [
-        ("person.circle.fill", "Classic"),
-        ("person.circle", "Minimal"),
-        ("figure.mind.and.body", "Zen"),
-    ]
+    private let avatarOptions = AvatarOptions.avatarOptions
 
     var body: some View {
         VStack(spacing: theme.spacing.sectionGap) {

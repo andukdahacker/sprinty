@@ -2,7 +2,13 @@ import SwiftUI
 
 struct SettingsView: View {
     @Bindable var memoryViewModel: MemoryViewModel
+    @State private var viewModel: SettingsViewModel
     @Environment(\.colorScheme) private var colorScheme
+
+    init(memoryViewModel: MemoryViewModel, databaseManager: DatabaseManager) {
+        self.memoryViewModel = memoryViewModel
+        self._viewModel = State(initialValue: SettingsViewModel(databaseManager: databaseManager))
+    }
 
     private var theme: CoachingTheme {
         themeFor(context: .home, colorScheme: colorScheme)
@@ -11,6 +17,39 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    NavigationLink {
+                        SettingsAvatarSelectionView(viewModel: viewModel)
+                    } label: {
+                        HStack {
+                            Image(systemName: viewModel.avatarId)
+                                .font(.system(size: 20))
+                                .foregroundStyle(theme.palette.textPrimary)
+                                .frame(width: 32, height: 32)
+                                .clipShape(Circle())
+                            Text("Your Avatar")
+                        }
+                    }
+
+                    NavigationLink {
+                        SettingsCoachAppearanceView(viewModel: viewModel)
+                    } label: {
+                        HStack {
+                            Image(systemName: viewModel.coachAppearanceId)
+                                .font(.system(size: 20))
+                                .foregroundStyle(theme.palette.textPrimary)
+                                .frame(width: 32, height: 32)
+                                .clipShape(Circle())
+                            Text(viewModel.coachName)
+                                .insightTextStyle()
+                        }
+                    }
+                } header: {
+                    Text("Appearance")
+                        .sectionHeadingStyle()
+                        .foregroundStyle(theme.palette.textPrimary)
+                }
+
                 Section {
                     NavigationLink("What Your Coach Knows") {
                         MemoryView(viewModel: memoryViewModel)
@@ -33,18 +72,21 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .task {
+                await viewModel.loadProfile()
+            }
         }
     }
 }
 
 #if DEBUG
 #Preview("Light") {
-    SettingsView(memoryViewModel: .preview())
+    SettingsView(memoryViewModel: .preview(), databaseManager: SettingsViewModel.previewDB())
         .environment(AppState())
 }
 
 #Preview("Dark") {
-    SettingsView(memoryViewModel: .preview())
+    SettingsView(memoryViewModel: .preview(), databaseManager: SettingsViewModel.previewDB())
         .environment(AppState())
         .preferredColorScheme(.dark)
 }

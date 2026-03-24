@@ -85,8 +85,8 @@ struct RootView: View {
                 }
             }
             .sheet(isPresented: $showSettings) {
-                if let memoryViewModel {
-                    SettingsView(memoryViewModel: memoryViewModel)
+                if let memoryViewModel, let databaseManager = appState.databaseManager {
+                    SettingsView(memoryViewModel: memoryViewModel, databaseManager: databaseManager)
                 }
             }
         } else {

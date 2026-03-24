@@ -9,11 +9,7 @@ struct CoachNamingView: View {
 
     @Environment(\.coachingTheme) private var theme
 
-    private let coachOptions: [(id: String, name: String, hint: String)] = [
-        ("person.circle.fill", "Sage", "Warm and encouraging"),
-        ("brain.head.profile", "Mentor", "Focused and direct"),
-        ("leaf.circle.fill", "Guide", "Calm and grounding"),
-    ]
+    private let coachOptions = AvatarOptions.coachOptions
 
     var body: some View {
         VStack(spacing: theme.spacing.sectionGap) {
@@ -46,7 +42,7 @@ struct CoachNamingView: View {
 
         return Button {
             onSelectAppearance(option.id)
-            if coachName == "Sage" || coachName == "Mentor" || coachName == "Guide" || coachName.isEmpty {
+            if AvatarOptions.defaultCoachNames.contains(coachName) || coachName.isEmpty {
                 onUpdateName(option.name)
             }
         } label: {
