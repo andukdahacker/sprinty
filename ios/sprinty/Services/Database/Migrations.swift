@@ -159,5 +159,11 @@ enum DatabaseMigrations {
                 columns: ["sprintId"]
             )
         }
+
+        migrator.registerMigration("v9") { db in
+            try db.alter(table: "SprintStep") { t in
+                t.add(column: "coachContext", .text)
+            }
+        }
     }
 }

@@ -8,6 +8,7 @@ struct SprintStep: Codable, FetchableRecord, PersistableRecord, Identifiable, Se
     var completed: Bool
     var completedAt: Date?
     var order: Int
+    var coachContext: String?
 
     static let databaseTableName = "SprintStep"
 }

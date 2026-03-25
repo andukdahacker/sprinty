@@ -9,6 +9,8 @@ struct RootView: View {
     @State private var onboardingChecked = false
     @State private var showConversation = false
     @State private var showSettings = false
+    @State private var showSprintDetail = false
+    @State private var sprintDetailViewModel: SprintDetailViewModel?
     @State private var memoryViewModel: MemoryViewModel?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -60,6 +62,9 @@ struct RootView: View {
                 }, onOpenSettings: {
                     ensureMemoryViewModel(databaseManager: databaseManager)
                     showSettings = true
+                }, onOpenSprintDetail: {
+                    ensureSprintDetailViewModel(databaseManager: databaseManager)
+                    showSprintDetail = true
                 })
                 .opacity(showConversation ? 0 : 1)
                 .offset(y: showConversation ? -20 : 0)
@@ -89,6 +94,11 @@ struct RootView: View {
                     SettingsView(memoryViewModel: memoryViewModel, databaseManager: databaseManager)
                 }
             }
+            .sheet(isPresented: $showSprintDetail) {
+                if let sprintDetailViewModel {
+                    SprintDetailView(viewModel: sprintDetailViewModel)
+                }
+            }
         } else {
             Color.clear.onAppear {
                 let embeddingPipeline = makeEmbeddingPipeline(databaseManager: databaseManager)
@@ -103,6 +113,14 @@ struct RootView: View {
                 )
             }
         }
+    }
+
+    private func ensureSprintDetailViewModel(databaseManager: DatabaseManager) {
+        guard sprintDetailViewModel == nil else { return }
+        sprintDetailViewModel = SprintDetailViewModel(
+            appState: appState,
+            databaseManager: databaseManager
+        )
     }
 
     private func ensureMemoryViewModel(databaseManager: DatabaseManager) {

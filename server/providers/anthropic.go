@@ -55,7 +55,7 @@ var toolSchema = anthropic.ToolParam{
 				"type": "object",
 				"properties": map[string]any{
 					"name":          map[string]any{"type": "string", "description": "A short, motivating name for the sprint."},
-					"steps":         map[string]any{"type": "array", "items": map[string]any{"type": "object", "properties": map[string]any{"description": map[string]any{"type": "string"}, "order": map[string]any{"type": "integer"}}, "required": []string{"description", "order"}}},
+					"steps":         map[string]any{"type": "array", "items": map[string]any{"type": "object", "properties": map[string]any{"description": map[string]any{"type": "string"}, "order": map[string]any{"type": "integer"}, "coachContext": map[string]any{"type": "string", "description": "Brief coach context explaining why this step matters, written in coach voice (1-2 sentences)."}}, "required": []string{"description", "order"}}},
 					"durationWeeks": map[string]any{"type": "integer", "description": "Sprint duration in weeks (1-4)."},
 				},
 				"required":    []string{"name", "steps", "durationWeeks"},

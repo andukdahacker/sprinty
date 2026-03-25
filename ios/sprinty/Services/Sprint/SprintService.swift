@@ -17,6 +17,7 @@ struct SprintProposalData: Codable, Sendable {
     struct ProposalStep: Codable, Sendable {
         let description: String
         let order: Int
+        var coachContext: String?
     }
 }
 
@@ -64,7 +65,8 @@ final class SprintService: SprintServiceProtocol {
                 description: step.description,
                 completed: false,
                 completedAt: nil,
-                order: step.order
+                order: step.order,
+                coachContext: step.coachContext
             )
         }
 

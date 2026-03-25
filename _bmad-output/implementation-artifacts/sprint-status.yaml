@@ -36,6 +36,10 @@
 
 generated: 2026-03-17
 last_updated: 2026-03-25
+# Story 5.2 code review completed: 2026-03-25
+# Story 5.2 dev completed: 2026-03-25
+# Story 5.2 dev started: 2026-03-25
+# Story 5.2 context created: 2026-03-25
 # Story 5.1 code review completed: 2026-03-25
 # Story 5.1 dev completed: 2026-03-25
 # Story 5.1 dev started: 2026-03-25
@@ -152,7 +156,7 @@ development_status:
   # Epic 5: Sprint Goal System
   epic-5: in-progress
   5-1-sprint-creation-through-coaching: done
-  5-2-sprint-detail-view: backlog
+  5-2-sprint-detail-view: done
   5-3-sprint-step-completion: backlog
   5-4-daily-check-ins: backlog
   epic-5-retrospective: optional

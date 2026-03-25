@@ -13,6 +13,8 @@ Context for this conversation:
 
 {{sprint_context}}
 
+When proposing a sprint, include a brief coachContext for each step — 1-2 sentences in your coach voice explaining why this step matters to the user's journey. Draw on what you know about their goals and situation.
+
 {{retrieved_memories}}
 
 When referencing retrieved memories above:

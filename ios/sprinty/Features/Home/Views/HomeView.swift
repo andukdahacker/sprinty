@@ -7,6 +7,7 @@ struct HomeView: View {
 
     let onTalkToCoach: () -> Void
     var onOpenSettings: (() -> Void)?
+    var onOpenSprintDetail: (() -> Void)?
 
     private var homeTheme: CoachingTheme {
         themeFor(context: .home, colorScheme: colorScheme)
@@ -68,15 +69,21 @@ struct HomeView: View {
                     }
 
                     if viewModel.homeStage == .sprintActive || (viewModel.homeStage == .paused && viewModel.hasActiveSprint) {
-                        SprintProgressView(
-                            progress: viewModel.sprintProgress,
-                            currentStep: viewModel.sprintCurrentStep,
-                            totalSteps: viewModel.sprintTotalSteps,
-                            isMuted: viewModel.homeStage == .paused,
-                            sprintName: viewModel.sprintName,
-                            dayNumber: viewModel.sprintDayNumber,
-                            totalDays: viewModel.sprintTotalDays
-                        )
+                        Button {
+                            onOpenSprintDetail?()
+                        } label: {
+                            SprintProgressView(
+                                progress: viewModel.sprintProgress,
+                                currentStep: viewModel.sprintCurrentStep,
+                                totalSteps: viewModel.sprintTotalSteps,
+                                isMuted: viewModel.homeStage == .paused,
+                                sprintName: viewModel.sprintName,
+                                dayNumber: viewModel.sprintDayNumber,
+                                totalDays: viewModel.sprintTotalDays
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(viewModel.homeStage == .paused)
                         .padding(.top, homeTheme.spacing.homeElement)
                         .transition(.opacity)
                         .accessibilitySortPriority(2)
@@ -175,6 +182,25 @@ struct HomeView: View {
         )
     ) {}
         .environment(appState)
+}
+
+#Preview("Sprint Tappable") {
+    HomeView(
+        viewModel: .preview(
+            completedConversationCount: 5,
+            latestInsight: "Your reflection showed real depth.",
+            hasActiveSprint: true,
+            sprintProgress: 0.4,
+            sprintCurrentStep: 2,
+            sprintTotalSteps: 5,
+            sprintName: "Career Growth",
+            sprintDayNumber: 3,
+            sprintTotalDays: 7
+        ),
+        onTalkToCoach: {},
+        onOpenSprintDetail: { }
+    )
+    .environment(AppState())
 }
 
 #Preview("Dark") {
