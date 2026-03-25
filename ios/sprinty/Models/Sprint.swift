@@ -13,6 +13,8 @@ struct Sprint: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendab
     var startDate: Date
     var endDate: Date
     var status: SprintStatus
+    var narrativeRetro: String?
+    var lastStepCompletedAt: Date?
 
     static let databaseTableName = "Sprint"
 }

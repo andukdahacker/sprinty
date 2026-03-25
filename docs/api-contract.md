@@ -112,7 +112,7 @@ JWT required. Streams response via Server-Sent Events (SSE).
 ```
 
 - `messages` (array): Conversation messages with `role` (`user`|`assistant`) and `content`
-- `mode` (string): Coaching mode. Values: `discovery`, `directive`, `summarize`
+- `mode` (string): Coaching mode. Values: `discovery`, `directive`, `summarize`, `sprint_retro`
 - `promptVersion` (string): System prompt version for reproducibility
 - `profile` (object, optional): User profile data for personalized coaching
   - `coachName` (string): Selected coach name
@@ -130,6 +130,20 @@ JWT required. Streams response via Server-Sent Events (SSE).
   - `lastSessionGapHours` (number, optional): Hours since last session
   - `recentSessionIntensity` (string): `light`, `moderate`, `deep`
 - `ragContext` (string, optional): Pre-formatted past conversation context retrieved via on-device RAG. Contains relevant summaries with dates, domain tags, key moments. Token budget: ~1000 tokens (~4000 characters). Omit if no relevant context or RAG unavailable
+- `sprintContext` (object, optional): Sprint-related context for coaching and retrospectives
+  - `activeSprint` (object, optional): Active sprint info
+    - `name` (string): Sprint name
+    - `status` (string): `active` or `complete`
+    - `stepsCompleted` (number): Completed step count
+    - `stepsTotal` (number): Total step count
+    - `dayNumber` (number): Current day in sprint
+    - `totalDays` (number): Total sprint duration in days
+    - `lastStepCompletedAt` (string, optional): ISO 8601 timestamp of most recent step completion
+    - `sprintJustCompleted` (boolean, optional): `true` if sprint completed within last hour
+  - `pendingProposal` (object, optional): Previously offered but unconfirmed sprint proposal
+  - `retroSteps` (array, optional): Step details for `sprint_retro` mode only
+    - `description` (string): Step description
+    - `coachContext` (string, optional): Why this step mattered
 
 **Response** `200 OK` — `Content-Type: text/event-stream`
 
@@ -159,6 +173,10 @@ When `mode` is `"summarize"`, the endpoint returns a **single JSON response** (n
 **Errors**
 - `401` — `invalid_jwt` / `token_expired`: Auth failure
 - `502` — `provider_unavailable`: LLM provider failed
+
+#### Sprint Retro Mode
+
+When `mode` is `"sprint_retro"`, the endpoint streams a narrative retrospective for a completed sprint. Requires `sprintContext.retroSteps` with step descriptions. Response uses standard SSE `event: token` streaming followed by `event: done`.
 
 ---
 

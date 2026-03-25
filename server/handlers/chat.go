@@ -47,6 +47,12 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 			return
 		}
 
+		// Route sprint_retro mode to streaming retro handler
+		if req.Mode == "sprint_retro" {
+			handleSprintRetro(w, r, req, provider, promptBuilder)
+			return
+		}
+
 		// Assemble system prompt
 		coachName := ""
 		if req.Profile != nil {
@@ -162,6 +168,84 @@ func handleSummarize(w http.ResponseWriter, r *http.Request, req providers.ChatR
 		"keyMoments": []string{},
 		"domainTags": []string{},
 	})
+}
+
+// handleSprintRetro processes sprint_retro mode requests, streaming the narrative retro.
+func handleSprintRetro(w http.ResponseWriter, r *http.Request, req providers.ChatRequest, provider providers.Provider, promptBuilder *prompts.Builder) {
+	sprintName := ""
+	durationDays := 0
+	var retroSteps []prompts.SprintRetroStep
+
+	if req.SprintContext != nil {
+		if req.SprintContext.ActiveSprint != nil {
+			sprintName = req.SprintContext.ActiveSprint.Name
+			durationDays = req.SprintContext.ActiveSprint.TotalDays
+		}
+		for _, s := range req.SprintContext.RetroSteps {
+			retroSteps = append(retroSteps, prompts.SprintRetroStep{
+				Description:  s.Description,
+				CoachContext: s.CoachContext,
+			})
+		}
+	}
+
+	if len(retroSteps) == 0 {
+		WriteError(w, http.StatusBadRequest, "invalid_request", "Sprint retro requires step descriptions.")
+		return
+	}
+
+	req.SystemPrompt = promptBuilder.SprintRetroPrompt(sprintName, durationDays, retroSteps)
+	req.Mode = "sprint_retro"
+
+	logArgs := []any{
+		"mode", "sprint_retro",
+		"sprintName", sprintName,
+		"stepCount", len(retroSteps),
+	}
+	if claims, ok := middleware.ClaimsFromContext(r.Context()); ok {
+		logArgs = append(logArgs, "deviceId", claims.DeviceID)
+	}
+	slog.Info("chat.sprint_retro", logArgs...)
+
+	ch, err := provider.StreamChat(r.Context(), req)
+	if err != nil {
+		handleProviderError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.WriteHeader(http.StatusOK)
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		slog.Warn("streaming not supported")
+		return
+	}
+
+	for event := range ch {
+		var eventType string
+		var data []byte
+
+		switch event.Type {
+		case "token":
+			eventType = "token"
+			data, _ = json.Marshal(map[string]string{"text": event.Text})
+		case "done":
+			eventType = "done"
+			data, _ = json.Marshal(map[string]any{
+				"safetyLevel": "green",
+				"domainTags":  []string{},
+				"usage":       event.Usage,
+			})
+		default:
+			continue
+		}
+
+		fmt.Fprintf(w, "event: %s\ndata: %s\n\n", eventType, data)
+		flusher.Flush()
+	}
 }
 
 // handleProviderError translates provider errors into warm user-facing JSON responses.

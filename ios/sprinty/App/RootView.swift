@@ -117,9 +117,11 @@ struct RootView: View {
 
     private func ensureSprintDetailViewModel(databaseManager: DatabaseManager) {
         guard sprintDetailViewModel == nil else { return }
+        let chatService = makeChatService()
         sprintDetailViewModel = SprintDetailViewModel(
             appState: appState,
-            databaseManager: databaseManager
+            databaseManager: databaseManager,
+            chatService: chatService
         )
     }
 

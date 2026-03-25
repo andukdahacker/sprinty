@@ -39,10 +39,11 @@ func createTestPromptBuilder(t *testing.T) *prompts.Builder {
 		"mood.md":              "Mood selection.",
 		"tagging.md":           "Domain tagging.",
 		"cultural.md":          "Cultural.",
-		"context-injection.md": "{{retrieved_memories}} Coach: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
+		"context-injection.md": "{{sprint_context}} {{retrieved_memories}} Coach: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
 		"mode-transitions.md": "Mode transitions: analyze user intent.",
 		"challenger.md":       "Challenger capability: push back constructively.",
 		"summarize.md":        "Summarize the coaching conversation.",
+		"sprint-retro.md":     "Generate a narrative retrospective.",
 	}
 	for name, content := range files {
 		os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
@@ -79,6 +80,7 @@ func setupMuxWithBuilder(builder *prompts.Builder) *http.ServeMux {
 			"mode-transitions.md": "Mode transitions: analyze user intent.",
 			"challenger.md":       "Challenger capability: push back constructively.",
 			"summarize.md":        "Summarize the coaching conversation.",
+			"sprint-retro.md":     "Generate a narrative retrospective.",
 		}
 		for name, content := range files {
 			os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
@@ -1028,5 +1030,108 @@ func TestChatHandler_DoneEvent_IncludesMemoryReferenced(t *testing.T) {
 	body := w.Body.String()
 	if !strings.Contains(body, "memoryReferenced") {
 		t.Error("expected memoryReferenced field in done event")
+	}
+}
+
+// --- Story 5.3 Tests ---
+
+func TestSprintRetroHandler(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+
+	payload := `{
+		"messages":[{"role":"user","content":"Generate sprint retrospective"}],
+		"mode":"sprint_retro",
+		"promptVersion":"1.0",
+		"sprintContext":{
+			"activeSprint":{"name":"Career Growth","status":"active","stepsCompleted":3,"stepsTotal":3,"dayNumber":14,"totalDays":14,"sprintJustCompleted":true},
+			"retroSteps":[
+				{"description":"Step 1: Research roles","coachContext":"Exploring career options"},
+				{"description":"Step 2: Update resume"},
+				{"description":"Step 3: Apply"}
+			]
+		}
+	}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d. Body: %s", w.Code, w.Body.String())
+	}
+
+	ct := w.Header().Get("Content-Type")
+	if !strings.HasPrefix(ct, "text/event-stream") {
+		t.Errorf("expected text/event-stream content type, got %q", ct)
+	}
+
+	body := w.Body.String()
+	// Should have token events
+	if !strings.Contains(body, "event: token") {
+		t.Error("expected token events in sprint_retro response")
+	}
+	// Should have done event
+	if !strings.Contains(body, "event: done") {
+		t.Error("expected done event in sprint_retro response")
+	}
+	// Mock provider returns retro-specific text
+	if !strings.Contains(body, "chapter we just finished") {
+		t.Error("expected retro narrative text in response")
+	}
+}
+
+func TestSprintRetroHandler_EmptyContext_Returns400(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+
+	payload := `{
+		"messages":[{"role":"user","content":"Generate sprint retrospective"}],
+		"mode":"sprint_retro",
+		"promptVersion":"1.0"
+	}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for empty retroSteps, got %d. Body: %s", w.Code, w.Body.String())
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "invalid_request") {
+		t.Error("expected invalid_request error code")
+	}
+}
+
+func TestSprintContextMilestoneFields(t *testing.T) {
+	builder := createTestPromptBuilder(t)
+
+	lastStep := "2026-03-25T10:00:00Z"
+	justCompleted := true
+	sprintCtx := &providers.SprintContext{
+		ActiveSprint: &providers.ActiveSprintInfo{
+			Name:                "Career Growth",
+			Status:              "complete",
+			StepsCompleted:      3,
+			StepsTotal:          3,
+			DayNumber:           14,
+			TotalDays:           14,
+			LastStepCompletedAt: &lastStep,
+			SprintJustCompleted: &justCompleted,
+		},
+	}
+
+	result := builder.Build("discovery", "Coach", nil, nil, "", sprintCtx)
+
+	if !strings.Contains(result, "recently completed a sprint step") {
+		t.Error("expected milestone context for lastStepCompletedAt")
+	}
+	if !strings.Contains(result, "just completed their entire sprint") {
+		t.Error("expected sprint completion context for sprintJustCompleted")
+	}
+	if !strings.Contains(result, "No Challenger this session") {
+		t.Error("expected Challenger suppression in milestone context")
 	}
 }

@@ -343,13 +343,30 @@ final class CoachingViewModel {
             let completed = result.steps.filter(\.completed).count
             let dayNumber = max(1, (Calendar.current.dateComponents([.day], from: result.sprint.startDate, to: now).day ?? 0) + 1)
             let totalDays = max(1, (Calendar.current.dateComponents([.day], from: result.sprint.startDate, to: result.sprint.endDate).day ?? 0) + 1)
+
+            // Compute milestone context from lastStepCompletedAt
+            var lastStepISO: String?
+            let recentCelebration: Bool
+            if let lastCompleted = result.sprint.lastStepCompletedAt {
+                let formatter = ISO8601DateFormatter()
+                lastStepISO = formatter.string(from: lastCompleted)
+                let hourAgo = Calendar.current.date(byAdding: .hour, value: -1, to: now) ?? now
+                recentCelebration = lastCompleted > hourAgo
+            } else {
+                recentCelebration = false
+            }
+
+            let justCompleted = result.sprint.status == .complete && recentCelebration
+
             activeInfo = ActiveSprintInfo(
                 name: result.sprint.name,
                 status: result.sprint.status.rawValue,
                 stepsCompleted: completed,
                 stepsTotal: result.steps.count,
                 dayNumber: dayNumber,
-                totalDays: totalDays
+                totalDays: totalDays,
+                lastStepCompletedAt: lastStepISO,
+                sprintJustCompleted: justCompleted ? true : nil
             )
         }
         let pending = sprintService.loadPendingProposal()

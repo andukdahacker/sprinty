@@ -114,10 +114,25 @@ struct SprintDetailView: View {
                 .sectionHeadingStyle()
                 .foregroundStyle(theme.palette.textPrimary)
 
-            Text("Here's the chapter we just finished...")
-                .coachVoiceStyle()
-                .foregroundStyle(theme.palette.textSecondary)
+            if let retroText = viewModel.sprint?.narrativeRetro {
+                Text(retroText)
+                    .coachVoiceStyle()
+                    .foregroundStyle(theme.palette.textSecondary)
+                    .accessibilityLabel("Sprint retrospective from your coach: \(retroText)")
+            } else {
+                Text("Here's the chapter we just finished...")
+                    .coachVoiceStyle()
+                    .foregroundStyle(theme.palette.textSecondary)
+                    .opacity(viewModel.isGeneratingRetro ? 0.5 : 1.0)
+                    .animation(
+                        viewModel.isGeneratingRetro && !reduceMotion
+                            ? .easeInOut(duration: 0.8).repeatForever(autoreverses: true)
+                            : .none,
+                        value: viewModel.isGeneratingRetro
+                    )
+            }
         }
+        .accessibilitySortPriority(1)
         .transition(.opacity)
         .animation(reduceMotion ? .none : .easeInOut(duration: 0.4), value: viewModel.sprint?.status)
     }

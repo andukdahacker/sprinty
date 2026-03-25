@@ -29,6 +29,7 @@ func setupTestSections(t *testing.T) string {
 		"mode-transitions.md": "Mode transitions: analyze user intent.",
 		"challenger.md":       "Challenger capability: push back constructively.",
 		"summarize.md":        "Summarize the coaching conversation.",
+		"sprint-retro.md":     "Generate a narrative retrospective.",
 	}
 
 	for name, content := range files {
@@ -48,8 +49,8 @@ func TestNewBuilder_LoadsSections(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	if len(b.sections) != 11 {
-		t.Errorf("expected 11 sections, got %d", len(b.sections))
+	if len(b.sections) != 12 {
+		t.Errorf("expected 12 sections, got %d", len(b.sections))
 	}
 
 	if b.contentHash == "" {
@@ -509,6 +510,78 @@ func TestBuilder_Build_WithSprintContext_PendingProposal(t *testing.T) {
 	}
 	if !strings.Contains(prompt, "Re-surface this naturally") {
 		t.Error("expected re-surface instruction in prompt")
+	}
+}
+
+// --- Story 5.3 Tests ---
+
+func TestSprintRetroPrompt_IncludesBasePersonaAndRetroSection(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	steps := []SprintRetroStep{
+		{Description: "Research career options", CoachContext: "Exploring what fits"},
+		{Description: "Update resume"},
+		{Description: "Apply to 3 roles", CoachContext: "Building momentum"},
+	}
+
+	prompt := b.SprintRetroPrompt("Career Growth", 14, steps)
+
+	// Must include base-persona
+	if !strings.Contains(prompt, "You are") {
+		t.Error("expected base-persona section in retro prompt")
+	}
+	// Must include sprint-retro section
+	if !strings.Contains(prompt, "narrative retrospective") {
+		t.Error("expected sprint-retro section in retro prompt")
+	}
+	// Must include sprint details
+	if !strings.Contains(prompt, `Sprint: "Career Growth" (14 days)`) {
+		t.Error("expected sprint name and duration in retro prompt")
+	}
+	// Must list step descriptions
+	if !strings.Contains(prompt, "- Research career options (context: Exploring what fits)") {
+		t.Error("expected step with coach context in retro prompt")
+	}
+	if !strings.Contains(prompt, "- Update resume\n") {
+		t.Error("expected step without coach context in retro prompt")
+	}
+	if !strings.Contains(prompt, "- Apply to 3 roles (context: Building momentum)") {
+		t.Error("expected third step with coach context in retro prompt")
+	}
+	// Must NOT include coaching sections
+	if strings.Contains(prompt, "Discovery mode") {
+		t.Error("retro prompt should not include discovery mode section")
+	}
+	if strings.Contains(prompt, "Mood selection") {
+		t.Error("retro prompt should not include mood section")
+	}
+	if strings.Contains(prompt, "Challenger capability") {
+		t.Error("retro prompt should not include challenger section")
+	}
+	if strings.Contains(prompt, "Safety classification") {
+		t.Error("retro prompt should not include safety section")
+	}
+}
+
+func TestSprintRetroPrompt_EmptySteps(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	prompt := b.SprintRetroPrompt("Test Sprint", 7, nil)
+
+	if !strings.Contains(prompt, "Steps completed:") {
+		t.Error("expected steps header even with no steps")
+	}
+	// Should not contain any step bullet points
+	if strings.Contains(prompt, "- ") {
+		t.Error("expected no step entries for empty steps list")
 	}
 }
 

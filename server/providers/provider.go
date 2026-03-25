@@ -34,12 +34,19 @@ type UserState struct {
 }
 
 type ActiveSprintInfo struct {
-	Name           string `json:"name"`
-	Status         string `json:"status"`
-	StepsCompleted int    `json:"stepsCompleted"`
-	StepsTotal     int    `json:"stepsTotal"`
-	DayNumber      int    `json:"dayNumber"`
-	TotalDays      int    `json:"totalDays"`
+	Name                string  `json:"name"`
+	Status              string  `json:"status"`
+	StepsCompleted      int     `json:"stepsCompleted"`
+	StepsTotal          int     `json:"stepsTotal"`
+	DayNumber           int     `json:"dayNumber"`
+	TotalDays           int     `json:"totalDays"`
+	LastStepCompletedAt *string `json:"lastStepCompletedAt,omitempty"`
+	SprintJustCompleted *bool   `json:"sprintJustCompleted,omitempty"`
+}
+
+type SprintRetroStep struct {
+	Description  string `json:"description"`
+	CoachContext string `json:"coachContext,omitempty"`
 }
 
 type PendingProposal struct {
@@ -48,8 +55,9 @@ type PendingProposal struct {
 }
 
 type SprintContext struct {
-	ActiveSprint    *ActiveSprintInfo `json:"activeSprint,omitempty"`
-	PendingProposal *PendingProposal  `json:"pendingProposal,omitempty"`
+	ActiveSprint    *ActiveSprintInfo  `json:"activeSprint,omitempty"`
+	PendingProposal *PendingProposal   `json:"pendingProposal,omitempty"`
+	RetroSteps      []SprintRetroStep  `json:"retroSteps,omitempty"`
 }
 
 type ChatRequest struct {

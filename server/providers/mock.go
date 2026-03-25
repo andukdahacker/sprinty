@@ -17,6 +17,33 @@ func (m *MockProvider) StreamChat(ctx context.Context, req ChatRequest) (<-chan 
 	go func() {
 		defer close(ch)
 
+		// Handle sprint_retro mode with streaming tokens
+		if req.Mode == "sprint_retro" {
+			retroTokens := []string{
+				"Here's the chapter we just finished... ",
+				"You set out to grow, and that's exactly what happened. ",
+				"Each step built on the last, and now you can see how far you've come.",
+			}
+			for _, text := range retroTokens {
+				select {
+				case <-ctx.Done():
+					return
+				case ch <- ChatEvent{Type: "token", Text: text}:
+				}
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- ChatEvent{
+				Type:        "done",
+				SafetyLevel: "green",
+				DomainTags:  []string{},
+				Usage:       &Usage{InputTokens: 30, OutputTokens: 25},
+			}:
+			}
+			return
+		}
+
 		// Handle summarize mode with a direct JSON response
 		if req.Mode == "summarize" {
 			select {

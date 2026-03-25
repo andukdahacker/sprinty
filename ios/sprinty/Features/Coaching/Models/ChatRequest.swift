@@ -38,11 +38,36 @@ struct ActiveSprintInfo: Codable, Sendable {
     let stepsTotal: Int
     let dayNumber: Int
     let totalDays: Int
+    let lastStepCompletedAt: String?
+    let sprintJustCompleted: Bool?
+
+    init(name: String, status: String, stepsCompleted: Int, stepsTotal: Int, dayNumber: Int, totalDays: Int, lastStepCompletedAt: String? = nil, sprintJustCompleted: Bool? = nil) {
+        self.name = name
+        self.status = status
+        self.stepsCompleted = stepsCompleted
+        self.stepsTotal = stepsTotal
+        self.dayNumber = dayNumber
+        self.totalDays = totalDays
+        self.lastStepCompletedAt = lastStepCompletedAt
+        self.sprintJustCompleted = sprintJustCompleted
+    }
+}
+
+struct SprintRetroStep: Codable, Sendable {
+    let description: String
+    let coachContext: String?
 }
 
 struct SprintContext: Codable, Sendable {
     let activeSprint: ActiveSprintInfo?
     let pendingProposal: PendingSprintProposal?
+    let retroSteps: [SprintRetroStep]?
+
+    init(activeSprint: ActiveSprintInfo? = nil, pendingProposal: PendingSprintProposal? = nil, retroSteps: [SprintRetroStep]? = nil) {
+        self.activeSprint = activeSprint
+        self.pendingProposal = pendingProposal
+        self.retroSteps = retroSteps
+    }
 }
 
 struct ChatRequest: Codable, Sendable {

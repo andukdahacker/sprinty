@@ -274,4 +274,248 @@ struct SprintDetailViewModelTests {
         await vm.toggleStep(vm.steps[0])
         #expect(vm.completedCount == 1)
     }
+
+    // MARK: - Story 5.3 Tests
+
+    @Test("Migration v10 adds narrativeRetro and lastStepCompletedAt columns")
+    func test_migrationV10_addsNewColumns() async throws {
+        let db = try makeTestDB()
+
+        let sprint = Sprint(
+            id: UUID(),
+            name: "Test",
+            startDate: Date(),
+            endDate: Date(),
+            status: .active,
+            narrativeRetro: "Great job!",
+            lastStepCompletedAt: Date()
+        )
+        try await db.dbPool.write { dbConn in
+            try sprint.insert(dbConn)
+        }
+
+        let fetched = try await db.dbPool.read { dbConn in
+            try Sprint.fetchOne(dbConn, key: sprint.id)
+        }
+        #expect(fetched != nil)
+        #expect(fetched?.narrativeRetro == "Great job!")
+        #expect(fetched?.lastStepCompletedAt != nil)
+    }
+
+    @Test("Migration v10 existing sprints have nil narrativeRetro and lastStepCompletedAt")
+    func test_migrationV10_existingSprintsHaveNilNewFields() async throws {
+        let db = try makeTestDB()
+
+        let sprint = Sprint(
+            id: UUID(),
+            name: "Old Sprint",
+            startDate: Date(),
+            endDate: Date(),
+            status: .active
+        )
+        try await db.dbPool.write { dbConn in
+            try sprint.insert(dbConn)
+        }
+
+        let fetched = try await db.dbPool.read { dbConn in
+            try Sprint.fetchOne(dbConn, key: sprint.id)
+        }
+        #expect(fetched?.narrativeRetro == nil)
+        #expect(fetched?.lastStepCompletedAt == nil)
+    }
+
+    @Test("toggleStep persists lastStepCompletedAt on Sprint record")
+    @MainActor func test_toggleStep_persistsLastStepCompletedAt() async throws {
+        let db = try makeTestDB()
+        let appState = AppState()
+        let (sprint, _) = try await createActiveSprint(in: db, stepCount: 3)
+        let vm = SprintDetailViewModel(appState: appState, databaseManager: db)
+        await vm.load()
+
+        await vm.toggleStep(vm.steps[0])
+
+        let fetchedSprint = try await db.dbPool.read { dbConn in
+            try Sprint.fetchOne(dbConn, key: sprint.id)
+        }
+        #expect(fetchedSprint?.lastStepCompletedAt != nil)
+    }
+
+    @Test("Narrative retro generation sends sprint_retro mode to chat service")
+    @MainActor func test_generateNarrativeRetro_sendsCorrectMode() async throws {
+        let db = try makeTestDB()
+        let appState = AppState()
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Here's the chapter we just finished... "),
+            .token(text: "Great work on this sprint!"),
+            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 20), promptVersion: nil, profileUpdate: nil)
+        ]
+
+        let (sprint, steps) = try await createActiveSprint(in: db, stepCount: 2, withCoachContext: true)
+        let vm = SprintDetailViewModel(appState: appState, databaseManager: db, chatService: mockChat)
+        vm.sprint = sprint
+        vm.steps = steps
+
+        await vm.generateNarrativeRetro(for: sprint, steps: steps)
+
+        #expect(mockChat.lastMode == "sprint_retro")
+        #expect(mockChat.lastSprintContext?.retroSteps?.count == 2)
+        #expect(mockChat.lastSprintContext?.retroSteps?[0].description == "Step 1")
+        #expect(mockChat.lastSprintContext?.retroSteps?[0].coachContext == "Why step 1 matters")
+    }
+
+    @Test("Narrative retro persists to Sprint.narrativeRetro")
+    @MainActor func test_generateNarrativeRetro_persistsRetro() async throws {
+        let db = try makeTestDB()
+        let appState = AppState()
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Here's the chapter "),
+            .token(text: "we just finished."),
+            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 20), promptVersion: nil, profileUpdate: nil)
+        ]
+
+        let (sprint, steps) = try await createActiveSprint(in: db, stepCount: 2)
+        let vm = SprintDetailViewModel(appState: appState, databaseManager: db, chatService: mockChat)
+        vm.sprint = sprint
+        vm.steps = steps
+
+        await vm.generateNarrativeRetro(for: sprint, steps: steps)
+
+        #expect(vm.sprint?.narrativeRetro == "Here's the chapter we just finished.")
+
+        // Verify persisted in DB
+        let fetchedSprint = try await db.dbPool.read { dbConn in
+            try Sprint.fetchOne(dbConn, key: sprint.id)
+        }
+        #expect(fetchedSprint?.narrativeRetro == "Here's the chapter we just finished.")
+    }
+
+    @Test("Narrative retro failure keeps narrativeRetro nil")
+    @MainActor func test_generateNarrativeRetro_failureKeepsNil() async throws {
+        let db = try makeTestDB()
+        let appState = AppState()
+        let mockChat = MockChatService()
+        mockChat.stubbedError = AppError.networkUnavailable
+
+        let (sprint, steps) = try await createActiveSprint(in: db, stepCount: 2)
+        let vm = SprintDetailViewModel(appState: appState, databaseManager: db, chatService: mockChat)
+        vm.sprint = sprint
+        vm.steps = steps
+
+        await vm.generateNarrativeRetro(for: sprint, steps: steps)
+
+        #expect(vm.sprint?.narrativeRetro == nil)
+    }
+
+    @Test("Retro retry on load when sprint complete but narrativeRetro nil")
+    @MainActor func test_load_retriesRetroWhenMissing() async throws {
+        let db = try makeTestDB()
+        let appState = AppState()
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Retro text"),
+            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 20), promptVersion: nil, profileUpdate: nil)
+        ]
+
+        // Create a complete sprint without retro (no active sprint exists)
+        let sprint = Sprint(
+            id: UUID(),
+            name: "Done Sprint",
+            startDate: Date(),
+            endDate: Calendar.current.date(byAdding: .weekOfYear, value: 2, to: Date())!,
+            status: .complete,
+            narrativeRetro: nil
+        )
+        let steps = (1...2).map { i in
+            SprintStep(
+                id: UUID(),
+                sprintId: sprint.id,
+                description: "Step \(i)",
+                completed: true,
+                completedAt: Date(),
+                order: i,
+                coachContext: nil
+            )
+        }
+
+        try await db.dbPool.write { dbConn in
+            try sprint.insert(dbConn)
+            for step in steps {
+                try step.insert(dbConn)
+            }
+        }
+
+        let vm = SprintDetailViewModel(appState: appState, databaseManager: db, chatService: mockChat)
+        await vm.load()
+
+        // load() should find the complete sprint via fallback query
+        #expect(vm.sprint != nil)
+        #expect(vm.sprint?.status == .complete)
+
+        // Retry triggers in a detached Task — give it time to complete
+        try await Task.sleep(for: .milliseconds(100))
+
+        // Verify retro generation was attempted with sprint_retro mode
+        #expect(mockChat.lastMode == "sprint_retro")
+    }
+
+    @Test("sprintJustCompleted TTL: true within 1 hour, false after")
+    func test_sprintJustCompleted_withinOneHour() throws {
+        let now = Date()
+
+        // Replicate the actual computation from CoachingViewModel.buildSprintContext()
+        func computeJustCompleted(lastStepCompletedAt: Date?, sprintStatus: SprintStatus) -> Bool {
+            let recentCelebration: Bool
+            if let lastCompleted = lastStepCompletedAt {
+                let hourAgo = Calendar.current.date(byAdding: .hour, value: -1, to: now) ?? now
+                recentCelebration = lastCompleted > hourAgo
+            } else {
+                recentCelebration = false
+            }
+            return sprintStatus == .complete && recentCelebration
+        }
+
+        // Recent completion + complete status → true
+        let thirtyMinAgo = Calendar.current.date(byAdding: .minute, value: -30, to: now)!
+        #expect(computeJustCompleted(lastStepCompletedAt: thirtyMinAgo, sprintStatus: .complete) == true)
+
+        // Old completion + complete status → false
+        let twoHoursAgo = Calendar.current.date(byAdding: .hour, value: -2, to: now)!
+        #expect(computeJustCompleted(lastStepCompletedAt: twoHoursAgo, sprintStatus: .complete) == false)
+
+        // Recent completion + active status → false (not complete yet)
+        #expect(computeJustCompleted(lastStepCompletedAt: thirtyMinAgo, sprintStatus: .active) == false)
+
+        // Nil completion + complete status → false
+        #expect(computeJustCompleted(lastStepCompletedAt: nil, sprintStatus: .complete) == false)
+    }
+
+    @Test("Sprint completion uses differentiated celebration — avatar celebrating state")
+    @MainActor func test_toggleStep_sprintCompletion_usesDifferentiatedCelebration() async throws {
+        let db = try makeTestDB()
+        let appState = AppState()
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Retro"),
+            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 20), promptVersion: nil, profileUpdate: nil)
+        ]
+
+        let (sprint, _) = try await createActiveSprint(in: db, stepCount: 2)
+        appState.activeSprint = sprint
+        let vm = SprintDetailViewModel(appState: appState, databaseManager: db, chatService: mockChat)
+        await vm.load()
+
+        // Complete first step — step celebration triggers .celebrating avatar
+        await vm.toggleStep(vm.steps[0])
+        #expect(vm.sprint?.status == .active)
+        #expect(appState.avatarState == .celebrating)
+
+        // Complete second step — sprint completion also triggers .celebrating avatar
+        await vm.toggleStep(vm.steps[1])
+        #expect(vm.sprint?.status == .complete)
+        #expect(appState.activeSprint == nil)
+        // Sprint completion sets celebrating state (triggerSprintCompletion was called)
+        #expect(appState.avatarState == .celebrating)
+    }
 }

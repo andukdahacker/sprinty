@@ -38,6 +38,7 @@ func NewBuilder(sectionsPath string) (*Builder, error) {
 		"mode-transitions.md",
 		"challenger.md",
 		"summarize.md",
+		"sprint-retro.md",
 	}
 
 	var allContent strings.Builder
@@ -73,6 +74,30 @@ func (b *Builder) SummarizePrompt() string {
 		return s
 	}
 	return ""
+}
+
+// SprintRetroStep holds a single step's info for retro prompt assembly.
+type SprintRetroStep struct {
+	Description  string `json:"description"`
+	CoachContext string `json:"coachContext,omitempty"`
+}
+
+// SprintRetroPrompt assembles a standalone prompt for sprint retrospective generation.
+func (b *Builder) SprintRetroPrompt(sprintName string, durationDays int, steps []SprintRetroStep) string {
+	var prompt strings.Builder
+	prompt.WriteString(b.sections["base-persona"])
+	prompt.WriteString("\n\n")
+	prompt.WriteString(b.sections["sprint-retro"])
+	prompt.WriteString("\n\n## Sprint Details\n")
+	prompt.WriteString(fmt.Sprintf("Sprint: \"%s\" (%d days)\n\nSteps completed:\n", sprintName, durationDays))
+	for _, s := range steps {
+		prompt.WriteString(fmt.Sprintf("- %s", s.Description))
+		if s.CoachContext != "" {
+			prompt.WriteString(fmt.Sprintf(" (context: %s)", s.CoachContext))
+		}
+		prompt.WriteString("\n")
+	}
+	return prompt.String()
 }
 
 // Build assembles a system prompt for the given mode, coach name, profile, and user state.
@@ -195,6 +220,13 @@ func (b *Builder) Build(mode string, coachName string, profile *providers.ChatPr
 			s := sprintContext.ActiveSprint
 			sprintText.WriteString(fmt.Sprintf("## Current Sprint Context\nSprint: \"%s\" (Day %d of %d)\n", s.Name, s.DayNumber, s.TotalDays))
 			sprintText.WriteString(fmt.Sprintf("Progress: %d/%d steps complete\nStatus: %s\n", s.StepsCompleted, s.StepsTotal, s.Status))
+
+			if s.LastStepCompletedAt != nil {
+				sprintText.WriteString("IMPORTANT: User recently completed a sprint step. This is a celebration moment. Do NOT activate Challenger mode in this session (UX-DR78 transition rhythm).\n")
+			}
+			if s.SprintJustCompleted != nil && *s.SprintJustCompleted {
+				sprintText.WriteString("IMPORTANT: User just completed their entire sprint! This is a major milestone. Acknowledge their achievement warmly. No Challenger this session.\n")
+			}
 		}
 		if sprintContext.PendingProposal != nil {
 			p := sprintContext.PendingProposal

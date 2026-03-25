@@ -165,5 +165,12 @@ enum DatabaseMigrations {
                 t.add(column: "coachContext", .text)
             }
         }
+
+        migrator.registerMigration("v10_sprintRetroAndMilestone") { db in
+            try db.alter(table: "Sprint") { t in
+                t.add(column: "narrativeRetro", .text)
+                t.add(column: "lastStepCompletedAt", .text)
+            }
+        }
     }
 }
