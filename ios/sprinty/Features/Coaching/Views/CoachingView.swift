@@ -82,6 +82,7 @@ struct CoachingView: View {
                                 DialogueTurnView(content: viewModel.streamingText, role: .assistant)
                                     .id("streaming")
                             }
+                            sprintProposalSection
                         }
                         .padding(.horizontal, margin)
                         .contentColumn()
@@ -155,6 +156,19 @@ struct CoachingView: View {
             Task {
                 await viewModel.endSession()
             }
+        }
+    }
+
+    @ViewBuilder
+    private var sprintProposalSection: some View {
+        if let proposal = viewModel.sprintProposal {
+            SprintProposalView(
+                proposal: proposal,
+                onConfirm: { Task { await viewModel.confirmSprint() } },
+                onDecline: { Task { await viewModel.declineSprint() } }
+            )
+            .id("sprint-proposal")
+            .transition(.opacity)
         }
     }
 

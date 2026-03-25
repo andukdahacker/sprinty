@@ -404,4 +404,164 @@ struct MigrationTests {
         #expect(results.count == 1)
         #expect(results.first?.content == "A")
     }
+
+    // --- Story 5.1 Tests ---
+
+    @Test("v8 migration creates Sprint table with correct columns")
+    func v8SprintTableCreated() throws {
+        let db = try createInMemoryDatabase()
+        try db.read { db in
+            let columns = try db.columns(in: "Sprint")
+            let columnNames = columns.map(\.name)
+            #expect(columnNames.contains("id"))
+            #expect(columnNames.contains("name"))
+            #expect(columnNames.contains("startDate"))
+            #expect(columnNames.contains("endDate"))
+            #expect(columnNames.contains("status"))
+        }
+    }
+
+    @Test("v8 migration creates SprintStep table with correct columns")
+    func v8SprintStepTableCreated() throws {
+        let db = try createInMemoryDatabase()
+        try db.read { db in
+            let columns = try db.columns(in: "SprintStep")
+            let columnNames = columns.map(\.name)
+            #expect(columnNames.contains("id"))
+            #expect(columnNames.contains("sprintId"))
+            #expect(columnNames.contains("description"))
+            #expect(columnNames.contains("completed"))
+            #expect(columnNames.contains("completedAt"))
+            #expect(columnNames.contains("order"))
+        }
+    }
+
+    @Test("v8 SprintStep sprintId index exists")
+    func v8SprintStepIndexExists() throws {
+        let db = try createInMemoryDatabase()
+        try db.read { db in
+            let indexes = try db.indexes(on: "SprintStep")
+            let indexNames = indexes.map(\.name)
+            #expect(indexNames.contains("idx_sprintstep_sprintId"))
+        }
+    }
+
+    @Test("Can insert and fetch Sprint")
+    func insertAndFetchSprint() throws {
+        let db = try createInMemoryDatabase()
+        let sprint = Sprint(
+            id: UUID(),
+            name: "Career Growth",
+            startDate: Date(),
+            endDate: Date(timeIntervalSinceNow: 14 * 86400),
+            status: .active
+        )
+        try db.write { db in
+            try sprint.insert(db)
+        }
+        let fetched = try db.read { db in
+            try Sprint.fetchOne(db, key: sprint.id)
+        }
+        #expect(fetched != nil)
+        #expect(fetched?.name == "Career Growth")
+        #expect(fetched?.status == .active)
+    }
+
+    @Test("Can insert and fetch SprintStep")
+    func insertAndFetchSprintStep() throws {
+        let db = try createInMemoryDatabase()
+        let sprint = Sprint(
+            id: UUID(),
+            name: "Test Sprint",
+            startDate: Date(),
+            endDate: Date(timeIntervalSinceNow: 7 * 86400),
+            status: .active
+        )
+        let step = SprintStep(
+            id: UUID(),
+            sprintId: sprint.id,
+            description: "Research PM roles",
+            completed: false,
+            completedAt: nil,
+            order: 1
+        )
+        try db.write { db in
+            try sprint.insert(db)
+            try step.insert(db)
+        }
+        let fetched = try db.read { db in
+            try SprintStep.fetchOne(db, key: step.id)
+        }
+        #expect(fetched != nil)
+        #expect(fetched?.description == "Research PM roles")
+        #expect(fetched?.sprintId == sprint.id)
+    }
+
+    @Test("SprintStep cascade delete when Sprint deleted")
+    func sprintStepCascadeDelete() throws {
+        let db = try createInMemoryDatabase()
+        let sprint = Sprint(
+            id: UUID(),
+            name: "Test Sprint",
+            startDate: Date(),
+            endDate: Date(timeIntervalSinceNow: 7 * 86400),
+            status: .active
+        )
+        let step = SprintStep(
+            id: UUID(),
+            sprintId: sprint.id,
+            description: "Step 1",
+            completed: false,
+            completedAt: nil,
+            order: 1
+        )
+        try db.write { db in
+            try sprint.insert(db)
+            try step.insert(db)
+            try sprint.delete(db)
+        }
+        let remainingSteps = try db.read { db in
+            try SprintStep.filter(Column("sprintId") == sprint.id).fetchCount(db)
+        }
+        #expect(remainingSteps == 0)
+    }
+
+    @Test("Sprint.active() query returns only active sprints")
+    func sprintActiveQuery() throws {
+        let db = try createInMemoryDatabase()
+        let activeSprint = Sprint(id: UUID(), name: "Active", startDate: Date(), endDate: Date(timeIntervalSinceNow: 7 * 86400), status: .active)
+        let completeSprint = Sprint(id: UUID(), name: "Complete", startDate: Date(timeIntervalSinceNow: -14 * 86400), endDate: Date(timeIntervalSinceNow: -7 * 86400), status: .complete)
+        try db.write { db in
+            try activeSprint.insert(db)
+            try completeSprint.insert(db)
+        }
+        let result = try db.read { db in
+            try Sprint.active().fetchOne(db)
+        }
+        #expect(result != nil)
+        #expect(result?.name == "Active")
+    }
+
+    @Test("SprintStep.forSprint returns ordered steps")
+    func sprintStepForSprintQuery() throws {
+        let db = try createInMemoryDatabase()
+        let sprint = Sprint(id: UUID(), name: "Test", startDate: Date(), endDate: Date(timeIntervalSinceNow: 7 * 86400), status: .active)
+        let step3 = SprintStep(id: UUID(), sprintId: sprint.id, description: "Third", completed: false, completedAt: nil, order: 3)
+        let step1 = SprintStep(id: UUID(), sprintId: sprint.id, description: "First", completed: false, completedAt: nil, order: 1)
+        let step2 = SprintStep(id: UUID(), sprintId: sprint.id, description: "Second", completed: true, completedAt: Date(), order: 2)
+        try db.write { db in
+            try sprint.insert(db)
+            try step3.insert(db)
+            try step1.insert(db)
+            try step2.insert(db)
+        }
+        let results = try db.read { db in
+            try SprintStep.forSprint(id: sprint.id).fetchAll(db)
+        }
+        #expect(results.count == 3)
+        #expect(results[0].description == "First")
+        #expect(results[1].description == "Second")
+        #expect(results[2].description == "Third")
+        #expect(results[1].completed == true)
+    }
 }

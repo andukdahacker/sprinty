@@ -31,6 +31,20 @@ struct UserState: Codable, Sendable {
     }
 }
 
+struct ActiveSprintInfo: Codable, Sendable {
+    let name: String
+    let status: String
+    let stepsCompleted: Int
+    let stepsTotal: Int
+    let dayNumber: Int
+    let totalDays: Int
+}
+
+struct SprintContext: Codable, Sendable {
+    let activeSprint: ActiveSprintInfo?
+    let pendingProposal: PendingSprintProposal?
+}
+
 struct ChatRequest: Codable, Sendable {
     let messages: [ChatRequestMessage]
     let mode: String
@@ -38,14 +52,16 @@ struct ChatRequest: Codable, Sendable {
     let profile: ChatProfile?
     let userState: UserState?
     let ragContext: String?
+    let sprintContext: SprintContext?
 
-    init(messages: [ChatRequestMessage], mode: String, promptVersion: String, profile: ChatProfile?, userState: UserState? = nil, ragContext: String? = nil) {
+    init(messages: [ChatRequestMessage], mode: String, promptVersion: String, profile: ChatProfile?, userState: UserState? = nil, ragContext: String? = nil, sprintContext: SprintContext? = nil) {
         self.messages = messages
         self.mode = mode
         self.promptVersion = promptVersion
         self.profile = profile
         self.userState = userState
         self.ragContext = ragContext
+        self.sprintContext = sprintContext
     }
 
     enum CodingKeys: String, CodingKey {
@@ -55,5 +71,6 @@ struct ChatRequest: Codable, Sendable {
         case profile
         case userState
         case ragContext
+        case sprintContext
     }
 }

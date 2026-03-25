@@ -11,6 +11,8 @@ Context for this conversation:
 - Time since last session: {{last_session_gap}}
 - Recent session intensity: {{recent_session_intensity}}
 
+{{sprint_context}}
+
 {{retrieved_memories}}
 
 When referencing retrieved memories above:

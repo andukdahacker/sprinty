@@ -133,5 +133,31 @@ enum DatabaseMigrations {
             try db.execute(sql: "UPDATE UserProfile SET coachAppearanceId = 'coach_mentor' WHERE coachAppearanceId = 'brain.head.profile'")
             try db.execute(sql: "UPDATE UserProfile SET coachAppearanceId = 'coach_guide' WHERE coachAppearanceId = 'leaf.circle.fill'")
         }
+
+        migrator.registerMigration("v8") { db in
+            try db.create(table: "Sprint") { t in
+                t.column("id", .text).primaryKey().notNull()
+                t.column("name", .text).notNull()
+                t.column("startDate", .text).notNull()
+                t.column("endDate", .text).notNull()
+                t.column("status", .text).notNull().defaults(to: "active")
+            }
+
+            try db.create(table: "SprintStep") { t in
+                t.column("id", .text).primaryKey().notNull()
+                t.column("sprintId", .text).notNull()
+                    .references("Sprint", onDelete: .cascade)
+                t.column("description", .text).notNull()
+                t.column("completed", .boolean).notNull().defaults(to: false)
+                t.column("completedAt", .text)
+                t.column("order", .integer).notNull()
+            }
+
+            try db.create(
+                index: "idx_sprintstep_sprintId",
+                on: "SprintStep",
+                columns: ["sprintId"]
+            )
+        }
     }
 }

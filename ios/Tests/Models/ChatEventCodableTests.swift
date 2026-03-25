@@ -192,6 +192,45 @@ struct ChatEventCodableTests {
         }
     }
 
+    // MARK: - Story 5.1 — Sprint Proposal Event
+
+    @Test("Decodes sprint_proposal event with valid data")
+    func test_fromSSE_sprintProposal_validData() throws {
+        let json = """
+        {"name": "Career Clarity Sprint", "steps": [{"description": "Research PM roles", "order": 1}, {"description": "Update portfolio", "order": 2}, {"description": "Reach out to contacts", "order": 3}], "durationWeeks": 2}
+        """
+        let sseEvent = SSEEvent(type: "sprint_proposal", data: json)
+        let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
+
+        if case .sprintProposal(let proposal) = chatEvent {
+            #expect(proposal.name == "Career Clarity Sprint")
+            #expect(proposal.steps.count == 3)
+            #expect(proposal.steps[0].description == "Research PM roles")
+            #expect(proposal.steps[0].order == 1)
+            #expect(proposal.steps[2].description == "Reach out to contacts")
+            #expect(proposal.durationWeeks == 2)
+        } else {
+            Issue.record("Expected sprintProposal event")
+        }
+    }
+
+    @Test("Decodes sprint_proposal event with single step")
+    func test_fromSSE_sprintProposal_singleStep() throws {
+        let json = """
+        {"name": "Quick Focus", "steps": [{"description": "Do one thing", "order": 1}], "durationWeeks": 1}
+        """
+        let sseEvent = SSEEvent(type: "sprint_proposal", data: json)
+        let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
+
+        if case .sprintProposal(let proposal) = chatEvent {
+            #expect(proposal.name == "Quick Focus")
+            #expect(proposal.steps.count == 1)
+            #expect(proposal.durationWeeks == 1)
+        } else {
+            Issue.record("Expected sprintProposal event")
+        }
+    }
+
     @Test("Throws on unknown event type")
     func test_fromSSE_unknownType_throws() throws {
         let sseEvent = SSEEvent(type: "unknown", data: "{}")

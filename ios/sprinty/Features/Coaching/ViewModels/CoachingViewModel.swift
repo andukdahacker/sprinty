@@ -23,6 +23,9 @@ final class CoachingViewModel {
     private(set) var hasMoreHistory: Bool = true
     private(set) var isLoadingHistory: Bool = false
 
+    // MARK: - Sprint Proposal State
+    var sprintProposal: SprintProposalData?
+
     // MARK: - Search State
     var isSearchActive: Bool = false
     var searchQuery: String = ""
@@ -47,8 +50,9 @@ final class CoachingViewModel {
     private let profileUpdateService: ProfileUpdateServiceProtocol?
     private let profileEnricher: ProfileEnricherProtocol?
     private let searchService: SearchServiceProtocol?
+    private let sprintService: SprintServiceProtocol?
 
-    init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager, embeddingPipeline: EmbeddingPipelineProtocol? = nil, profileUpdateService: ProfileUpdateServiceProtocol? = nil, profileEnricher: ProfileEnricherProtocol? = nil, searchService: SearchServiceProtocol? = nil) {
+    init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager, embeddingPipeline: EmbeddingPipelineProtocol? = nil, profileUpdateService: ProfileUpdateServiceProtocol? = nil, profileEnricher: ProfileEnricherProtocol? = nil, searchService: SearchServiceProtocol? = nil, sprintService: SprintServiceProtocol? = nil) {
         self.appState = appState
         self.chatService = chatService
         self.databaseManager = databaseManager
@@ -56,6 +60,7 @@ final class CoachingViewModel {
         self.profileUpdateService = profileUpdateService
         self.profileEnricher = profileEnricher
         self.searchService = searchService
+        self.sprintService = sprintService
     }
 
     func loadMessages() {
@@ -194,7 +199,8 @@ final class CoachingViewModel {
             // Retrieve RAG context (non-blocking — errors fall back to nil)
             let ragContext = await retrieveRAGContext(for: text, lastSessionGapHours: userState?.lastSessionGapHours)
 
-            let stream = chatService.streamChat(messages: chatMessages, mode: session.mode.rawValue, profile: profile, userState: userState, ragContext: ragContext)
+            let sprintCtx = await buildSprintContext()
+            let stream = chatService.streamChat(messages: chatMessages, mode: session.mode.rawValue, profile: profile, userState: userState, ragContext: ragContext, sprintContext: sprintCtx)
             let dbManager = databaseManager
 
             streamingTask = Task { [weak self] in
@@ -206,6 +212,8 @@ final class CoachingViewModel {
                         switch event {
                         case .token(let tokenText):
                             self.streamingText += tokenText
+                        case .sprintProposal(let proposal):
+                            self.sprintProposal = proposal
                         case .done(let safetyLevel, _, let mood, let mode, let memoryReferenced, let challengerUsed, _, let promptVersion, let profileUpdate):
                             // Cache promptVersion from first done event per session
                             if let promptVersion, self.cachedPromptVersion == nil {
@@ -289,6 +297,64 @@ final class CoachingViewModel {
         streamingTask = nil
         isStreaming = false
         streamingText = ""
+    }
+
+    // MARK: - Sprint Proposal Actions
+
+    func confirmSprint() async {
+        guard let proposal = sprintProposal, let sprintService else {
+            sprintProposal = nil
+            return
+        }
+        do {
+            let sprint = try await sprintService.createSprint(from: proposal, durationWeeks: proposal.durationWeeks)
+            appState.activeSprint = sprint
+            sprintProposal = nil
+        } catch {
+            Logger(subsystem: Bundle.main.bundleIdentifier ?? "sprinty", category: "sprint")
+                .error("Sprint creation failed: \(error)")
+            streamingText = "I had trouble saving that. Let me try again."
+        }
+    }
+
+    func declineSprint() async {
+        guard let proposal = sprintProposal, let sprintService else {
+            sprintProposal = nil
+            return
+        }
+        let pending = PendingSprintProposal(
+            name: proposal.name,
+            steps: proposal.steps
+        )
+        do {
+            try sprintService.savePendingProposal(pending)
+        } catch {
+            Logger(subsystem: Bundle.main.bundleIdentifier ?? "sprinty", category: "sprint")
+                .error("Failed to save pending proposal: \(error)")
+        }
+        sprintProposal = nil
+    }
+
+    private func buildSprintContext() async -> SprintContext? {
+        guard let sprintService else { return nil }
+        let now = Date()
+        var activeInfo: ActiveSprintInfo?
+        if let result = try? await sprintService.activeSprint() {
+            let completed = result.steps.filter(\.completed).count
+            let dayNumber = max(1, (Calendar.current.dateComponents([.day], from: result.sprint.startDate, to: now).day ?? 0) + 1)
+            let totalDays = max(1, (Calendar.current.dateComponents([.day], from: result.sprint.startDate, to: result.sprint.endDate).day ?? 0) + 1)
+            activeInfo = ActiveSprintInfo(
+                name: result.sprint.name,
+                status: result.sprint.status.rawValue,
+                stepsCompleted: completed,
+                stepsTotal: result.steps.count,
+                dayNumber: dayNumber,
+                totalDays: totalDays
+            )
+        }
+        let pending = sprintService.loadPendingProposal()
+        if activeInfo == nil && pending == nil { return nil }
+        return SprintContext(activeSprint: activeInfo, pendingProposal: pending)
     }
 
     func endSession() async {
@@ -762,7 +828,7 @@ extension CoachingViewModel {
 }
 
 private struct PreviewChatService: ChatServiceProtocol {
-    func streamChat(messages: [ChatRequestMessage], mode: String, profile: ChatProfile?, userState: UserState?, ragContext: String?) -> AsyncThrowingStream<ChatEvent, Error> {
+    func streamChat(messages: [ChatRequestMessage], mode: String, profile: ChatProfile?, userState: UserState?, ragContext: String?, sprintContext: SprintContext? = nil) -> AsyncThrowingStream<ChatEvent, Error> {
         AsyncThrowingStream { $0.finish() }
     }
     func summarize(messages: [ChatRequestMessage]) async throws -> SummaryResponse {

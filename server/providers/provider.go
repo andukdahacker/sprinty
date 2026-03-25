@@ -33,14 +33,34 @@ type UserState struct {
 	RecentSessionIntensity string   `json:"recentSessionIntensity"`
 }
 
+type ActiveSprintInfo struct {
+	Name           string `json:"name"`
+	Status         string `json:"status"`
+	StepsCompleted int    `json:"stepsCompleted"`
+	StepsTotal     int    `json:"stepsTotal"`
+	DayNumber      int    `json:"dayNumber"`
+	TotalDays      int    `json:"totalDays"`
+}
+
+type PendingProposal struct {
+	Name  string          `json:"name"`
+	Steps json.RawMessage `json:"steps"`
+}
+
+type SprintContext struct {
+	ActiveSprint    *ActiveSprintInfo `json:"activeSprint,omitempty"`
+	PendingProposal *PendingProposal  `json:"pendingProposal,omitempty"`
+}
+
 type ChatRequest struct {
-	Messages      []ChatMessage `json:"messages"`
-	Mode          string        `json:"mode"`
-	PromptVersion string        `json:"promptVersion"`
-	SystemPrompt  string        `json:"systemPrompt,omitempty"`
-	Profile       *ChatProfile  `json:"profile,omitempty"`
-	UserState     *UserState    `json:"userState,omitempty"`
-	RagContext    string        `json:"ragContext,omitempty"`
+	Messages      []ChatMessage  `json:"messages"`
+	Mode          string         `json:"mode"`
+	PromptVersion string         `json:"promptVersion"`
+	SystemPrompt  string         `json:"systemPrompt,omitempty"`
+	Profile       *ChatProfile   `json:"profile,omitempty"`
+	UserState     *UserState     `json:"userState,omitempty"`
+	RagContext    string          `json:"ragContext,omitempty"`
+	SprintContext *SprintContext  `json:"sprintContext,omitempty"`
 }
 
 type Usage struct {
@@ -59,6 +79,7 @@ type ChatEvent struct {
 	ChallengerUsed   bool            `json:"challengerUsed,omitempty"`
 	Usage            *Usage          `json:"usage,omitempty"`
 	SummaryData      any             `json:"summaryData,omitempty"`
+	SprintProposal   json.RawMessage `json:"sprintProposal,omitempty"`
 	ProfileUpdate    json.RawMessage `json:"profileUpdate,omitempty"`
 }
 

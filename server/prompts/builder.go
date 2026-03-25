@@ -76,7 +76,7 @@ func (b *Builder) SummarizePrompt() string {
 }
 
 // Build assembles a system prompt for the given mode, coach name, profile, and user state.
-func (b *Builder) Build(mode string, coachName string, profile *providers.ChatProfile, userState *providers.UserState, ragContext string) string {
+func (b *Builder) Build(mode string, coachName string, profile *providers.ChatProfile, userState *providers.UserState, ragContext string, sprintContext *providers.SprintContext) string {
 	var prompt strings.Builder
 
 	// Always include base persona
@@ -187,6 +187,23 @@ func (b *Builder) Build(mode string, coachName string, profile *providers.ChatPr
 
 	// Replace RAG context
 	result = strings.ReplaceAll(result, "{{retrieved_memories}}", ragContext)
+
+	// Replace sprint context
+	if sprintContext != nil {
+		var sprintText strings.Builder
+		if sprintContext.ActiveSprint != nil {
+			s := sprintContext.ActiveSprint
+			sprintText.WriteString(fmt.Sprintf("## Current Sprint Context\nSprint: \"%s\" (Day %d of %d)\n", s.Name, s.DayNumber, s.TotalDays))
+			sprintText.WriteString(fmt.Sprintf("Progress: %d/%d steps complete\nStatus: %s\n", s.StepsCompleted, s.StepsTotal, s.Status))
+		}
+		if sprintContext.PendingProposal != nil {
+			p := sprintContext.PendingProposal
+			sprintText.WriteString(fmt.Sprintf("\n## Pending Sprint Proposal (from previous conversation)\nThe user was offered but didn't confirm: \"%s\". Re-surface this naturally.\n", p.Name))
+		}
+		result = strings.ReplaceAll(result, "{{sprint_context}}", sprintText.String())
+	} else {
+		result = strings.ReplaceAll(result, "{{sprint_context}}", "")
+	}
 
 	return result
 }

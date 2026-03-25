@@ -326,6 +326,120 @@ struct CodableRoundtripTests {
         #expect(decoded.ragContext == nil)
     }
 
+    // MARK: - Story 5.1 — SprintContext
+
+    @Test("ChatRequest encodes sprintContext when present")
+    func test_chatRequest_withSprintContext_encodes() throws {
+        let request = ChatRequest(
+            messages: [ChatRequestMessage(role: "user", content: "Hello")],
+            mode: "discovery",
+            promptVersion: "1.0",
+            profile: nil,
+            sprintContext: SprintContext(
+                activeSprint: ActiveSprintInfo(name: "Career Growth", status: "active", stepsCompleted: 1, stepsTotal: 3, dayNumber: 2, totalDays: 14),
+                pendingProposal: nil
+            )
+        )
+        let data = try encoder.encode(request)
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let sc = json?["sprintContext"] as? [String: Any]
+        #expect(sc != nil)
+        let active = sc?["activeSprint"] as? [String: Any]
+        #expect(active?["name"] as? String == "Career Growth")
+        #expect(active?["stepsCompleted"] as? Int == 1)
+    }
+
+    @Test("ChatRequest omits sprintContext when nil")
+    func test_chatRequest_withoutSprintContext_omitsField() throws {
+        let request = ChatRequest(
+            messages: [ChatRequestMessage(role: "user", content: "Hello")],
+            mode: "discovery",
+            promptVersion: "1.0",
+            profile: nil
+        )
+        let data = try encoder.encode(request)
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        #expect(json?["sprintContext"] == nil)
+    }
+
+    @Test("SprintContext with pendingProposal roundtrips")
+    func test_sprintContext_pendingProposal_roundtrip() throws {
+        let ctx = SprintContext(
+            activeSprint: nil,
+            pendingProposal: PendingSprintProposal(
+                name: "Career Sprint",
+                steps: [SprintProposalData.ProposalStep(description: "Step 1", order: 1)]
+            )
+        )
+        let data = try encoder.encode(ctx)
+        let decoded = try decoder.decode(SprintContext.self, from: data)
+        #expect(decoded.activeSprint == nil)
+        #expect(decoded.pendingProposal?.name == "Career Sprint")
+        #expect(decoded.pendingProposal?.steps.count == 1)
+    }
+
+    // MARK: - Story 5.1 — Sprint & SprintStep
+
+    @Test("Sprint encodes and decodes correctly")
+    func sprintRoundtrip() throws {
+        let sprint = Sprint(
+            id: UUID(),
+            name: "Career Growth",
+            startDate: Date(timeIntervalSince1970: 1710000000),
+            endDate: Date(timeIntervalSince1970: 1711209600),
+            status: .active
+        )
+        let data = try encoder.encode(sprint)
+        let decoded = try decoder.decode(Sprint.self, from: data)
+        #expect(decoded.id == sprint.id)
+        #expect(decoded.name == "Career Growth")
+        #expect(decoded.status == .active)
+    }
+
+    @Test("All SprintStatus cases encode to expected strings")
+    func sprintStatusEncoding() throws {
+        for status in [SprintStatus.active, .complete, .cancelled] {
+            let data = try encoder.encode(status)
+            let str = String(data: data, encoding: .utf8)
+            #expect(str == "\"\(status.rawValue)\"")
+        }
+    }
+
+    @Test("SprintStep encodes and decodes correctly")
+    func sprintStepRoundtrip() throws {
+        let step = SprintStep(
+            id: UUID(),
+            sprintId: UUID(),
+            description: "Research PM roles",
+            completed: false,
+            completedAt: nil,
+            order: 1
+        )
+        let data = try encoder.encode(step)
+        let decoded = try decoder.decode(SprintStep.self, from: data)
+        #expect(decoded.id == step.id)
+        #expect(decoded.description == "Research PM roles")
+        #expect(decoded.completed == false)
+        #expect(decoded.completedAt == nil)
+        #expect(decoded.order == 1)
+    }
+
+    @Test("SprintStep with completedAt roundtrips")
+    func sprintStepCompletedRoundtrip() throws {
+        let step = SprintStep(
+            id: UUID(),
+            sprintId: UUID(),
+            description: "Update portfolio",
+            completed: true,
+            completedAt: Date(timeIntervalSince1970: 1710100000),
+            order: 2
+        )
+        let data = try encoder.encode(step)
+        let decoded = try decoder.decode(SprintStep.self, from: data)
+        #expect(decoded.completed == true)
+        #expect(decoded.completedAt != nil)
+    }
+
     // MARK: - Helpers
 
     private func loadFixture(_ filename: String) throws -> String {

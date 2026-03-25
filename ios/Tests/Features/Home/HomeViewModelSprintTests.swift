@@ -16,51 +16,29 @@ struct HomeViewModelSprintTests {
         return DatabaseManager(dbPool: dbPool)
     }
 
-    private func createSprintTable(in db: DatabaseManager) async throws {
-        try await db.dbPool.write { dbConn in
-            try dbConn.execute(sql: """
-                CREATE TABLE IF NOT EXISTS Sprint (
-                    id TEXT PRIMARY KEY,
-                    name TEXT,
-                    startDate TEXT,
-                    endDate TEXT,
-                    status TEXT
-                )
-                """)
-            try dbConn.execute(sql: """
-                CREATE TABLE IF NOT EXISTS SprintStep (
-                    id TEXT PRIMARY KEY,
-                    sprintId TEXT,
-                    description TEXT,
-                    completedAt TEXT,
-                    "order" INTEGER
-                )
-                """)
-        }
-    }
-
     private func createActiveSprint(
         in db: DatabaseManager,
-        id: String = "sprint-1",
         name: String = "Career Growth",
-        startDate: String? = nil,
-        endDate: String? = nil,
+        startDate: Date? = nil,
+        endDate: Date? = nil,
         completedSteps: Int = 2,
         totalSteps: Int = 5
     ) async throws {
-        let start = startDate ?? ISO8601DateFormatter().string(from: Date(timeIntervalSinceNow: -3 * 86400))
-        let end = endDate ?? ISO8601DateFormatter().string(from: Date(timeIntervalSinceNow: 4 * 86400))
+        let start = startDate ?? Date(timeIntervalSinceNow: -3 * 86400)
+        let end = endDate ?? Date(timeIntervalSinceNow: 4 * 86400)
+        let sprint = Sprint(id: UUID(), name: name, startDate: start, endDate: end, status: .active)
         try await db.dbPool.write { dbConn in
-            try dbConn.execute(
-                sql: "INSERT INTO Sprint (id, name, startDate, endDate, status) VALUES (?, ?, ?, ?, 'active')",
-                arguments: [id, name, start, end]
-            )
+            try sprint.insert(dbConn)
             for i in 1...totalSteps {
-                let completedAt: String? = i <= completedSteps ? ISO8601DateFormatter().string(from: Date()) : nil
-                try dbConn.execute(
-                    sql: "INSERT INTO SprintStep (id, sprintId, description, completedAt, \"order\") VALUES (?, ?, ?, ?, ?)",
-                    arguments: ["step-\(i)", id, "Step \(i)", completedAt, i]
+                let step = SprintStep(
+                    id: UUID(),
+                    sprintId: sprint.id,
+                    description: "Step \(i)",
+                    completed: i <= completedSteps,
+                    completedAt: i <= completedSteps ? Date() : nil,
+                    order: i
                 )
+                try step.insert(dbConn)
             }
         }
     }
@@ -71,10 +49,8 @@ struct HomeViewModelSprintTests {
     @MainActor
     func test_loadActiveSprint_midSprint_correctDayNumber() async throws {
         let db = try makeTestDB()
-        try await createSprintTable(in: db)
-        let formatter = ISO8601DateFormatter()
-        let start = formatter.string(from: Date(timeIntervalSinceNow: -3 * 86400))
-        let end = formatter.string(from: Date(timeIntervalSinceNow: 4 * 86400))
+        let start = Date(timeIntervalSinceNow: -3 * 86400)
+        let end = Date(timeIntervalSinceNow: 4 * 86400)
         try await createActiveSprint(in: db, startDate: start, endDate: end)
 
         let appState = AppState()
@@ -89,10 +65,8 @@ struct HomeViewModelSprintTests {
     @MainActor
     func test_loadActiveSprint_sameDay_dayOne() async throws {
         let db = try makeTestDB()
-        try await createSprintTable(in: db)
-        let formatter = ISO8601DateFormatter()
-        let today = formatter.string(from: Date())
-        let end = formatter.string(from: Date(timeIntervalSinceNow: 6 * 86400))
+        let today = Date()
+        let end = Date(timeIntervalSinceNow: 6 * 86400)
         try await createActiveSprint(in: db, startDate: today, endDate: end)
 
         let appState = AppState()
@@ -107,10 +81,8 @@ struct HomeViewModelSprintTests {
     @MainActor
     func test_loadActiveSprint_pastEndDate_clampedDay() async throws {
         let db = try makeTestDB()
-        try await createSprintTable(in: db)
-        let formatter = ISO8601DateFormatter()
-        let start = formatter.string(from: Date(timeIntervalSinceNow: -10 * 86400))
-        let end = formatter.string(from: Date(timeIntervalSinceNow: -3 * 86400))
+        let start = Date(timeIntervalSinceNow: -10 * 86400)
+        let end = Date(timeIntervalSinceNow: -3 * 86400)
         try await createActiveSprint(in: db, startDate: start, endDate: end)
 
         let appState = AppState()
@@ -122,33 +94,12 @@ struct HomeViewModelSprintTests {
         #expect(vm.sprintTotalDays == 8) // 7 days apart + 1 for inclusive count
     }
 
-    @Test("Day calculation — nil dates omit day data")
-    @MainActor
-    func test_loadActiveSprint_nilDates_zeroDays() async throws {
-        let db = try makeTestDB()
-        try await createSprintTable(in: db)
-        try await db.dbPool.write { dbConn in
-            try dbConn.execute(
-                sql: "INSERT INTO Sprint (id, name, startDate, endDate, status) VALUES ('s1', 'Test', NULL, NULL, 'active')"
-            )
-        }
-
-        let appState = AppState()
-        let vm = HomeViewModel(appState: appState, databaseManager: db)
-        await vm.load()
-
-        #expect(vm.hasActiveSprint == true)
-        #expect(vm.sprintDayNumber == 0)
-        #expect(vm.sprintTotalDays == 0)
-    }
-
     // MARK: - Sprint name tests (Task 4.7)
 
     @Test("Sprint name populated from Sprint table")
     @MainActor
     func test_loadActiveSprint_populatesSprintName() async throws {
         let db = try makeTestDB()
-        try await createSprintTable(in: db)
         try await createActiveSprint(in: db, name: "Career Growth")
 
         let appState = AppState()
@@ -189,7 +140,6 @@ struct HomeViewModelSprintTests {
     @MainActor
     func test_pauseMode_isMuted() async throws {
         let db = try makeTestDB()
-        try await createSprintTable(in: db)
         try await createActiveSprint(in: db)
 
         let appState = AppState()
@@ -201,11 +151,11 @@ struct HomeViewModelSprintTests {
         #expect(vm.hasActiveSprint == true)
     }
 
-    // MARK: - Graceful fallback (Task 4.6)
+    // MARK: - Graceful fallback (Task 4.6) — tables now always exist via v8 migration
 
-    @Test("Sprint table doesn't exist → returns defaults")
+    @Test("No active sprint → returns defaults")
     @MainActor
-    func test_loadActiveSprint_noTable_gracefulDefaults() async throws {
+    func test_loadActiveSprint_noActiveSprint_gracefulDefaults() async throws {
         let db = try makeTestDB()
         let appState = AppState()
         let vm = HomeViewModel(appState: appState, databaseManager: db)
@@ -226,10 +176,8 @@ struct HomeViewModelSprintTests {
     @MainActor
     func test_voiceOverValue_withDays() async throws {
         let db = try makeTestDB()
-        try await createSprintTable(in: db)
-        let formatter = ISO8601DateFormatter()
-        let start = formatter.string(from: Date(timeIntervalSinceNow: -2 * 86400))
-        let end = formatter.string(from: Date(timeIntervalSinceNow: 5 * 86400))
+        let start = Date(timeIntervalSinceNow: -2 * 86400)
+        let end = Date(timeIntervalSinceNow: 5 * 86400)
         try await createActiveSprint(in: db, startDate: start, endDate: end, completedSteps: 2, totalSteps: 5)
 
         let appState = AppState()
@@ -239,7 +187,6 @@ struct HomeViewModelSprintTests {
         #expect(vm.sprintDayNumber > 0)
         #expect(vm.sprintTotalDays > 0)
 
-        // Verify actual VoiceOver string includes day portion
         let view = SprintProgressView(
             progress: vm.sprintProgress,
             currentStep: vm.sprintCurrentStep,
@@ -250,33 +197,6 @@ struct HomeViewModelSprintTests {
         )
         #expect(view.voiceOverValue.contains("day \(vm.sprintDayNumber) of \(vm.sprintTotalDays)"))
         #expect(view.voiceOverValue.hasPrefix("Step \(vm.sprintCurrentStep) of \(vm.sprintTotalSteps)"))
-    }
-
-    @Test("VoiceOver value omits day when dates unavailable")
-    @MainActor
-    func test_voiceOverValue_withoutDays() async throws {
-        let db = try makeTestDB()
-        try await createSprintTable(in: db)
-        try await db.dbPool.write { dbConn in
-            try dbConn.execute(
-                sql: "INSERT INTO Sprint (id, name, startDate, endDate, status) VALUES ('s1', 'Test', NULL, NULL, 'active')"
-            )
-        }
-
-        let appState = AppState()
-        let vm = HomeViewModel(appState: appState, databaseManager: db)
-        await vm.load()
-
-        #expect(vm.sprintDayNumber == 0)
-        #expect(vm.sprintTotalDays == 0)
-
-        // Verify VoiceOver string has no day portion
-        let view = SprintProgressView(
-            progress: 0, currentStep: 0, totalSteps: 0, isMuted: false,
-            dayNumber: 0, totalDays: 0
-        )
-        #expect(view.voiceOverValue == "Step 0 of 0")
-        #expect(!view.voiceOverValue.contains("day"))
     }
 
     // MARK: - VoiceOver string format (direct view tests)

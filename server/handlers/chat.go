@@ -52,7 +52,7 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 		if req.Profile != nil {
 			coachName = req.Profile.CoachName
 		}
-		req.SystemPrompt = promptBuilder.Build(req.Mode, coachName, req.Profile, req.UserState, req.RagContext)
+		req.SystemPrompt = promptBuilder.Build(req.Mode, coachName, req.Profile, req.UserState, req.RagContext, req.SprintContext)
 
 		logArgs := []any{
 			"mode", req.Mode,
@@ -89,6 +89,13 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 			case "token":
 				eventType = "token"
 				data, _ = json.Marshal(map[string]string{"text": event.Text})
+			case "sprint_proposal":
+				eventType = "sprint_proposal"
+				if !json.Valid(event.SprintProposal) {
+					slog.Warn("invalid JSON in sprint_proposal event, skipping")
+					continue
+				}
+				data = event.SprintProposal
 			case "done":
 				eventType = "done"
 				donePayload := map[string]any{

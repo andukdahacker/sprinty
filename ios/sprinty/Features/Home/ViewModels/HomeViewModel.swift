@@ -115,37 +115,19 @@ final class HomeViewModel {
     }
 
     private func loadActiveSprint() async {
-        // Sprint models deferred to Story 5.1 — gracefully handle missing table
         do {
             let sprintData: (hasActive: Bool, completed: Int, total: Int, name: String, dayNumber: Int, totalDays: Int) = try await databaseManager.dbPool.read { db in
-                guard try db.tableExists("Sprint") else {
-                    return (false, 0, 0, "", 0, 0)
-                }
-                guard let row = try Row.fetchOne(db, sql: "SELECT id, name, startDate, endDate FROM Sprint WHERE status = 'active' LIMIT 1") else {
+                guard let sprint = try Sprint.active().fetchOne(db) else {
                     return (false, 0, 0, "", 0, 0)
                 }
 
-                let name: String = row["name"] ?? ""
+                let dayNumber = (Calendar.current.dateComponents([.day], from: sprint.startDate, to: Date()).day ?? 0) + 1
+                let totalDays = (Calendar.current.dateComponents([.day], from: sprint.startDate, to: sprint.endDate).day ?? 0) + 1
 
-                // Calculate day number and total days from dates
-                var dayNumber = 0
-                var totalDays = 0
-                let formatter = ISO8601DateFormatter()
-                if let startStr: String = row["startDate"],
-                   let endStr: String = row["endDate"],
-                   let startDate = formatter.date(from: startStr),
-                   let endDate = formatter.date(from: endStr) {
-                    dayNumber = (Calendar.current.dateComponents([.day], from: startDate, to: Date()).day ?? 0) + 1
-                    totalDays = (Calendar.current.dateComponents([.day], from: startDate, to: endDate).day ?? 0) + 1
-                }
+                let steps = try SprintStep.forSprint(id: sprint.id).fetchAll(db)
+                let completed = steps.filter(\.completed).count
 
-                guard try db.tableExists("SprintStep") else {
-                    return (true, 0, 0, name, dayNumber, totalDays)
-                }
-                let sprintId: String = row["id"]
-                let completed = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM SprintStep WHERE sprintId = ? AND completedAt IS NOT NULL", arguments: [sprintId]) ?? 0
-                let total = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM SprintStep WHERE sprintId = ?", arguments: [sprintId]) ?? 0
-                return (true, completed, total, name, dayNumber, totalDays)
+                return (true, completed, steps.count, sprint.name, dayNumber, totalDays)
             }
             hasActiveSprint = sprintData.hasActive
             sprintCurrentStep = sprintData.completed

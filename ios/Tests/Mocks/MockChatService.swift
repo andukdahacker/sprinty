@@ -11,14 +11,16 @@ final class MockChatService: ChatServiceProtocol, @unchecked Sendable {
     var lastProfile: ChatProfile?
     var lastUserState: UserState?
     var lastRagContext: String?
+    var lastSprintContext: SprintContext?
     var summarizeCallCount: Int = 0
 
-    func streamChat(messages: [ChatRequestMessage], mode: String, profile: ChatProfile?, userState: UserState? = nil, ragContext: String? = nil) -> AsyncThrowingStream<ChatEvent, Error> {
+    func streamChat(messages: [ChatRequestMessage], mode: String, profile: ChatProfile?, userState: UserState? = nil, ragContext: String? = nil, sprintContext: SprintContext? = nil) -> AsyncThrowingStream<ChatEvent, Error> {
         lastMessages = messages
         lastMode = mode
         lastProfile = profile
         lastUserState = userState
         lastRagContext = ragContext
+        lastSprintContext = sprintContext
 
         let events = stubbedEvents
         let error = stubbedError

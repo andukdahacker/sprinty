@@ -25,7 +25,7 @@ func setupTestSections(t *testing.T) string {
 		"mood.md":              "Select mood: welcoming/warm/focused/gentle.",
 		"tagging.md":           "Tag domains: career, finance, etc.",
 		"cultural.md":          "Cultural context.",
-		"context-injection.md": "{{retrieved_memories}} Coach name: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
+		"context-injection.md": "{{sprint_context}} {{retrieved_memories}} Coach name: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
 		"mode-transitions.md": "Mode transitions: analyze user intent.",
 		"challenger.md":       "Challenger capability: push back constructively.",
 		"summarize.md":        "Summarize the coaching conversation.",
@@ -114,7 +114,7 @@ func TestBuilder_Build_DiscoveryMode(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("discovery", "Luna", nil, nil, "")
+	prompt := b.Build("discovery", "Luna", nil, nil, "", nil)
 
 	if !strings.Contains(prompt, "You are Luna, a coach.") {
 		t.Error("expected base persona with coach name injected")
@@ -143,7 +143,7 @@ func TestBuilder_Build_DefaultCoachName(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("discovery", "", nil, nil, "")
+	prompt := b.Build("discovery", "", nil, nil, "", nil)
 
 	if !strings.Contains(prompt, "You are Coach, a coach.") {
 		t.Error("expected default coach name 'Coach'")
@@ -157,7 +157,7 @@ func TestBuilder_Build_UnknownModeDefaultsToDiscovery(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("unknown_mode", "Luna", nil, nil, "")
+	prompt := b.Build("unknown_mode", "Luna", nil, nil, "", nil)
 
 	if !strings.Contains(prompt, "Discovery mode") {
 		t.Error("expected unknown mode to fall back to discovery")
@@ -171,7 +171,7 @@ func TestBuilder_Build_DiscoveryMode_IncludesDiscoverySection(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("discovery", "Luna", nil, nil, "")
+	prompt := b.Build("discovery", "Luna", nil, nil, "", nil)
 
 	if !strings.Contains(prompt, "Discovery mode") {
 		t.Error("expected discovery section in discovery mode prompt")
@@ -185,7 +185,7 @@ func TestBuilder_Build_DirectiveMode(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("directive", "Luna", nil, nil, "")
+	prompt := b.Build("directive", "Luna", nil, nil, "", nil)
 
 	if !strings.Contains(prompt, "Directive mode") {
 		t.Error("expected directive mode section in directive mode prompt")
@@ -205,7 +205,7 @@ func TestBuilder_Build_DirectiveMode_ExcludesDiscovery(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("directive", "Luna", nil, nil, "")
+	prompt := b.Build("directive", "Luna", nil, nil, "", nil)
 
 	if strings.Contains(prompt, "Discovery mode") {
 		t.Error("expected discovery section to be absent in directive mode")
@@ -223,7 +223,7 @@ func TestBuilder_Build_IncludesModeTransitions(t *testing.T) {
 	}
 
 	for _, mode := range []string{"discovery", "directive", "unknown"} {
-		prompt := b.Build(mode, "Luna", nil, nil, "")
+		prompt := b.Build(mode, "Luna", nil, nil, "", nil)
 		if !strings.Contains(prompt, "Mode transitions") {
 			t.Errorf("expected mode-transitions section in %s mode prompt", mode)
 		}
@@ -238,7 +238,7 @@ func TestBuilder_Build_IncludesChallenger(t *testing.T) {
 	}
 
 	for _, mode := range []string{"discovery", "directive", "unknown"} {
-		prompt := b.Build(mode, "Luna", nil, nil, "")
+		prompt := b.Build(mode, "Luna", nil, nil, "", nil)
 		if !strings.Contains(prompt, "Challenger capability") {
 			t.Errorf("expected challenger section in %s mode prompt", mode)
 		}
@@ -252,7 +252,7 @@ func TestBuilder_Build_IncludesCulturalSection(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("discovery", "Luna", nil, nil, "")
+	prompt := b.Build("discovery", "Luna", nil, nil, "", nil)
 
 	if !strings.Contains(prompt, "Cultural context") {
 		t.Error("expected cultural section in assembled prompt")
@@ -276,7 +276,7 @@ func TestBuilder_Build_WithUserState_InjectsContext(t *testing.T) {
 		RecentSessionIntensity: "moderate",
 	}
 
-	prompt := b.Build("discovery", "Luna", nil, us, "")
+	prompt := b.Build("discovery", "Luna", nil, us, "", nil)
 
 	if !strings.Contains(prompt, "Engagement: high") {
 		t.Error("expected engagement level in prompt")
@@ -320,7 +320,7 @@ func TestBuilder_Build_WithNilUserState_UsesDefaults(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("discovery", "Luna", nil, nil, "")
+	prompt := b.Build("discovery", "Luna", nil, nil, "", nil)
 
 	if !strings.Contains(prompt, "Engagement: unknown") {
 		t.Error("expected unknown engagement level when userState is nil")
@@ -349,7 +349,7 @@ func TestBuilder_Build_WithProfile_InjectsFields(t *testing.T) {
 		},
 	}
 
-	prompt := b.Build("discovery", "Luna", profile, nil, "")
+	prompt := b.Build("discovery", "Luna", profile, nil, "", nil)
 
 	if !strings.Contains(prompt, "Values: authenticity, growth") {
 		t.Error("expected user values in prompt")
@@ -372,7 +372,7 @@ func TestBuilder_Build_WithNilProfile_UsesNotYetKnown(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("discovery", "Luna", nil, nil, "")
+	prompt := b.Build("discovery", "Luna", nil, nil, "", nil)
 
 	if !strings.Contains(prompt, "Values: not yet known") {
 		t.Error("expected 'not yet known' for values when profile is nil")
@@ -399,7 +399,7 @@ func TestBuilder_Build_WithEmptyProfileFields_UsesNotYetKnown(t *testing.T) {
 		CoachName: "Luna",
 	}
 
-	prompt := b.Build("discovery", "Luna", profile, nil, "")
+	prompt := b.Build("discovery", "Luna", profile, nil, "", nil)
 
 	if !strings.Contains(prompt, "Values: not yet known") {
 		t.Error("expected 'not yet known' for empty values")
@@ -419,7 +419,7 @@ func TestBuilder_Build_WithRagContext_InjectsMemories(t *testing.T) {
 	}
 
 	ragContext := "## Past Conversations\n**2026-03-20** — career\nSummary: Discussed career goals"
-	prompt := b.Build("discovery", "Luna", nil, nil, ragContext)
+	prompt := b.Build("discovery", "Luna", nil, nil, ragContext, nil)
 
 	if !strings.Contains(prompt, "Past Conversations") {
 		t.Error("expected ragContext content in prompt")
@@ -436,7 +436,7 @@ func TestBuilder_Build_WithEmptyRagContext_ReplacesCleanly(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	prompt := b.Build("discovery", "Luna", nil, nil, "")
+	prompt := b.Build("discovery", "Luna", nil, nil, "", nil)
 
 	if strings.Contains(prompt, "{{retrieved_memories}}") {
 		t.Error("expected {{retrieved_memories}} template to be replaced")
@@ -451,9 +451,77 @@ func TestBuilder_Build_WithNilRagContext_ReplacesCleanly(t *testing.T) {
 	}
 
 	// Empty string simulates nil ragContext from handler
-	prompt := b.Build("discovery", "Luna", nil, nil, "")
+	prompt := b.Build("discovery", "Luna", nil, nil, "", nil)
 
 	if strings.Contains(prompt, "{{retrieved_memories}}") {
 		t.Error("expected template variable to be replaced even with empty string")
+	}
+}
+
+// --- Story 5.1 Tests ---
+
+func TestBuilder_Build_WithSprintContext_ActiveSprint(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	sc := &providers.SprintContext{
+		ActiveSprint: &providers.ActiveSprintInfo{
+			Name:           "Career Clarity Sprint",
+			Status:         "active",
+			StepsCompleted: 1,
+			StepsTotal:     3,
+			DayNumber:      3,
+			TotalDays:      14,
+		},
+	}
+	prompt := b.Build("discovery", "Luna", nil, nil, "", sc)
+
+	if !strings.Contains(prompt, "Career Clarity Sprint") {
+		t.Error("expected sprint name in prompt")
+	}
+	if !strings.Contains(prompt, "Day 3 of 14") {
+		t.Error("expected day info in prompt")
+	}
+	if !strings.Contains(prompt, "1/3 steps complete") {
+		t.Error("expected step progress in prompt")
+	}
+}
+
+func TestBuilder_Build_WithSprintContext_PendingProposal(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	sc := &providers.SprintContext{
+		PendingProposal: &providers.PendingProposal{
+			Name: "Focus Sprint",
+		},
+	}
+	prompt := b.Build("discovery", "Luna", nil, nil, "", sc)
+
+	if !strings.Contains(prompt, "Focus Sprint") {
+		t.Error("expected pending proposal name in prompt")
+	}
+	if !strings.Contains(prompt, "Re-surface this naturally") {
+		t.Error("expected re-surface instruction in prompt")
+	}
+}
+
+func TestBuilder_Build_WithNilSprintContext_NoTemplate(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	prompt := b.Build("discovery", "Luna", nil, nil, "", nil)
+
+	if strings.Contains(prompt, "{{sprint_context}}") {
+		t.Error("unreplaced sprint_context template variable found")
 	}
 }

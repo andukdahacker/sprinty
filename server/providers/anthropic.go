@@ -51,6 +51,16 @@ var toolSchema = anthropic.ToolParam{
 				"type":        "boolean",
 				"description": "Set to true when this response includes constructive pushback, alternative perspectives, or stress-testing of the user's assumptions. Set to false for normal coaching responses.",
 			},
+			"sprintProposal": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"name":          map[string]any{"type": "string", "description": "A short, motivating name for the sprint."},
+					"steps":         map[string]any{"type": "array", "items": map[string]any{"type": "object", "properties": map[string]any{"description": map[string]any{"type": "string"}, "order": map[string]any{"type": "integer"}}, "required": []string{"description", "order"}}},
+					"durationWeeks": map[string]any{"type": "integer", "description": "Sprint duration in weeks (1-4)."},
+				},
+				"required":    []string{"name", "steps", "durationWeeks"},
+				"description": "Propose a sprint when the user has discussed clear goals and would benefit from an action plan. Do NOT propose sprints when safety level is elevated (orange/red). Only propose when the conversation naturally leads to it.",
+			},
 			"profileUpdate": map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -126,6 +136,7 @@ type toolResult struct {
 	MemoryReferenced bool             `json:"memoryReferenced"`
 	Mode             string           `json:"mode"`
 	ChallengerUsed   bool             `json:"challengerUsed"`
+	SprintProposal   json.RawMessage  `json:"sprintProposal,omitempty"`
 	ProfileUpdate    json.RawMessage  `json:"profileUpdate,omitempty"`
 }
 
@@ -256,6 +267,26 @@ func (p *AnthropicProvider) StreamChat(ctx context.Context, req ChatRequest) (<-
 					if message.Usage.InputTokens > 0 || message.Usage.OutputTokens > 0 {
 						usage.InputTokens = int(message.Usage.InputTokens)
 						usage.OutputTokens = int(message.Usage.OutputTokens)
+					}
+
+					// Emit sprint_proposal event before done if present and valid
+					if len(result.SprintProposal) > 0 {
+						var proposal struct {
+							Name          string `json:"name"`
+							Steps         []any  `json:"steps"`
+							DurationWeeks int    `json:"durationWeeks"`
+						}
+						if err := json.Unmarshal(result.SprintProposal, &proposal); err != nil {
+							slog.Warn("malformed sprint_proposal in response, skipping", "error", err)
+						} else if proposal.Name != "" && len(proposal.Steps) > 0 && proposal.DurationWeeks > 0 {
+							select {
+							case <-ctx.Done():
+								return
+							case ch <- ChatEvent{Type: "sprint_proposal", SprintProposal: result.SprintProposal}:
+							}
+						} else {
+							slog.Warn("incomplete sprint_proposal, skipping", "name", proposal.Name, "steps", len(proposal.Steps), "weeks", proposal.DurationWeeks)
+						}
 					}
 
 					select {

@@ -2,6 +2,7 @@ import Foundation
 
 enum ChatEvent: Sendable {
     case token(text: String)
+    case sprintProposal(SprintProposalData)
     case done(safetyLevel: String, domainTags: [String], mood: String?, mode: String?, memoryReferenced: Bool?, challengerUsed: Bool?, usage: ChatUsage, promptVersion: String?, profileUpdate: ProfileUpdate?)
 }
 
@@ -20,6 +21,12 @@ extension ChatEvent {
         case "token":
             let parsed = try JSONDecoder().decode(TokenEventData.self, from: data)
             return .token(text: parsed.text)
+        case "sprint_proposal":
+            let parsed = try JSONDecoder().decode(SprintProposalData.self, from: data)
+            guard !parsed.name.isEmpty, !parsed.steps.isEmpty, parsed.durationWeeks > 0 else {
+                throw ChatEventParseError.invalidData
+            }
+            return .sprintProposal(parsed)
         case "done":
             let parsed = try JSONDecoder().decode(DoneEventData.self, from: data)
             return .done(
