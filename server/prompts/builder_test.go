@@ -25,7 +25,7 @@ func setupTestSections(t *testing.T) string {
 		"mood.md":              "Select mood: welcoming/warm/focused/gentle.",
 		"tagging.md":           "Tag domains: career, finance, etc.",
 		"cultural.md":          "Cultural context.",
-		"context-injection.md": "{{sprint_context}} {{retrieved_memories}} Coach name: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
+		"context-injection.md": "{{re_engagement_context}}{{sprint_context}} {{retrieved_memories}} Coach name: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
 		"mode-transitions.md": "Mode transitions: analyze user intent.",
 		"challenger.md":       "Challenger capability: push back constructively.",
 		"summarize.md":        "Summarize the coaching conversation.",
@@ -645,5 +645,83 @@ func TestBuilder_Build_CheckInMode_IncludesSharedSections(t *testing.T) {
 		if !strings.Contains(prompt, section) {
 			t.Errorf("expected shared section %q in check_in prompt", section)
 		}
+	}
+}
+
+// --- Story 6.3 Tests ---
+
+func TestBuilder_Build_WithReEngagement_InjectsContext(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	isReturning := true
+	us := &providers.UserState{
+		EngagementLevel:        "high",
+		RecentMoods:            []string{"warm"},
+		AvgMessageLength:       "medium",
+		SessionCount:           5,
+		RecentSessionIntensity: "moderate",
+		IsReturningFromCrisis:  &isReturning,
+	}
+
+	prompt := b.Build("discovery", "Luna", nil, us, "", nil)
+
+	if !strings.Contains(prompt, "Re-engagement Context") {
+		t.Error("expected re-engagement context when IsReturningFromCrisis is true")
+	}
+	if !strings.Contains(prompt, "Do NOT reference what happened") {
+		t.Error("expected re-engagement instruction text")
+	}
+}
+
+func TestBuilder_Build_WithoutReEngagement_OmitsContext(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	us := &providers.UserState{
+		EngagementLevel:        "high",
+		RecentMoods:            []string{"warm"},
+		AvgMessageLength:       "medium",
+		SessionCount:           5,
+		RecentSessionIntensity: "moderate",
+	}
+
+	prompt := b.Build("discovery", "Luna", nil, us, "", nil)
+
+	if strings.Contains(prompt, "Re-engagement Context") {
+		t.Error("should not contain re-engagement context when flag is nil")
+	}
+	if strings.Contains(prompt, "{{re_engagement_context}}") {
+		t.Error("template variable should be replaced even when flag is nil")
+	}
+}
+
+func TestBuilder_Build_ReEngagementFalse_OmitsContext(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	isReturning := false
+	us := &providers.UserState{
+		EngagementLevel:        "high",
+		RecentMoods:            []string{"warm"},
+		AvgMessageLength:       "medium",
+		SessionCount:           5,
+		RecentSessionIntensity: "moderate",
+		IsReturningFromCrisis:  &isReturning,
+	}
+
+	prompt := b.Build("discovery", "Luna", nil, us, "", nil)
+
+	if strings.Contains(prompt, "Re-engagement Context") {
+		t.Error("should not contain re-engagement context when flag is false")
 	}
 }

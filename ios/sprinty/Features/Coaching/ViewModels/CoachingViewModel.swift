@@ -56,6 +56,7 @@ final class CoachingViewModel {
 
     // MARK: - Safety State
     var currentSafetyUIState: SafetyUIState = .green
+    var isReturningFromCrisis: Bool = false
 
     init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager, embeddingPipeline: EmbeddingPipelineProtocol? = nil, profileUpdateService: ProfileUpdateServiceProtocol? = nil, profileEnricher: ProfileEnricherProtocol? = nil, searchService: SearchServiceProtocol? = nil, sprintService: SprintServiceProtocol? = nil, safetyHandler: SafetyHandlerProtocol = SafetyHandler(), safetyStateManager: SafetyStateManagerProtocol = SafetyStateManager()) {
         self.appState = appState
@@ -201,7 +202,10 @@ final class CoachingViewModel {
             // Compute engagement snapshot for adaptive tone
             let calculator = EngagementCalculator(dbPool: databaseManager.dbPool)
             let snapshot = try? await calculator.compute()
-            let userState = snapshot.map { UserState(from: $0) }
+            var userState = snapshot.map { UserState(from: $0) }
+            if isReturningFromCrisis {
+                userState?.isReturningFromCrisis = true
+            }
 
             // Retrieve RAG context (non-blocking — errors fall back to nil)
             let ragContext = await retrieveRAGContext(for: text, lastSessionGapHours: userState?.lastSessionGapHours)
@@ -261,6 +265,30 @@ final class CoachingViewModel {
                             let processedLevel = self.safetyStateManager.processClassification(classifiedLevel, source: source)
                             self.currentSafetyUIState = self.safetyHandler.uiState(for: processedLevel)
                             await self.updateSessionSafetyLevel(processedLevel)
+
+                            // Persist safety boundary event on orange/red
+                            if processedLevel >= .orange {
+                                Task {
+                                    try? await dbManager.dbPool.write { db in
+                                        try db.execute(
+                                            sql: "UPDATE UserProfile SET lastSafetyBoundaryAt = ? WHERE id = (SELECT id FROM UserProfile LIMIT 1)",
+                                            arguments: [Date()]
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Clear re-engagement state on genuine green/yellow classification
+                            if self.isReturningFromCrisis && processedLevel < .orange && source == .genuine {
+                                self.isReturningFromCrisis = false
+                                Task {
+                                    try? await dbManager.dbPool.write { db in
+                                        try db.execute(
+                                            sql: "UPDATE UserProfile SET lastSafetyBoundaryAt = NULL WHERE id = (SELECT id FROM UserProfile LIMIT 1)"
+                                        )
+                                    }
+                                }
+                            }
 
                             // Safety override: set gentle expression for yellow+
                             if processedLevel >= .yellow {
@@ -519,6 +547,15 @@ final class CoachingViewModel {
 
     private func createNewSession() async throws -> ConversationSession {
         safetyStateManager.resetSession()
+
+        // Detect returning-from-crisis state
+        let profile: UserProfile? = try await databaseManager.dbPool.read { db in
+            try UserProfile.current().fetchOne(db)
+        }
+        if profile?.lastSafetyBoundaryAt != nil {
+            isReturningFromCrisis = true
+        }
+
         let session = ConversationSession(
             id: UUID(),
             startedAt: Date(),
@@ -589,6 +626,11 @@ final class CoachingViewModel {
     // MARK: - Daily Greeting
 
     func generateDailyGreeting() async {
+        if isReturningFromCrisis {
+            dailyGreeting = "I'm glad you're here. What's on your mind today?"
+            return
+        }
+
         let fallback = "What's on your mind?"
 
         do {

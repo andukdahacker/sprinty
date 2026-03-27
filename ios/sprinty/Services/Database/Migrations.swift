@@ -202,5 +202,11 @@ enum DatabaseMigrations {
                 t.add(column: "checkInWeekday", .integer)
             }
         }
+
+        migrator.registerMigration("v12_safetyBoundary") { db in
+            try db.alter(table: "UserProfile") { t in
+                t.add(column: "lastSafetyBoundaryAt", .text)
+            }
+        }
     }
 }

@@ -20,6 +20,7 @@ struct UserState: Codable, Sendable {
     let sessionCount: Int
     let lastSessionGapHours: Int?
     let recentSessionIntensity: String
+    var isReturningFromCrisis: Bool?
 
     init(from snapshot: EngagementSnapshot) {
         self.engagementLevel = snapshot.engagementLevel.rawValue
@@ -28,6 +29,7 @@ struct UserState: Codable, Sendable {
         self.sessionCount = snapshot.sessionCount
         self.lastSessionGapHours = snapshot.lastSessionGapHours
         self.recentSessionIntensity = snapshot.recentSessionIntensity.rawValue
+        self.isReturningFromCrisis = nil
     }
 }
 

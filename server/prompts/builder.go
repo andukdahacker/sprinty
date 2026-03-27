@@ -147,8 +147,25 @@ func (b *Builder) Build(mode string, coachName string, profile *providers.ChatPr
 		prompt.WriteString(s)
 	}
 
-	// Replace template slots
+	// Replace re-engagement context
 	result := prompt.String()
+	if userState != nil && userState.IsReturningFromCrisis != nil && *userState.IsReturningFromCrisis {
+		reEngagementText := `## Re-engagement Context
+The user is returning after a difficult moment. This is important:
+- Greet them warmly and with genuine care — "I'm glad you're here"
+- Do NOT reference what happened, the crisis, or any previous difficult conversation
+- Do NOT ask "how are you feeling about what happened" or anything that resurfaces the event
+- Start with gentle, open-ended Discovery Mode questions about what's on their mind today
+- Let the user lead — they'll share if and when they're ready
+- Focus on the present and future, not the past
+- Keep the energy warm, unhurried, and low-pressure
+`
+		result = strings.ReplaceAll(result, "{{re_engagement_context}}", reEngagementText)
+	} else {
+		result = strings.ReplaceAll(result, "{{re_engagement_context}}", "")
+	}
+
+	// Replace template slots
 	if coachName != "" {
 		result = strings.ReplaceAll(result, "{{coach_name}}", coachName)
 	} else {

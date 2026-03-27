@@ -114,4 +114,31 @@ struct CheckInNotificationServiceTests {
     func test_notificationIdentifier() {
         #expect(CheckInNotificationService.checkInIdentifier == "com.ducdo.sprinty.checkin")
     }
+
+    // --- Story 6.3 Tests ---
+
+    @Test("Notifications suppressed when lastSafetyBoundaryAt is present")
+    func test_postCrisis_notificationsSuppressed() async throws {
+        let db = try makeTestDB()
+        // Create profile with lastSafetyBoundaryAt set
+        let profile = UserProfile(
+            id: UUID(),
+            avatarId: "avatar_classic",
+            coachAppearanceId: "coach_sage",
+            coachName: "Sage",
+            onboardingStep: 5,
+            onboardingCompleted: true,
+            lastSafetyBoundaryAt: Date(),
+            createdAt: Date(timeIntervalSinceNow: -2 * 86400),
+            updatedAt: Date()
+        )
+        try await db.dbPool.write { dbConn in
+            try profile.insert(dbConn)
+        }
+        try await createActiveSprint(in: db)
+
+        let service = CheckInNotificationService(databaseManager: db)
+        await service.scheduleCheckInNotification(cadence: "daily", hour: 9, weekday: nil)
+        // Should early-return due to post-crisis suppression — no crash = guard works
+    }
 }

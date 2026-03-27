@@ -35,8 +35,8 @@ final class CheckInNotificationService: CheckInNotificationServiceProtocol, @unc
         // Cancel existing check-in notifications first
         await cancelCheckInNotifications()
 
-        // Enforce 24-hour no-notification rule
-        guard await isInstallOlderThan24Hours() else { return }
+        // Enforce 24-hour rule and suppress during post-crisis (single DB read)
+        guard await shouldAllowNotifications() else { return }
 
         // Check for active sprint — no sprint = no check-in notifications
         guard await hasActiveSprint() else { return }
@@ -76,13 +76,17 @@ final class CheckInNotificationService: CheckInNotificationServiceProtocol, @unc
         notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.checkInIdentifier])
     }
 
-    private func isInstallOlderThan24Hours() async -> Bool {
+    private func shouldAllowNotifications() async -> Bool {
         do {
             let profile = try await databaseManager.dbPool.read { db in
                 try UserProfile.current().fetchOne(db)
             }
             guard let profile else { return false }
-            return Date().timeIntervalSince(profile.createdAt) >= 86400
+            // 24-hour install rule
+            guard Date().timeIntervalSince(profile.createdAt) >= 86400 else { return false }
+            // Post-crisis suppression
+            guard profile.lastSafetyBoundaryAt == nil else { return false }
+            return true
         } catch {
             return false
         }

@@ -18,6 +18,8 @@ struct UserProfile: Codable, FetchableRecord, PersistableRecord, Identifiable, S
     var checkInCadence: String = "daily"
     var checkInTimeHour: Int = 9
     var checkInWeekday: Int?
+    // --- Safety (Story 6.3) ---
+    var lastSafetyBoundaryAt: Date?
     // --- Timestamps ---
     var createdAt: Date
     var updatedAt: Date

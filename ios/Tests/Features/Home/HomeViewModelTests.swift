@@ -179,6 +179,92 @@ struct HomeViewModelTests {
         #expect(viewModel.greeting == "Welcome back")
     }
 
+    // --- Story 6.3 Tests ---
+
+    @Test("HomeViewModel sets resting avatar when lastSafetyBoundaryAt is present")
+    @MainActor
+    func test_load_postCrisis_setsRestingAvatar() async throws {
+        let db = try makeTestDB()
+        let profile = UserProfile(
+            id: UUID(),
+            avatarId: "avatar_classic",
+            coachAppearanceId: "coach_sage",
+            coachName: "Sage",
+            onboardingStep: 5,
+            onboardingCompleted: true,
+            lastSafetyBoundaryAt: Date(),
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        try await db.dbPool.write { dbConn in
+            try profile.save(dbConn)
+        }
+
+        let appState = AppState()
+        appState.avatarState = .active
+        let viewModel = HomeViewModel(appState: appState, databaseManager: db)
+
+        await viewModel.load()
+
+        #expect(viewModel.isPostCrisis == true)
+        #expect(appState.avatarState == .resting)
+    }
+
+    @Test("HomeViewModel suppresses sprint nudges when post-crisis")
+    @MainActor
+    func test_load_postCrisis_suppressesSprintNudges() async throws {
+        let db = try makeTestDB()
+        let profile = UserProfile(
+            id: UUID(),
+            avatarId: "avatar_classic",
+            coachAppearanceId: "coach_sage",
+            coachName: "Sage",
+            onboardingStep: 5,
+            onboardingCompleted: true,
+            lastSafetyBoundaryAt: Date(),
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        try await db.dbPool.write { dbConn in
+            try profile.save(dbConn)
+        }
+        // Create an active sprint
+        let sprint = Sprint(
+            id: UUID(),
+            name: "Test Sprint",
+            startDate: Date(),
+            endDate: Date(timeIntervalSinceNow: 7 * 86400),
+            status: .active
+        )
+        try await db.dbPool.write { dbConn in
+            try sprint.save(dbConn)
+        }
+
+        let appState = AppState()
+        let viewModel = HomeViewModel(appState: appState, databaseManager: db)
+        await viewModel.load()
+
+        #expect(viewModel.isPostCrisis == true)
+        #expect(viewModel.homeStage == .welcome)
+        #expect(viewModel.insightDisplayText == nil)
+    }
+
+    @Test("HomeViewModel does not set resting avatar when lastSafetyBoundaryAt is nil")
+    @MainActor
+    func test_load_noCrisis_normalAvatar() async throws {
+        let db = try makeTestDB()
+        try await createProfile(in: db)
+
+        let appState = AppState()
+        appState.avatarState = .active
+        let viewModel = HomeViewModel(appState: appState, databaseManager: db)
+
+        await viewModel.load()
+
+        #expect(viewModel.isPostCrisis == false)
+        #expect(appState.avatarState == .active)
+    }
+
     // MARK: - Helpers
 
     private func makeDate(hour: Int) -> Date {

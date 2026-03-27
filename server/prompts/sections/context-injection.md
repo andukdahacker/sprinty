@@ -1,3 +1,4 @@
+{{re_engagement_context}}
 Context for this conversation:
 - Coach name: {{coach_name}}
 - User values: {{user_values}}

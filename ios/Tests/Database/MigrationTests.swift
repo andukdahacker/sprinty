@@ -542,6 +542,67 @@ struct MigrationTests {
         #expect(result?.name == "Active")
     }
 
+    // --- Story 6.3 Tests ---
+
+    @Test("v12 migration adds lastSafetyBoundaryAt column to UserProfile")
+    func v12SafetyBoundaryColumnExists() throws {
+        let db = try createInMemoryDatabase()
+        try db.read { db in
+            let columns = try db.columns(in: "UserProfile")
+            let columnNames = columns.map(\.name)
+            #expect(columnNames.contains("lastSafetyBoundaryAt"))
+        }
+    }
+
+    @Test("UserProfile can persist and read lastSafetyBoundaryAt")
+    func v12SafetyBoundaryRoundTrip() throws {
+        let db = try createInMemoryDatabase()
+        let now = Date()
+        let profile = UserProfile(
+            id: UUID(),
+            avatarId: "avatar_classic",
+            coachAppearanceId: "coach_sage",
+            coachName: "Sage",
+            onboardingStep: 3,
+            onboardingCompleted: true,
+            lastSafetyBoundaryAt: now,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        try db.write { db in
+            try profile.insert(db)
+        }
+        let fetched = try db.read { db in
+            try UserProfile.fetchOne(db, key: profile.id)
+        }
+        #expect(fetched != nil)
+        #expect(fetched?.lastSafetyBoundaryAt != nil)
+    }
+
+    @Test("UserProfile lastSafetyBoundaryAt nullable — nil roundtrip")
+    func v12SafetyBoundaryNullable() throws {
+        let db = try createInMemoryDatabase()
+        let profile = UserProfile(
+            id: UUID(),
+            avatarId: "avatar_classic",
+            coachAppearanceId: "coach_sage",
+            coachName: "Sage",
+            onboardingStep: 3,
+            onboardingCompleted: true,
+            lastSafetyBoundaryAt: nil,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        try db.write { db in
+            try profile.insert(db)
+        }
+        let fetched = try db.read { db in
+            try UserProfile.fetchOne(db, key: profile.id)
+        }
+        #expect(fetched != nil)
+        #expect(fetched?.lastSafetyBoundaryAt == nil)
+    }
+
     @Test("SprintStep.forSprint returns ordered steps")
     func sprintStepForSprintQuery() throws {
         let db = try createInMemoryDatabase()

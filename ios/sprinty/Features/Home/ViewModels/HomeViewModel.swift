@@ -21,8 +21,11 @@ final class HomeViewModel {
     var sprintDayNumber: Int = 0
     var sprintTotalDays: Int = 0
 
+    private(set) var isPostCrisis: Bool = false
+
     var homeStage: HomeDisclosureStage {
         if appState.isPaused { return .paused }
+        if isPostCrisis { return .welcome }
         if hasActiveSprint { return .sprintActive }
         if completedConversationCount >= 1 { return .insightUnlocked }
         return .welcome
@@ -30,6 +33,7 @@ final class HomeViewModel {
 
     var insightDisplayText: String? {
         if appState.isPaused { return "Your coach is here when you're ready." }
+        if isPostCrisis { return nil }
         if let latestInsight { return latestInsight }
         if completedConversationCount >= 1 { return "Your coach is getting to know you..." }
         return nil
@@ -77,6 +81,10 @@ final class HomeViewModel {
             }
             if let profile {
                 avatarId = profile.avatarId
+                if profile.lastSafetyBoundaryAt != nil {
+                    isPostCrisis = true
+                    appState.avatarState = .resting
+                }
             }
         } catch {
             // Fallback to defaults

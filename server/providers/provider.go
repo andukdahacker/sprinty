@@ -31,6 +31,7 @@ type UserState struct {
 	SessionCount           int      `json:"sessionCount"`
 	LastSessionGapHours    *int     `json:"lastSessionGapHours,omitempty"`
 	RecentSessionIntensity string   `json:"recentSessionIntensity"`
+	IsReturningFromCrisis  *bool    `json:"isReturningFromCrisis,omitempty"`
 }
 
 type ActiveSprintInfo struct {
