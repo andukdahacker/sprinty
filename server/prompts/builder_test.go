@@ -30,6 +30,7 @@ func setupTestSections(t *testing.T) string {
 		"challenger.md":       "Challenger capability: push back constructively.",
 		"summarize.md":        "Summarize the coaching conversation.",
 		"sprint-retro.md":     "Generate a narrative retrospective.",
+		"check-in.md":         "Check-in mode: brief response.",
 	}
 
 	for name, content := range files {
@@ -49,8 +50,8 @@ func TestNewBuilder_LoadsSections(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	if len(b.sections) != 12 {
-		t.Errorf("expected 12 sections, got %d", len(b.sections))
+	if len(b.sections) != 13 {
+		t.Errorf("expected 13 sections, got %d", len(b.sections))
 	}
 
 	if b.contentHash == "" {
@@ -596,5 +597,53 @@ func TestBuilder_Build_WithNilSprintContext_NoTemplate(t *testing.T) {
 
 	if strings.Contains(prompt, "{{sprint_context}}") {
 		t.Error("unreplaced sprint_context template variable found")
+	}
+}
+
+// --- Story 5.4 Tests ---
+
+func TestBuilder_Build_CheckInMode_IncludesCheckInSection(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	prompt := b.Build("check_in", "Sage", nil, nil, "", nil)
+
+	if !strings.Contains(prompt, "Check-in mode") {
+		t.Error("expected check-in section in prompt")
+	}
+}
+
+func TestBuilder_Build_CheckInMode_ExcludesDiscoveryAndDirective(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	prompt := b.Build("check_in", "Sage", nil, nil, "", nil)
+
+	if strings.Contains(prompt, "Discovery mode") {
+		t.Error("check_in mode should not include Discovery mode section")
+	}
+	if strings.Contains(prompt, "Directive mode") {
+		t.Error("check_in mode should not include Directive mode section")
+	}
+}
+
+func TestBuilder_Build_CheckInMode_IncludesSharedSections(t *testing.T) {
+	dir := setupTestSections(t)
+	b, err := NewBuilder(dir)
+	if err != nil {
+		t.Fatalf("NewBuilder error: %v", err)
+	}
+
+	prompt := b.Build("check_in", "Sage", nil, nil, "", nil)
+	for _, section := range []string{"Classify safety", "Select mood", "Tag domains", "Cultural context", "Mode transitions", "Challenger capability"} {
+		if !strings.Contains(prompt, section) {
+			t.Errorf("expected shared section %q in check_in prompt", section)
+		}
 	}
 }

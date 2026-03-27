@@ -10,6 +10,7 @@ final class AppState {
     var onboardingCompleted = false
     var avatarState: AvatarState = .active
     var isPaused: Bool = false
+    var pendingCheckIn: Bool = false
     var activeSprint: Sprint?
     var databaseManager: DatabaseManager?
 }

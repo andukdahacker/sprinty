@@ -44,6 +44,7 @@ func createTestPromptBuilder(t *testing.T) *prompts.Builder {
 		"challenger.md":       "Challenger capability: push back constructively.",
 		"summarize.md":        "Summarize the coaching conversation.",
 		"sprint-retro.md":     "Generate a narrative retrospective.",
+		"check-in.md":         "Check-in mode: brief response.",
 	}
 	for name, content := range files {
 		os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
@@ -81,6 +82,7 @@ func setupMuxWithBuilder(builder *prompts.Builder) *http.ServeMux {
 			"challenger.md":       "Challenger capability: push back constructively.",
 			"summarize.md":        "Summarize the coaching conversation.",
 			"sprint-retro.md":     "Generate a narrative retrospective.",
+			"check-in.md":         "Check-in mode: brief response.",
 		}
 		for name, content := range files {
 			os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
@@ -1102,6 +1104,55 @@ func TestSprintRetroHandler_EmptyContext_Returns400(t *testing.T) {
 	body := w.Body.String()
 	if !strings.Contains(body, "invalid_request") {
 		t.Error("expected invalid_request error code")
+	}
+}
+
+// --- Story 5.4 Tests ---
+
+func TestCheckInModeStreamsTokensAndDone(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+
+	payload := `{
+		"messages":[{"role":"user","content":"Quick check-in: here's where I am on my sprint"}],
+		"mode":"check_in",
+		"promptVersion":"1.0"
+	}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d. Body: %s", w.Code, w.Body.String())
+	}
+
+	ct := w.Header().Get("Content-Type")
+	if !strings.HasPrefix(ct, "text/event-stream") {
+		t.Errorf("expected text/event-stream content type, got %q", ct)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "event: token") {
+		t.Error("expected token events in check_in response")
+	}
+	if !strings.Contains(body, "event: done") {
+		t.Error("expected done event in check_in response")
+	}
+	if !strings.Contains(body, "showing up") {
+		t.Error("expected check-in specific text in response")
+	}
+}
+
+func TestCheckInModePromptAssembly(t *testing.T) {
+	builder := createTestPromptBuilder(t)
+	prompt := builder.Build("check_in", "Sage", nil, nil, "", nil)
+
+	if !strings.Contains(prompt, "Check-in mode") {
+		t.Error("expected check-in section in assembled prompt")
+	}
+	if strings.Contains(prompt, "Discovery mode") {
+		t.Error("check_in should not include discovery section")
 	}
 }
 

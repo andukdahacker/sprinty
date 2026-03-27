@@ -110,8 +110,23 @@ final class HomeViewModel {
     }
 
     private func loadLatestCheckIn() async {
-        // Check-in data deferred to Story 5.4 — gracefully return nil
-        latestCheckIn = nil
+        do {
+            let profile = try await databaseManager.dbPool.read { db in
+                try UserProfile.current().fetchOne(db)
+            }
+            let cadence = profile?.checkInCadence ?? "daily"
+
+            let checkIn: CheckIn? = try await databaseManager.dbPool.read { db in
+                if cadence == "weekly" {
+                    return try CheckIn.latestThisWeek().fetchOne(db)
+                } else {
+                    return try CheckIn.latestToday().fetchOne(db)
+                }
+            }
+            latestCheckIn = checkIn?.summary
+        } catch {
+            latestCheckIn = nil
+        }
     }
 
     private func loadActiveSprint() async {

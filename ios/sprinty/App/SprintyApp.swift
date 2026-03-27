@@ -1,8 +1,10 @@
 import SwiftUI
+import UserNotifications
 
 @main
 struct SprintyApp: App {
     @State private var appState = AppState()
+    @State private var notificationDelegate: CheckInNotificationDelegate?
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -12,6 +14,9 @@ struct SprintyApp: App {
                 .environment(appState)
                 .environment(\.coachingTheme, themeFor(context: .home, colorScheme: colorScheme))
                 .task {
+                    let delegate = CheckInNotificationDelegate(appState: appState)
+                    notificationDelegate = delegate
+                    UNUserNotificationCenter.current().delegate = delegate
                     await bootstrap()
                 }
         }
@@ -39,5 +44,32 @@ struct SprintyApp: App {
                 }
             }
         }
+    }
+}
+
+final class CheckInNotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
+    @MainActor private let appState: AppState
+
+    @MainActor init(appState: AppState) {
+        self.appState = appState
+        super.init()
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        if response.notification.request.identifier == CheckInNotificationService.checkInIdentifier {
+            await MainActor.run {
+                appState.pendingCheckIn = true
+            }
+        }
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        [.banner]
     }
 }

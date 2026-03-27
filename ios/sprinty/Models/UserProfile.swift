@@ -14,6 +14,10 @@ struct UserProfile: Codable, FetchableRecord, PersistableRecord, Identifiable, S
     var goals: String?
     var personalityTraits: String?
     var domainStates: String?
+    // --- Check-in settings (Story 5.4) ---
+    var checkInCadence: String = "daily"
+    var checkInTimeHour: Int = 9
+    var checkInWeekday: Int?
     // --- Timestamps ---
     var createdAt: Date
     var updatedAt: Date

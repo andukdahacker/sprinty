@@ -39,6 +39,7 @@ func NewBuilder(sectionsPath string) (*Builder, error) {
 		"challenger.md",
 		"summarize.md",
 		"sprint-retro.md",
+		"check-in.md",
 	}
 
 	var allContent strings.Builder
@@ -117,6 +118,11 @@ func (b *Builder) Build(mode string, coachName string, profile *providers.ChatPr
 		}
 	case "directive":
 		if s, ok := b.sections["mode-directive"]; ok {
+			prompt.WriteString(s)
+			prompt.WriteString("\n\n")
+		}
+	case "check_in":
+		if s, ok := b.sections["check-in"]; ok {
 			prompt.WriteString(s)
 			prompt.WriteString("\n\n")
 		}

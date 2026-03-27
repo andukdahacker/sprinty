@@ -9,11 +9,16 @@ final class SettingsViewModel {
     var avatarId: String = "avatar_classic"
     var coachAppearanceId: String = "coach_sage"
     var coachName: String = "Sage"
+    var checkInCadence: String = "daily"
+    var checkInTimeHour: Int = 9
+    var checkInWeekday: Int?
 
     let databaseManager: DatabaseManager
+    private let notificationService: CheckInNotificationServiceProtocol?
 
-    init(databaseManager: DatabaseManager) {
+    init(databaseManager: DatabaseManager, notificationService: CheckInNotificationServiceProtocol? = nil) {
         self.databaseManager = databaseManager
+        self.notificationService = notificationService
     }
 
     func loadProfile() async {
@@ -26,6 +31,9 @@ final class SettingsViewModel {
                 self.avatarId = profile.avatarId
                 self.coachAppearanceId = profile.coachAppearanceId
                 self.coachName = profile.coachName
+                self.checkInCadence = profile.checkInCadence
+                self.checkInTimeHour = profile.checkInTimeHour
+                self.checkInWeekday = profile.checkInWeekday
             }
         } catch {
             // Profile not found — keep defaults
@@ -70,6 +78,61 @@ final class SettingsViewModel {
                     }
                 }
                 WidgetCenter.shared.reloadAllTimelines()
+            } catch {
+                // Write failed — local state already updated for responsiveness
+            }
+        }
+    }
+    func updateCheckInCadence(_ newCadence: String) {
+        checkInCadence = newCadence
+        if newCadence == "weekly" && checkInWeekday == nil {
+            checkInWeekday = Calendar.current.component(.weekday, from: Date())
+        }
+        let weekday = checkInWeekday
+        let hour = checkInTimeHour
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await databaseManager.dbPool.write { db in
+                    if var profile = try UserProfile.fetchOne(db) {
+                        profile.checkInCadence = newCadence
+                        if newCadence == "weekly" && profile.checkInWeekday == nil {
+                            profile.checkInWeekday = Calendar.current.component(.weekday, from: Date())
+                        }
+                        profile.updatedAt = Date()
+                        try profile.update(db)
+                    }
+                }
+                await notificationService?.scheduleCheckInNotification(
+                    cadence: newCadence,
+                    hour: hour,
+                    weekday: newCadence == "weekly" ? weekday : nil
+                )
+            } catch {
+                // Write failed — local state already updated for responsiveness
+            }
+        }
+    }
+
+    func updateCheckInTime(_ newHour: Int) {
+        checkInTimeHour = newHour
+        let cadence = checkInCadence
+        let weekday = checkInWeekday
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await databaseManager.dbPool.write { db in
+                    if var profile = try UserProfile.fetchOne(db) {
+                        profile.checkInTimeHour = newHour
+                        profile.updatedAt = Date()
+                        try profile.update(db)
+                    }
+                }
+                await notificationService?.scheduleCheckInNotification(
+                    cadence: cadence,
+                    hour: newHour,
+                    weekday: cadence == "weekly" ? weekday : nil
+                )
             } catch {
                 // Write failed — local state already updated for responsiveness
             }

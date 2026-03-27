@@ -8,6 +8,7 @@ struct HomeView: View {
     let onTalkToCoach: () -> Void
     var onOpenSettings: (() -> Void)?
     var onOpenSprintDetail: (() -> Void)?
+    var onOpenCheckIn: (() -> Void)?
 
     private var homeTheme: CoachingTheme {
         themeFor(context: .home, colorScheme: colorScheme)
@@ -94,6 +95,19 @@ struct HomeView: View {
                         CheckInSummaryView(summary: checkIn)
                             .padding(.top, homeTheme.spacing.homeElement)
                             .transition(.opacity)
+                    } else if viewModel.latestCheckIn == nil,
+                              viewModel.homeStage == .sprintActive {
+                        Button {
+                            onOpenCheckIn?()
+                        } label: {
+                            Label("Check in", systemImage: "bubble.left")
+                                .font(homeTheme.typography.insightTextFont)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(homeTheme.palette.primaryActionStart)
+                        .padding(.top, homeTheme.spacing.homeElement)
+                        .transition(.opacity)
+                        .accessibilityLabel("Check in with your coach")
                     }
                 }
                 .padding(.horizontal, margin)

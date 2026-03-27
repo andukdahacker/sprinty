@@ -172,5 +172,35 @@ enum DatabaseMigrations {
                 t.add(column: "lastStepCompletedAt", .text)
             }
         }
+
+        migrator.registerMigration("v11_checkIn") { db in
+            try db.create(table: "CheckIn") { t in
+                t.column("id", .text).primaryKey().notNull()
+                t.column("sessionId", .text).notNull()
+                    .references("ConversationSession", onDelete: .cascade)
+                t.column("sprintId", .text).notNull()
+                    .references("Sprint", onDelete: .cascade)
+                t.column("summary", .text).notNull()
+                t.column("createdAt", .text).notNull()
+            }
+
+            try db.create(
+                index: "idx_checkin_sprintId",
+                on: "CheckIn",
+                columns: ["sprintId"]
+            )
+
+            try db.create(
+                index: "idx_checkin_createdAt",
+                on: "CheckIn",
+                columns: ["createdAt"]
+            )
+
+            try db.alter(table: "UserProfile") { t in
+                t.add(column: "checkInCadence", .text).notNull().defaults(to: "daily")
+                t.add(column: "checkInTimeHour", .integer).notNull().defaults(to: 9)
+                t.add(column: "checkInWeekday", .integer)
+            }
+        }
     }
 }

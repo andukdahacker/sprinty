@@ -12,6 +12,9 @@ struct RootView: View {
     @State private var showSprintDetail = false
     @State private var sprintDetailViewModel: SprintDetailViewModel?
     @State private var memoryViewModel: MemoryViewModel?
+    @State private var checkInViewModel: CheckInViewModel?
+    @State private var showCheckIn = false
+    @State private var checkInNotificationService: CheckInNotificationService?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -65,6 +68,9 @@ struct RootView: View {
                 }, onOpenSprintDetail: {
                     ensureSprintDetailViewModel(databaseManager: databaseManager)
                     showSprintDetail = true
+                }, onOpenCheckIn: {
+                    ensureCheckInViewModel(databaseManager: databaseManager)
+                    showCheckIn = true
                 })
                 .opacity(showConversation ? 0 : 1)
                 .offset(y: showConversation ? -20 : 0)
@@ -91,12 +97,28 @@ struct RootView: View {
             }
             .sheet(isPresented: $showSettings) {
                 if let memoryViewModel, let databaseManager = appState.databaseManager {
-                    SettingsView(memoryViewModel: memoryViewModel, databaseManager: databaseManager)
+                    SettingsView(memoryViewModel: memoryViewModel, databaseManager: databaseManager, notificationService: checkInNotificationService)
                 }
             }
             .sheet(isPresented: $showSprintDetail) {
                 if let sprintDetailViewModel {
                     SprintDetailView(viewModel: sprintDetailViewModel)
+                }
+            }
+            .sheet(isPresented: $showCheckIn, onDismiss: {
+                // Reload home data to show updated check-in summary
+                Task { await homeViewModel.load() }
+                checkInViewModel = nil
+            }) {
+                if let checkInViewModel {
+                    CheckInView(viewModel: checkInViewModel)
+                }
+            }
+            .onChange(of: appState.pendingCheckIn) { _, newValue in
+                if newValue {
+                    appState.pendingCheckIn = false
+                    ensureCheckInViewModel(databaseManager: databaseManager)
+                    showCheckIn = true
                 }
             }
         } else {
@@ -111,6 +133,10 @@ struct RootView: View {
                     databaseManager: databaseManager,
                     insightService: insightService
                 )
+                checkInNotificationService = CheckInNotificationService(databaseManager: databaseManager)
+            }
+            .task {
+                await rescheduleCheckInNotifications(databaseManager: databaseManager)
             }
         }
     }
@@ -122,6 +148,18 @@ struct RootView: View {
             appState: appState,
             databaseManager: databaseManager,
             chatService: chatService
+        )
+    }
+
+    private func ensureCheckInViewModel(databaseManager: DatabaseManager) {
+        guard checkInViewModel == nil else { return }
+        let chatService = makeChatService()
+        let sprintService = SprintService(databaseManager: databaseManager)
+        checkInViewModel = CheckInViewModel(
+            appState: appState,
+            databaseManager: databaseManager,
+            chatService: chatService,
+            sprintService: sprintService
         )
     }
 
@@ -211,6 +249,24 @@ struct RootView: View {
                     databaseManager: databaseManager
                 )
             }
+        }
+    }
+
+    private func rescheduleCheckInNotifications(databaseManager: DatabaseManager) async {
+        guard !appState.isPaused else { return }
+        guard let service = checkInNotificationService else { return }
+        do {
+            let profile = try await databaseManager.dbPool.read { db in
+                try UserProfile.current().fetchOne(db)
+            }
+            guard let profile else { return }
+            await service.scheduleCheckInNotification(
+                cadence: profile.checkInCadence,
+                hour: profile.checkInTimeHour,
+                weekday: profile.checkInCadence == "weekly" ? profile.checkInWeekday : nil
+            )
+        } catch {
+            // Profile read failed — notifications will be scheduled on next launch
         }
     }
 

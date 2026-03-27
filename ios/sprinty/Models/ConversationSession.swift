@@ -3,6 +3,7 @@ import GRDB
 
 enum SessionType: String, Codable, Sendable, DatabaseValueConvertible {
     case coaching
+    case checkIn
 }
 
 enum CoachingMode: String, Codable, Sendable, DatabaseValueConvertible {

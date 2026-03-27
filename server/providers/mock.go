@@ -17,6 +17,34 @@ func (m *MockProvider) StreamChat(ctx context.Context, req ChatRequest) (<-chan 
 	go func() {
 		defer close(ch)
 
+		// Handle check_in mode with brief response
+		if req.Mode == "check_in" {
+			checkInTokens := []string{
+				"You're showing up, and that matters. ",
+				"Keep that momentum going.",
+			}
+			for _, text := range checkInTokens {
+				select {
+				case <-ctx.Done():
+					return
+				case ch <- ChatEvent{Type: "token", Text: text}:
+				}
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- ChatEvent{
+				Type:        "done",
+				SafetyLevel: "green",
+				DomainTags:  []string{},
+				Mood:        "supportive",
+				Mode:        "check_in",
+				Usage:       &Usage{InputTokens: 30, OutputTokens: 15},
+			}:
+			}
+			return
+		}
+
 		// Handle sprint_retro mode with streaming tokens
 		if req.Mode == "sprint_retro" {
 			retroTokens := []string{

@@ -5,9 +5,9 @@ struct SettingsView: View {
     @State private var viewModel: SettingsViewModel
     @Environment(\.colorScheme) private var colorScheme
 
-    init(memoryViewModel: MemoryViewModel, databaseManager: DatabaseManager) {
+    init(memoryViewModel: MemoryViewModel, databaseManager: DatabaseManager, notificationService: CheckInNotificationServiceProtocol? = nil) {
         self.memoryViewModel = memoryViewModel
-        self._viewModel = State(initialValue: SettingsViewModel(databaseManager: databaseManager))
+        self._viewModel = State(initialValue: SettingsViewModel(databaseManager: databaseManager, notificationService: notificationService))
     }
 
     private var theme: CoachingTheme {
@@ -61,6 +61,29 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Picker("Cadence", selection: Binding(
+                        get: { viewModel.checkInCadence },
+                        set: { viewModel.updateCheckInCadence($0) }
+                    )) {
+                        Text("Daily").tag("daily")
+                        Text("Weekly").tag("weekly")
+                    }
+
+                    Picker("Time", selection: Binding(
+                        get: { viewModel.checkInTimeHour },
+                        set: { viewModel.updateCheckInTime($0) }
+                    )) {
+                        ForEach(6..<22, id: \.self) { hour in
+                            Text(formatHour(hour)).tag(hour)
+                        }
+                    }
+                } header: {
+                    Text("Check-ins")
+                        .sectionHeadingStyle()
+                        .foregroundStyle(theme.palette.textPrimary)
+                }
+
+                Section {
                     Text("Your data stays on your phone. You can export or delete everything anytime.")
                         .font(theme.typography.insightTextFont)
                         .foregroundStyle(theme.palette.textSecondary)
@@ -76,6 +99,15 @@ struct SettingsView: View {
                 await viewModel.loadProfile()
             }
         }
+    }
+
+    private func formatHour(_ hour: Int) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h a"
+        var components = DateComponents()
+        components.hour = hour
+        guard let date = Calendar.current.date(from: components) else { return "\(hour):00" }
+        return formatter.string(from: date)
     }
 }
 
