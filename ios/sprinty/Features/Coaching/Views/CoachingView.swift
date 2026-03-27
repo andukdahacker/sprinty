@@ -16,9 +16,12 @@ struct CoachingView: View {
 
     private var conversationTheme: CoachingTheme {
         var theme = themeFor(context: .conversation, colorScheme: colorScheme, safetyLevel: safetyThemeOverride, isPaused: false)
-            .applyingAmbientMode(viewModel.coachingMode, colorScheme: colorScheme)
-        if viewModel.challengerActive {
-            theme = theme.applyingChallengerShift(colorScheme: colorScheme)
+        // UX-DR94: Safety always wins — suppress ambient mode and challenger shifts when safety active
+        if safetyThemeOverride == .none {
+            theme = theme.applyingAmbientMode(viewModel.coachingMode, colorScheme: colorScheme)
+            if viewModel.challengerActive {
+                theme = theme.applyingChallengerShift(colorScheme: colorScheme)
+            }
         }
         return theme
     }

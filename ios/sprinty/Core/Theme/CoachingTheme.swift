@@ -25,7 +25,9 @@ struct CoachingTheme: Sendable {
     let cornerRadius: RadiusTokens
 
     func applying(safetyOverride: SafetyThemeOverride) -> CoachingTheme {
-        self // Stub — Story 6.2 fills in
+        guard safetyOverride != .none else { return self }
+        let transformedPalette = palette.applying(safetyOverride: safetyOverride)
+        return CoachingTheme(palette: transformedPalette, typography: typography, spacing: spacing, cornerRadius: cornerRadius)
     }
 
     func applyingPauseMode() -> CoachingTheme {

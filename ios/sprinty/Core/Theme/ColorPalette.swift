@@ -194,6 +194,64 @@ extension ColorPalette {
     )
 }
 
+// MARK: - Safety Override Transformation
+
+extension ColorPalette {
+    /// Transforms ALL 25 color properties based on the safety override level.
+    /// Unlike ambient mode shifts (which only replace backgrounds), safety transforms
+    /// every property to create a cohesive visual environment for the safety state.
+    func applying(safetyOverride: SafetyThemeOverride) -> ColorPalette {
+        switch safetyOverride {
+        case .none:
+            return self
+        case .warmthIncrease:
+            // Yellow: subtle warmth +8%, saturation -12%
+            return transformAll(warmthFactor: 0.08, desaturationFactor: 0.12)
+        case .noticeableDesaturation:
+            // Orange: saturation -45%, slight warmth +5%
+            return transformAll(warmthFactor: 0.05, desaturationFactor: 0.45)
+        case .significantDesaturation:
+            // Red: saturation -75%, warmth +10% for warm monochrome
+            return transformAll(warmthFactor: 0.10, desaturationFactor: 0.75)
+        }
+    }
+
+    private func transformAll(warmthFactor: CGFloat, desaturationFactor: CGFloat) -> ColorPalette {
+        func transform(_ color: Color) -> Color {
+            color.adjustedSaturation(by: desaturationFactor)
+                .adjustedWarmth(by: warmthFactor)
+        }
+
+        return ColorPalette(
+            backgroundStart: transform(backgroundStart),
+            backgroundEnd: transform(backgroundEnd),
+            textPrimary: transform(textPrimary),
+            textSecondary: transform(textSecondary),
+            avatarGlow: transform(avatarGlow),
+            avatarGradientStart: transform(avatarGradientStart),
+            avatarGradientEnd: transform(avatarGradientEnd),
+            insightBackground: transform(insightBackground),
+            sprintTrack: transform(sprintTrack),
+            sprintProgressStart: transform(sprintProgressStart),
+            sprintProgressEnd: transform(sprintProgressEnd),
+            primaryActionStart: transform(primaryActionStart),
+            primaryActionEnd: transform(primaryActionEnd),
+            primaryActionText: transform(primaryActionText),
+            coachDialogue: transform(coachDialogue),
+            userDialogue: transform(userDialogue),
+            userAccent: transform(userAccent),
+            coachPortraitGradientStart: transform(coachPortraitGradientStart),
+            coachPortraitGradientEnd: transform(coachPortraitGradientEnd),
+            coachPortraitGlow: transform(coachPortraitGlow),
+            coachNameText: transform(coachNameText),
+            coachStatusText: transform(coachStatusText),
+            dateSeparator: transform(dateSeparator),
+            inputBorder: transform(inputBorder),
+            sendButton: transform(sendButton)
+        )
+    }
+}
+
 // MARK: - Discovery Ambient Mode Shift
 
 extension ColorPalette {

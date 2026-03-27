@@ -20,6 +20,7 @@ struct CoachingViewModelSafetyTests {
     private func makeViewModel(
         chatService: MockChatService = MockChatService(),
         safetyHandler: SafetyHandlerProtocol = SafetyHandler(),
+        safetyStateManager: SafetyStateManagerProtocol = SafetyStateManager(),
         dbManager: DatabaseManager? = nil
     ) async throws -> (CoachingViewModel, MockChatService, DatabaseManager, AppState) {
         let db = try dbManager ?? makeTestDB()
@@ -30,7 +31,8 @@ struct CoachingViewModelSafetyTests {
             appState: appState,
             chatService: chatService,
             databaseManager: db,
-            safetyHandler: safetyHandler
+            safetyHandler: safetyHandler,
+            safetyStateManager: safetyStateManager
         )
         return (viewModel, chatService, db, appState)
     }
@@ -239,5 +241,86 @@ struct CoachingViewModelSafetyTests {
         #expect(viewModel.currentSafetyUIState.level == .green)
         #expect(viewModel.currentSafetyUIState.hiddenElements.isEmpty)
         #expect(viewModel.currentSafetyUIState.showCrisisResources == false)
+    }
+
+    // MARK: - Story 6.2: SafetyStateManager integration
+
+    @Test("SafetyStateManager receives processed classification")
+    @MainActor
+    func test_safetyStateManager_receivesClassification() async throws {
+        let mockStateManager = MockSafetyStateManager()
+        mockStateManager.stubbedProcessResult = .orange
+
+        let mockHandler = MockSafetyHandler()
+        mockHandler.stubbedClassifyResult = .orange
+        mockHandler.stubbedUIState = SafetyUIState(
+            level: .orange,
+            hiddenElements: [.gamification],
+            coachExpression: .gentle,
+            notificationBehavior: .safetyOnly,
+            showCrisisResources: true
+        )
+
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Response"),
+            .done(safetyLevel: "orange", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil),
+        ]
+        let (viewModel, _, db, _) = try await makeViewModel(
+            chatService: mockChat,
+            safetyHandler: mockHandler,
+            safetyStateManager: mockStateManager
+        )
+
+        let session = try await createSession(in: db)
+        _ = try await createMessage(in: db, sessionId: session.id)
+
+        await viewModel.loadMessagesAsync()
+        await viewModel.sendMessage("Test")
+
+        try await Task.sleep(for: .milliseconds(300))
+
+        #expect(mockStateManager.processClassificationCallCount == 1)
+        #expect(mockStateManager.lastProcessedLevel == .orange)
+        #expect(mockStateManager.lastProcessedSource == .genuine)
+        #expect(viewModel.currentSafetyUIState.level == .orange)
+    }
+
+    @Test("Failsafe source passed when serverLevel is nil")
+    @MainActor
+    func test_failsafeSource_nilServerLevel() async throws {
+        let mockStateManager = MockSafetyStateManager()
+        mockStateManager.stubbedProcessResult = .yellow
+
+        let mockHandler = MockSafetyHandler()
+        mockHandler.stubbedClassifyResult = .yellow
+        mockHandler.stubbedUIState = SafetyUIState(
+            level: .yellow,
+            hiddenElements: [],
+            coachExpression: .gentle,
+            notificationBehavior: .normal,
+            showCrisisResources: false
+        )
+
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Response"),
+            .done(safetyLevel: "invalid_level", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil),
+        ]
+        let (viewModel, _, db, _) = try await makeViewModel(
+            chatService: mockChat,
+            safetyHandler: mockHandler,
+            safetyStateManager: mockStateManager
+        )
+
+        let session = try await createSession(in: db)
+        _ = try await createMessage(in: db, sessionId: session.id)
+
+        await viewModel.loadMessagesAsync()
+        await viewModel.sendMessage("Test")
+
+        try await Task.sleep(for: .milliseconds(300))
+
+        #expect(mockStateManager.lastProcessedSource == .failsafe)
     }
 }

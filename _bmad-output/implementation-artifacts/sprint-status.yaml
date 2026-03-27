@@ -36,6 +36,10 @@
 
 generated: 2026-03-17
 last_updated: 2026-03-27
+# Story 6.2 code review completed: 2026-03-27
+# Story 6.2 dev completed: 2026-03-27
+# Story 6.2 dev started: 2026-03-27
+# Story 6.2 context created: 2026-03-27
 # Story 6.1 code review completed: 2026-03-27
 # Story 6.1 dev completed: 2026-03-27
 # Story 6.1 dev started: 2026-03-27
@@ -176,7 +180,7 @@ development_status:
   # Epic 6: Safety & Clinical Boundaries
   epic-6: in-progress
   6-1-on-device-safety-classification: done
-  6-2-safety-state-manager-and-theme-transformations: backlog
+  6-2-safety-state-manager-and-theme-transformations: done
   6-3-post-crisis-re-engagement: backlog
   6-4-compliance-logging: backlog
   6-5-safety-regression-suite: backlog
