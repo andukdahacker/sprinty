@@ -51,8 +51,12 @@ final class CoachingViewModel {
     private let profileEnricher: ProfileEnricherProtocol?
     private let searchService: SearchServiceProtocol?
     private let sprintService: SprintServiceProtocol?
+    private let safetyHandler: SafetyHandlerProtocol
 
-    init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager, embeddingPipeline: EmbeddingPipelineProtocol? = nil, profileUpdateService: ProfileUpdateServiceProtocol? = nil, profileEnricher: ProfileEnricherProtocol? = nil, searchService: SearchServiceProtocol? = nil, sprintService: SprintServiceProtocol? = nil) {
+    // MARK: - Safety State
+    var currentSafetyUIState: SafetyUIState = .green
+
+    init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager, embeddingPipeline: EmbeddingPipelineProtocol? = nil, profileUpdateService: ProfileUpdateServiceProtocol? = nil, profileEnricher: ProfileEnricherProtocol? = nil, searchService: SearchServiceProtocol? = nil, sprintService: SprintServiceProtocol? = nil, safetyHandler: SafetyHandlerProtocol = SafetyHandler()) {
         self.appState = appState
         self.chatService = chatService
         self.databaseManager = databaseManager
@@ -61,6 +65,7 @@ final class CoachingViewModel {
         self.profileEnricher = profileEnricher
         self.searchService = searchService
         self.sprintService = sprintService
+        self.safetyHandler = safetyHandler
     }
 
     func loadMessages() {
@@ -248,8 +253,14 @@ final class CoachingViewModel {
                             self.streamingText = ""
                             self.isStreaming = false
 
-                            if let level = SafetyLevel(rawValue: safetyLevel) {
-                                await self.updateSessionSafetyLevel(level)
+                            let serverLevel = SafetyLevel(rawValue: safetyLevel)
+                            let classifiedLevel = self.safetyHandler.classify(serverLevel: serverLevel)
+                            self.currentSafetyUIState = self.safetyHandler.uiState(for: classifiedLevel)
+                            await self.updateSessionSafetyLevel(classifiedLevel)
+
+                            // Safety override: set gentle expression for yellow+
+                            if classifiedLevel >= .yellow {
+                                self.coachExpression = .gentle
                             }
 
                             if let mode, let newMode = CoachingMode(rawValue: mode), newMode != self.coachingMode {

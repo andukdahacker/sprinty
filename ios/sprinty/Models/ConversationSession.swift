@@ -11,10 +11,26 @@ enum CoachingMode: String, Codable, Sendable, DatabaseValueConvertible {
     case directive
 }
 
-enum SafetyLevel: String, Codable, Sendable, DatabaseValueConvertible {
+enum SafetyLevel: String, Codable, Sendable, DatabaseValueConvertible, Comparable {
     case green
     case yellow
+    case orange
     case red
+
+    // MARK: - Comparable
+
+    private var severityOrder: Int {
+        switch self {
+        case .green: 0
+        case .yellow: 1
+        case .orange: 2
+        case .red: 3
+        }
+    }
+
+    static func < (lhs: SafetyLevel, rhs: SafetyLevel) -> Bool {
+        lhs.severityOrder < rhs.severityOrder
+    }
 }
 
 struct ModeSegment: Codable, Sendable {

@@ -178,13 +178,15 @@ struct RootView: View {
         let embeddingPipeline = makeEmbeddingPipeline(databaseManager: databaseManager)
         let profileUpdateService = ProfileUpdateService(databaseManager: databaseManager)
         let profileEnricher = ProfileEnricher(databaseManager: databaseManager)
+        let safetyHandler = SafetyHandler()
         coachingViewModel = CoachingViewModel(
             appState: appState,
             chatService: chatService,
             databaseManager: databaseManager,
             embeddingPipeline: embeddingPipeline,
             profileUpdateService: profileUpdateService,
-            profileEnricher: profileEnricher
+            profileEnricher: profileEnricher,
+            safetyHandler: safetyHandler
         )
     }
 

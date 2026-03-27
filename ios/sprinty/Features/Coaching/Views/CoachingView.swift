@@ -5,8 +5,17 @@ struct CoachingView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var inputText = ""
 
+    private var safetyThemeOverride: SafetyThemeOverride {
+        switch viewModel.currentSafetyUIState.level {
+        case .green: .none
+        case .yellow: .warmthIncrease
+        case .orange: .noticeableDesaturation
+        case .red: .significantDesaturation
+        }
+    }
+
     private var conversationTheme: CoachingTheme {
-        var theme = themeFor(context: .conversation, colorScheme: colorScheme, safetyLevel: .none, isPaused: false)
+        var theme = themeFor(context: .conversation, colorScheme: colorScheme, safetyLevel: safetyThemeOverride, isPaused: false)
             .applyingAmbientMode(viewModel.coachingMode, colorScheme: colorScheme)
         if viewModel.challengerActive {
             theme = theme.applyingChallengerShift(colorScheme: colorScheme)
@@ -19,8 +28,18 @@ struct CoachingView: View {
             let margin = SpacingScale().screenMargin(for: geometry.size.width)
 
             VStack(spacing: 0) {
-                CoachCharacterView(expression: viewModel.coachExpression, coachAppearanceId: viewModel.coachAppearanceId)
-                    .padding(.bottom, conversationTheme.spacing.coachCharacterBottom)
+                // Red safety: prominent emergency resources at top
+                if viewModel.currentSafetyUIState.level == .red {
+                    ProfessionalResourcesView(isProminent: true)
+                        .padding(.horizontal, margin)
+                        .padding(.vertical, 8)
+                        .animation(nil, value: viewModel.currentSafetyUIState.level)
+                }
+
+                if !viewModel.currentSafetyUIState.hiddenElements.contains(.avatarActivity) {
+                    CoachCharacterView(expression: viewModel.coachExpression, coachAppearanceId: viewModel.coachAppearanceId)
+                        .padding(.bottom, conversationTheme.spacing.coachCharacterBottom)
+                }
 
                 SearchOverlayView(viewModel: viewModel)
                     .padding(.horizontal, margin)
@@ -82,7 +101,16 @@ struct CoachingView: View {
                                 DialogueTurnView(content: viewModel.streamingText, role: .assistant)
                                     .id("streaming")
                             }
-                            sprintProposalSection
+                            // Safety: show professional resources inline for orange/red
+                            if viewModel.currentSafetyUIState.showCrisisResources {
+                                ProfessionalResourcesView(isProminent: viewModel.currentSafetyUIState.level == .red)
+                                    .animation(nil, value: viewModel.currentSafetyUIState.level)
+                            }
+
+                            // Safety: hide sprint proposal when gamification is hidden
+                            if !viewModel.currentSafetyUIState.hiddenElements.contains(.gamification) {
+                                sprintProposalSection
+                            }
                         }
                         .padding(.horizontal, margin)
                         .contentColumn()
@@ -145,6 +173,24 @@ struct CoachingView: View {
             UIAccessibility.isReduceMotionEnabled ? nil : .easeInOut(duration: 0.4),
             value: viewModel.challengerActive
         )
+        // UX-DR74: Safety transitions are immediate (no animation)
+        .animation(nil, value: viewModel.currentSafetyUIState.level)
+        .onChange(of: viewModel.currentSafetyUIState.level) { _, newLevel in
+            let announcement: String
+            switch newLevel {
+            case .green:
+                announcement = ""
+            case .yellow:
+                announcement = "Coach is being more attentive"
+            case .orange:
+                announcement = "Connecting you with resources"
+            case .red:
+                announcement = "Safety resources available"
+            }
+            if !announcement.isEmpty {
+                AccessibilityNotification.Announcement(announcement).post()
+            }
+        }
         .task {
             await viewModel.loadMessagesAsync()
             await viewModel.generateDailyGreeting()
