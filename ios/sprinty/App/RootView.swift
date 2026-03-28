@@ -180,6 +180,7 @@ struct RootView: View {
         let profileEnricher = ProfileEnricher(databaseManager: databaseManager)
         let safetyHandler = SafetyHandler()
         let safetyStateManager = SafetyStateManager()
+        let complianceLogger = ComplianceLogger(databaseManager: databaseManager)
         coachingViewModel = CoachingViewModel(
             appState: appState,
             chatService: chatService,
@@ -188,7 +189,8 @@ struct RootView: View {
             profileUpdateService: profileUpdateService,
             profileEnricher: profileEnricher,
             safetyHandler: safetyHandler,
-            safetyStateManager: safetyStateManager
+            safetyStateManager: safetyStateManager,
+            complianceLogger: complianceLogger
         )
     }
 

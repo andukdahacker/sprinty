@@ -1186,3 +1186,83 @@ func TestSprintContextMilestoneFields(t *testing.T) {
 		t.Error("expected Challenger suppression in milestone context")
 	}
 }
+
+// --- Story 6.4 Tests ---
+
+func setupMuxWithProvider(provider *providers.MockProvider) *http.ServeMux {
+	authMW := middleware.AuthMiddleware(testSecret)
+
+	dir, _ := os.MkdirTemp("", "prompts-test-*")
+	sectionsDir := filepath.Join(dir, "sections")
+	os.MkdirAll(sectionsDir, 0o755)
+	files := map[string]string{
+		"base-persona.md":      "You are {{coach_name}}, a coach.",
+		"mode-discovery.md":    "Discovery mode.",
+		"mode-directive.md":    "Directive.",
+		"safety.md":            "Safety.",
+		"mood.md":              "Mood.",
+		"tagging.md":           "Tags.",
+		"cultural.md":          "Cultural.",
+		"context-injection.md": "{{retrieved_memories}} Coach: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
+		"mode-transitions.md": "Mode transitions: analyze user intent.",
+		"challenger.md":       "Challenger capability: push back constructively.",
+		"summarize.md":        "Summarize the coaching conversation.",
+		"sprint-retro.md":     "Generate a narrative retrospective.",
+		"check-in.md":         "Check-in mode: brief response.",
+	}
+	for name, content := range files {
+		os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
+	}
+	builder, _ := prompts.NewBuilder(sectionsDir)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health", handlers.HealthHandler)
+	mux.HandleFunc("POST /v1/auth/register", handlers.RegisterHandler(testSecret))
+	mux.Handle("POST /v1/auth/refresh", authMW(http.HandlerFunc(handlers.RefreshHandler(testSecret))))
+	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(provider, builder))))
+	return mux
+}
+
+func TestNonGreenSafetyLevelInDoneEvent(t *testing.T) {
+	mock := providers.NewMockProvider()
+	mock.StubbedSafetyLevel = "yellow"
+	mux := setupMuxWithProvider(mock)
+	token := createValidToken(t)
+
+	payload := `{
+		"messages":[{"role":"user","content":"I'm feeling really stressed"}],
+		"mode":"discovery",
+		"promptVersion":"1.0"
+	}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d. Body: %s", w.Code, w.Body.String())
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "event: done") {
+		t.Fatal("expected done event in response")
+	}
+
+	// Verify the done event contains the non-green safety level
+	scanner := bufio.NewScanner(strings.NewReader(body))
+	foundSafetyLevel := false
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "data: ") && strings.Contains(line, "safetyLevel") {
+			var doneData map[string]any
+			if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &doneData); err == nil {
+				if sl, ok := doneData["safetyLevel"].(string); ok && sl == "yellow" {
+					foundSafetyLevel = true
+				}
+			}
+		}
+	}
+	if !foundSafetyLevel {
+		t.Error("expected done event to contain safetyLevel 'yellow'")
+	}
+}

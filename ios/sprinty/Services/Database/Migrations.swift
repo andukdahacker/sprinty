@@ -208,5 +208,19 @@ enum DatabaseMigrations {
                 t.add(column: "lastSafetyBoundaryAt", .text)
             }
         }
+
+        migrator.registerMigration("v13_complianceLog") { db in
+            try db.create(table: "SafetyComplianceLog") { t in
+                t.column("id", .text).primaryKey().notNull()
+                t.column("sessionId", .text).notNull()
+                t.column("timestamp", .text).notNull()
+                t.column("safetyLevel", .text).notNull()
+                t.column("classificationSource", .text).notNull()
+                t.column("eventType", .text).notNull()
+                t.column("previousLevel", .text)
+            }
+            try db.create(index: "idx_complianceLog_timestamp", on: "SafetyComplianceLog", columns: ["timestamp"])
+            try db.create(index: "idx_complianceLog_safetyLevel", on: "SafetyComplianceLog", columns: ["safetyLevel"])
+        }
     }
 }

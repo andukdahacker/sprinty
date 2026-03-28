@@ -53,12 +53,14 @@ final class CoachingViewModel {
     private let sprintService: SprintServiceProtocol?
     private let safetyHandler: SafetyHandlerProtocol
     private let safetyStateManager: SafetyStateManagerProtocol
+    private let complianceLogger: ComplianceLoggerProtocol
+    private var previousSafetyLevel: SafetyLevel?
 
     // MARK: - Safety State
     var currentSafetyUIState: SafetyUIState = .green
     var isReturningFromCrisis: Bool = false
 
-    init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager, embeddingPipeline: EmbeddingPipelineProtocol? = nil, profileUpdateService: ProfileUpdateServiceProtocol? = nil, profileEnricher: ProfileEnricherProtocol? = nil, searchService: SearchServiceProtocol? = nil, sprintService: SprintServiceProtocol? = nil, safetyHandler: SafetyHandlerProtocol = SafetyHandler(), safetyStateManager: SafetyStateManagerProtocol = SafetyStateManager()) {
+    init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager, embeddingPipeline: EmbeddingPipelineProtocol? = nil, profileUpdateService: ProfileUpdateServiceProtocol? = nil, profileEnricher: ProfileEnricherProtocol? = nil, searchService: SearchServiceProtocol? = nil, sprintService: SprintServiceProtocol? = nil, safetyHandler: SafetyHandlerProtocol = SafetyHandler(), safetyStateManager: SafetyStateManagerProtocol = SafetyStateManager(), complianceLogger: ComplianceLoggerProtocol? = nil) {
         self.appState = appState
         self.chatService = chatService
         self.databaseManager = databaseManager
@@ -69,6 +71,7 @@ final class CoachingViewModel {
         self.sprintService = sprintService
         self.safetyHandler = safetyHandler
         self.safetyStateManager = safetyStateManager
+        self.complianceLogger = complianceLogger ?? ComplianceLogger(databaseManager: databaseManager)
     }
 
     func loadMessages() {
@@ -265,6 +268,22 @@ final class CoachingViewModel {
                             let processedLevel = self.safetyStateManager.processClassification(classifiedLevel, source: source)
                             self.currentSafetyUIState = self.safetyHandler.uiState(for: processedLevel)
                             await self.updateSessionSafetyLevel(processedLevel)
+
+                            // Compliance logging for all non-green safety levels
+                            if processedLevel >= .yellow {
+                                let prevLevel = self.previousSafetyLevel
+                                let logger = self.complianceLogger
+                                let sessionId = self.currentSession?.id ?? UUID()
+                                Task {
+                                    await logger.logSafetyBoundary(
+                                        sessionId: sessionId,
+                                        level: processedLevel,
+                                        source: source,
+                                        previousLevel: prevLevel
+                                    )
+                                }
+                                self.previousSafetyLevel = processedLevel
+                            }
 
                             // Persist safety boundary event on orange/red
                             if processedLevel >= .orange {
@@ -547,6 +566,7 @@ final class CoachingViewModel {
 
     private func createNewSession() async throws -> ConversationSession {
         safetyStateManager.resetSession()
+        previousSafetyLevel = nil
 
         // Detect returning-from-crisis state
         let profile: UserProfile? = try await databaseManager.dbPool.read { db in

@@ -1,6 +1,6 @@
 import Foundation
 
-enum SafetyClassificationSource: Sendable {
+enum SafetyClassificationSource: String, Sendable {
     case genuine
     case failsafe
 }

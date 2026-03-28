@@ -118,6 +118,22 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 					donePayload["profileUpdate"] = json.RawMessage(event.ProfileUpdate)
 				}
 				data, _ = json.Marshal(donePayload)
+
+				// Compliance logging: non-green safety levels
+				if event.SafetyLevel != "green" && event.SafetyLevel != "" {
+					deviceID := ""
+					tier := ""
+					if claims, ok := middleware.ClaimsFromContext(r.Context()); ok {
+						deviceID = claims.DeviceID
+						tier = claims.Tier
+					}
+					slog.Info("compliance.safety_boundary",
+						"safetyLevel", event.SafetyLevel,
+						"deviceId", deviceID,
+						"tier", tier,
+						"mode", req.Mode,
+					)
+				}
 			default:
 				continue
 			}

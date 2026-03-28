@@ -5,6 +5,7 @@ import "context"
 type MockProvider struct {
 	StubbedMode           string
 	StubbedChallengerUsed bool
+	StubbedSafetyLevel    string
 }
 
 func NewMockProvider() *MockProvider {
@@ -110,7 +111,7 @@ func (m *MockProvider) StreamChat(ctx context.Context, req ChatRequest) (<-chan 
 			return
 		case ch <- ChatEvent{
 			Type:           "done",
-			SafetyLevel:    "green",
+			SafetyLevel:    func() string { if m.StubbedSafetyLevel != "" { return m.StubbedSafetyLevel }; return "green" }(),
 			DomainTags:     []string{},
 			Mood:           "welcoming",
 			Mode:           func() string { if m.StubbedMode != "" { return m.StubbedMode }; return req.Mode }(),

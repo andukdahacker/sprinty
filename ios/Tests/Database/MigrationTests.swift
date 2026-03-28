@@ -603,6 +603,215 @@ struct MigrationTests {
         #expect(fetched?.lastSafetyBoundaryAt == nil)
     }
 
+    // --- Story 6.4 Tests ---
+
+    @Test("v13 migration creates SafetyComplianceLog table with correct columns")
+    func v13ComplianceLogTableCreated() throws {
+        let db = try createInMemoryDatabase()
+        try db.read { db in
+            let columns = try db.columns(in: "SafetyComplianceLog")
+            let columnNames = columns.map(\.name)
+            #expect(columnNames.contains("id"))
+            #expect(columnNames.contains("sessionId"))
+            #expect(columnNames.contains("timestamp"))
+            #expect(columnNames.contains("safetyLevel"))
+            #expect(columnNames.contains("classificationSource"))
+            #expect(columnNames.contains("eventType"))
+            #expect(columnNames.contains("previousLevel"))
+        }
+    }
+
+    @Test("v13 migration creates timestamp index on SafetyComplianceLog")
+    func v13TimestampIndexExists() throws {
+        let db = try createInMemoryDatabase()
+        try db.read { db in
+            let indexes = try db.indexes(on: "SafetyComplianceLog")
+            let indexNames = indexes.map(\.name)
+            #expect(indexNames.contains("idx_complianceLog_timestamp"))
+        }
+    }
+
+    @Test("v13 migration creates safetyLevel index on SafetyComplianceLog")
+    func v13SafetyLevelIndexExists() throws {
+        let db = try createInMemoryDatabase()
+        try db.read { db in
+            let indexes = try db.indexes(on: "SafetyComplianceLog")
+            let indexNames = indexes.map(\.name)
+            #expect(indexNames.contains("idx_complianceLog_safetyLevel"))
+        }
+    }
+
+    @Test("Can insert and fetch SafetyComplianceLog")
+    func insertAndFetchComplianceLog() throws {
+        let db = try createInMemoryDatabase()
+        let sessionId = UUID()
+        let session = ConversationSession(
+            id: sessionId,
+            startedAt: Date(),
+            endedAt: nil,
+            type: .coaching,
+            mode: .discovery,
+            safetyLevel: .green,
+            promptVersion: nil
+        )
+        let log = SafetyComplianceLog(
+            id: UUID(),
+            sessionId: sessionId,
+            timestamp: Date(),
+            safetyLevel: .yellow,
+            classificationSource: "genuine",
+            eventType: "boundary_detected",
+            previousLevel: "green"
+        )
+        try db.write { db in
+            try session.insert(db)
+            try log.insert(db)
+        }
+        let fetched = try db.read { db in
+            try SafetyComplianceLog.fetchOne(db, key: log.id)
+        }
+        #expect(fetched != nil)
+        #expect(fetched?.sessionId == sessionId)
+        #expect(fetched?.safetyLevel == .yellow)
+        #expect(fetched?.classificationSource == "genuine")
+        #expect(fetched?.eventType == "boundary_detected")
+        #expect(fetched?.previousLevel == "green")
+    }
+
+    @Test("SafetyComplianceLog previousLevel is nullable")
+    func complianceLogNullablePreviousLevel() throws {
+        let db = try createInMemoryDatabase()
+        let sessionId = UUID()
+        let session = ConversationSession(
+            id: sessionId,
+            startedAt: Date(),
+            endedAt: nil,
+            type: .coaching,
+            mode: .discovery,
+            safetyLevel: .green,
+            promptVersion: nil
+        )
+        let log = SafetyComplianceLog(
+            id: UUID(),
+            sessionId: sessionId,
+            timestamp: Date(),
+            safetyLevel: .orange,
+            classificationSource: "failsafe",
+            eventType: "boundary_detected",
+            previousLevel: nil
+        )
+        try db.write { db in
+            try session.insert(db)
+            try log.insert(db)
+        }
+        let fetched = try db.read { db in
+            try SafetyComplianceLog.fetchOne(db, key: log.id)
+        }
+        #expect(fetched != nil)
+        #expect(fetched?.previousLevel == nil)
+    }
+
+    @Test("SafetyComplianceLog insert and read back — append-only verification")
+    func complianceLogAppendOnly() throws {
+        let db = try createInMemoryDatabase()
+        let sessionId = UUID()
+        let session = ConversationSession(id: sessionId, startedAt: Date(), endedAt: nil, type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: nil)
+        let logId = UUID()
+        let log = SafetyComplianceLog(id: logId, sessionId: sessionId, timestamp: Date(), safetyLevel: .orange, classificationSource: "genuine", eventType: "boundary_detected", previousLevel: "yellow")
+        try db.write { db in
+            try session.insert(db)
+            try log.insert(db)
+        }
+        let fetched = try db.read { db in
+            try SafetyComplianceLog.fetchOne(db, key: logId)
+        }
+        #expect(fetched != nil)
+        #expect(fetched?.id == logId)
+        #expect(fetched?.safetyLevel == .orange)
+        #expect(fetched?.classificationSource == "genuine")
+        #expect(fetched?.eventType == "boundary_detected")
+    }
+
+    @Test("SafetyComplianceLog.timeline returns entries ordered by timestamp desc")
+    func complianceLogTimelineQuery() throws {
+        let db = try createInMemoryDatabase()
+        let sessionId = UUID()
+        let session = ConversationSession(id: sessionId, startedAt: Date(), endedAt: nil, type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: nil)
+        try db.write { db in
+            try session.insert(db)
+        }
+
+        let older = SafetyComplianceLog(id: UUID(), sessionId: sessionId, timestamp: Date(timeIntervalSinceNow: -3600), safetyLevel: .yellow, classificationSource: "genuine", eventType: "boundary_detected", previousLevel: nil)
+        let newer = SafetyComplianceLog(id: UUID(), sessionId: sessionId, timestamp: Date(), safetyLevel: .orange, classificationSource: "genuine", eventType: "boundary_detected", previousLevel: "yellow")
+        try db.write { db in
+            try older.insert(db)
+            try newer.insert(db)
+        }
+
+        let results = try db.read { db in
+            try SafetyComplianceLog.timeline(limit: 10).fetchAll(db)
+        }
+        #expect(results.count == 2)
+        #expect(results[0].safetyLevel == .orange) // newest first
+        #expect(results[1].safetyLevel == .yellow)
+    }
+
+    @Test("SafetyComplianceLog.forSession filters by session ID")
+    func complianceLogForSessionQuery() throws {
+        let db = try createInMemoryDatabase()
+        let sessionA = UUID()
+        let sessionB = UUID()
+        let sessA = ConversationSession(id: sessionA, startedAt: Date(), endedAt: nil, type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: nil)
+        let sessB = ConversationSession(id: sessionB, startedAt: Date(), endedAt: nil, type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: nil)
+        try db.write { db in
+            try sessA.insert(db)
+            try sessB.insert(db)
+        }
+
+        let logA = SafetyComplianceLog(id: UUID(), sessionId: sessionA, timestamp: Date(), safetyLevel: .yellow, classificationSource: "genuine", eventType: "boundary_detected", previousLevel: nil)
+        let logB = SafetyComplianceLog(id: UUID(), sessionId: sessionB, timestamp: Date(), safetyLevel: .red, classificationSource: "genuine", eventType: "boundary_detected", previousLevel: nil)
+        try db.write { db in
+            try logA.insert(db)
+            try logB.insert(db)
+        }
+
+        let results = try db.read { db in
+            try SafetyComplianceLog.forSession(id: sessionA).fetchAll(db)
+        }
+        #expect(results.count == 1)
+        #expect(results[0].safetyLevel == .yellow)
+    }
+
+    @Test("SafetyComplianceLog.forLevel filters by safety level")
+    func complianceLogForLevelQuery() throws {
+        let db = try createInMemoryDatabase()
+        let sessionId = UUID()
+        let session = ConversationSession(id: sessionId, startedAt: Date(), endedAt: nil, type: .coaching, mode: .discovery, safetyLevel: .green, promptVersion: nil)
+        try db.write { db in
+            try session.insert(db)
+        }
+
+        let yellowLog = SafetyComplianceLog(id: UUID(), sessionId: sessionId, timestamp: Date(), safetyLevel: .yellow, classificationSource: "genuine", eventType: "boundary_detected", previousLevel: nil)
+        let orangeLog = SafetyComplianceLog(id: UUID(), sessionId: sessionId, timestamp: Date(), safetyLevel: .orange, classificationSource: "genuine", eventType: "boundary_detected", previousLevel: nil)
+        let redLog = SafetyComplianceLog(id: UUID(), sessionId: sessionId, timestamp: Date(), safetyLevel: .red, classificationSource: "genuine", eventType: "boundary_detected", previousLevel: nil)
+        try db.write { db in
+            try yellowLog.insert(db)
+            try orangeLog.insert(db)
+            try redLog.insert(db)
+        }
+
+        let yellowResults = try db.read { db in
+            try SafetyComplianceLog.forLevel(.yellow).fetchAll(db)
+        }
+        #expect(yellowResults.count == 1)
+        #expect(yellowResults[0].safetyLevel == .yellow)
+
+        let orangeResults = try db.read { db in
+            try SafetyComplianceLog.forLevel(.orange).fetchAll(db)
+        }
+        #expect(orangeResults.count == 1)
+    }
+
     @Test("SprintStep.forSprint returns ordered steps")
     func sprintStepForSprintQuery() throws {
         let db = try createInMemoryDatabase()
