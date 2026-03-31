@@ -23,14 +23,12 @@ jobs:
         working-directory: server
         run: go test ./...
 
-      - name: Safety regression suite (placeholder)
+      - name: Safety regression suite
         working-directory: server
-        run: |
-          if [ -d "tests/safety" ]; then
-            go test -tags=safety ./tests/safety/...
-          else
-            echo "Safety test directory not yet created — skipping"
-          fi
+        continue-on-error: false
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: go test -tags=safety -timeout=300s -v ./tests/safety/...
 
       - name: Docker build verification
         run: docker build -t sprinty-server ./server
