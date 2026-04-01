@@ -31,6 +31,7 @@ func setupTestSections(t *testing.T) string {
 		"summarize.md":        "Summarize the coaching conversation.",
 		"sprint-retro.md":     "Generate a narrative retrospective.",
 		"check-in.md":         "Check-in mode: brief response.",
+		"autonomy.md":         "Autonomy: suggest breathers when intensity is high.",
 	}
 
 	for name, content := range files {
@@ -50,8 +51,8 @@ func TestNewBuilder_LoadsSections(t *testing.T) {
 		t.Fatalf("NewBuilder error: %v", err)
 	}
 
-	if len(b.sections) != 13 {
-		t.Errorf("expected 13 sections, got %d", len(b.sections))
+	if len(b.sections) != 14 {
+		t.Errorf("expected 14 sections, got %d", len(b.sections))
 	}
 
 	if b.contentHash == "" {

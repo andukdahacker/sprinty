@@ -31,7 +31,8 @@ struct CoachingTheme: Sendable {
     }
 
     func applyingPauseMode() -> CoachingTheme {
-        self // Stub — Story 7.1 fills in
+        let transformedPalette = palette.applyingPauseMode()
+        return CoachingTheme(palette: transformedPalette, typography: typography, spacing: spacing, cornerRadius: cornerRadius)
     }
 
     func applyingChallengerShift(colorScheme: ColorScheme) -> CoachingTheme {

@@ -11,7 +11,7 @@ struct HomeView: View {
     var onOpenCheckIn: (() -> Void)?
 
     private var homeTheme: CoachingTheme {
-        themeFor(context: .home, colorScheme: colorScheme)
+        themeFor(context: .home, colorScheme: colorScheme, isPaused: viewModel.homeStage == .paused)
     }
 
     var body: some View {
@@ -37,6 +37,16 @@ struct HomeView: View {
                     .accessibilitySortPriority(5)
 
                     Spacer()
+
+                    Button {
+                        viewModel.togglePause()
+                    } label: {
+                        Image(systemName: viewModel.homeStage == .paused ? "play.circle" : "pause.circle")
+                            .font(.title3)
+                            .foregroundStyle(homeTheme.palette.textSecondary)
+                            .frame(width: 44, height: 44)
+                    }
+                    .accessibilityLabel(viewModel.homeStage == .paused ? "Resume coaching" : "Pause coaching")
 
                     if let onOpenSettings {
                         Button {

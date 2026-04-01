@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import UIKit
 import GRDB
+import SwiftUI
 
 @MainActor
 @Observable
@@ -167,6 +168,67 @@ final class HomeViewModel {
             sprintName = ""
             sprintDayNumber = 0
             sprintTotalDays = 0
+        }
+    }
+
+    // MARK: - Pause Mode
+
+    func togglePause() {
+        let newPaused = !appState.isPaused
+        appState.isPaused = newPaused
+        appState.avatarState = AvatarState.derive(isPaused: newPaused)
+
+        // VoiceOver announcement
+        let announcement = newPaused ? "Pause Mode activated" : "Pause Mode deactivated"
+        UIAccessibility.post(notification: .announcement, argument: announcement)
+
+        // Persist to database
+        Task { [weak self] in
+            guard let self else { return }
+            guard !Task.isCancelled else { return }
+            do {
+                try await databaseManager.dbPool.write { db in
+                    guard var profile = try UserProfile.current().fetchOne(db) else { return }
+                    profile.isPaused = newPaused
+                    profile.pausedAt = newPaused ? Date() : nil
+                    profile.updatedAt = Date()
+                    try profile.update(db)
+                }
+            } catch {
+                // Persistence failed — runtime state already updated
+            }
+        }
+
+        // "Rest well" message on activation
+        if newPaused {
+            Task { [weak self] in
+                guard let self else { return }
+                guard !Task.isCancelled else { return }
+                await appendRestWellMessage()
+            }
+        }
+    }
+
+    private func appendRestWellMessage() async {
+        do {
+            // Find the most recent session
+            let session = try await databaseManager.dbPool.read { db in
+                try ConversationSession.recent(limit: 1).fetchOne(db)
+            }
+            guard let session else { return }
+
+            let message = Message(
+                id: UUID(),
+                sessionId: session.id,
+                role: .assistant,
+                content: "Rest well.",
+                timestamp: Date()
+            )
+            try await databaseManager.dbPool.write { db in
+                try message.insert(db)
+            }
+        } catch {
+            // Best effort — don't block pause activation
         }
     }
 

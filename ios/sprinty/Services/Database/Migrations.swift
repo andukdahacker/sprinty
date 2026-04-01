@@ -222,5 +222,12 @@ enum DatabaseMigrations {
             try db.create(index: "idx_complianceLog_timestamp", on: "SafetyComplianceLog", columns: ["timestamp"])
             try db.create(index: "idx_complianceLog_safetyLevel", on: "SafetyComplianceLog", columns: ["safetyLevel"])
         }
+
+        migrator.registerMigration("v14_pauseMode") { db in
+            try db.alter(table: "UserProfile") { t in
+                t.add(column: "isPaused", .boolean).notNull().defaults(to: false)
+                t.add(column: "pausedAt", .text)
+            }
+        }
     }
 }

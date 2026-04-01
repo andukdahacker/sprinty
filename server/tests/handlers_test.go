@@ -45,6 +45,7 @@ func createTestPromptBuilder(t *testing.T) *prompts.Builder {
 		"summarize.md":        "Summarize the coaching conversation.",
 		"sprint-retro.md":     "Generate a narrative retrospective.",
 		"check-in.md":         "Check-in mode: brief response.",
+		"autonomy.md":         "Autonomy: suggest breathers.",
 	}
 	for name, content := range files {
 		os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
@@ -83,6 +84,7 @@ func setupMuxWithBuilder(builder *prompts.Builder) *http.ServeMux {
 			"summarize.md":        "Summarize the coaching conversation.",
 			"sprint-retro.md":     "Generate a narrative retrospective.",
 			"check-in.md":         "Check-in mode: brief response.",
+			"autonomy.md":         "Autonomy: suggest breathers.",
 		}
 		for name, content := range files {
 			os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
@@ -1209,6 +1211,7 @@ func setupMuxWithProvider(provider *providers.MockProvider) *http.ServeMux {
 		"summarize.md":        "Summarize the coaching conversation.",
 		"sprint-retro.md":     "Generate a narrative retrospective.",
 		"check-in.md":         "Check-in mode: brief response.",
+		"autonomy.md":         "Autonomy: suggest breathers.",
 	}
 	for name, content := range files {
 		os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)

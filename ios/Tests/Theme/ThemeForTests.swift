@@ -36,19 +36,54 @@ struct ThemeForTests {
         #expect(colorsMatch(theme.palette.backgroundStart, expected))
     }
 
-    @Test("Safety override stub returns same theme")
-    func safetyOverrideStub() {
+    @Test("WarmthIncrease safety override has negligible effect on near-neutral home palette")
+    func safetyWarmthIncreaseNearNeutral() {
         let theme = themeFor(context: .home, colorScheme: .light, safetyLevel: .warmthIncrease)
         let baseline = themeFor(context: .home, colorScheme: .light, safetyLevel: .none)
-        // Stub returns self, so palettes should be identical
+        // homeLight backgroundStart (#F4F2EC) is near-neutral — subtle warmth/desaturation
+        // at 8%/12% factors stays within 0.01 tolerance for this near-neutral color
         #expect(colorsMatch(theme.palette.backgroundStart, baseline.palette.backgroundStart))
     }
 
-    @Test("Pause mode stub returns same theme")
-    func pauseModeStub() {
+    @Test("Pause mode produces desaturated palette")
+    func pauseModeDesaturated() {
         let theme = themeFor(context: .home, colorScheme: .light, isPaused: true)
         let baseline = themeFor(context: .home, colorScheme: .light, isPaused: false)
-        #expect(colorsMatch(theme.palette.backgroundStart, baseline.palette.backgroundStart))
+        // Pause should desaturate — sendButton is a reliably saturated color
+        let baseSat = baseline.palette.sendButton.hsbComponents.saturation
+        let pauseSat = theme.palette.sendButton.hsbComponents.saturation
+        #expect(pauseSat < baseSat)
+    }
+
+    @Test("Pause mode preserves avatar colors")
+    func pauseModePreservesAvatar() {
+        let theme = themeFor(context: .home, colorScheme: .light, isPaused: true)
+        let baseline = themeFor(context: .home, colorScheme: .light, isPaused: false)
+        // Avatar tokens should be unchanged
+        #expect(colorsMatch(theme.palette.avatarGlow, baseline.palette.avatarGlow))
+        #expect(colorsMatch(theme.palette.avatarGradientStart, baseline.palette.avatarGradientStart))
+        #expect(colorsMatch(theme.palette.avatarGradientEnd, baseline.palette.avatarGradientEnd))
+    }
+
+    @Test("Pause mode works on dark palette")
+    func pauseModeDark() {
+        let theme = themeFor(context: .home, colorScheme: .dark, isPaused: true)
+        let baseline = themeFor(context: .home, colorScheme: .dark, isPaused: false)
+        let baseSat = baseline.palette.sendButton.hsbComponents.saturation
+        let pauseSat = theme.palette.sendButton.hsbComponents.saturation
+        #expect(pauseSat < baseSat)
+    }
+
+    @Test("Safety + pause compound: combined desaturation is greater than pause alone")
+    func safetyAndPauseCompoundDesaturation() {
+        // Safety is applied first, then pause on top — compounding produces more desaturation.
+        // This is the intended behavior: safety's visual effect is fully preserved and amplified.
+        let pauseOnly = themeFor(context: .home, colorScheme: .light, safetyLevel: .none, isPaused: true)
+        let safetyAndPause = themeFor(context: .home, colorScheme: .light, safetyLevel: .noticeableDesaturation, isPaused: true)
+        let pauseSat = pauseOnly.palette.sendButton.hsbComponents.saturation
+        let bothSat = safetyAndPause.palette.sendButton.hsbComponents.saturation
+        // Combined effect should be at least as desaturated as pause alone
+        #expect(bothSat <= pauseSat)
     }
 
     @Test("Discovery ambient mode returns warmer light palette")

@@ -40,6 +40,7 @@ func NewBuilder(sectionsPath string) (*Builder, error) {
 		"summarize.md",
 		"sprint-retro.md",
 		"check-in.md",
+		"autonomy.md",
 	}
 
 	var allContent strings.Builder
@@ -135,7 +136,7 @@ func (b *Builder) Build(mode string, coachName string, profile *providers.ChatPr
 	}
 
 	// Always include safety, mood, tagging, cultural
-	for _, section := range []string{"safety", "mood", "tagging", "cultural", "mode-transitions", "challenger"} {
+	for _, section := range []string{"safety", "mood", "tagging", "cultural", "mode-transitions", "challenger", "autonomy"} {
 		if s, ok := b.sections[section]; ok {
 			prompt.WriteString(s)
 			prompt.WriteString("\n\n")

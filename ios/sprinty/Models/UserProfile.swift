@@ -20,6 +20,9 @@ struct UserProfile: Codable, FetchableRecord, PersistableRecord, Identifiable, S
     var checkInWeekday: Int?
     // --- Safety (Story 6.3) ---
     var lastSafetyBoundaryAt: Date?
+    // --- Pause (Story 7.1) ---
+    var isPaused: Bool = false
+    var pausedAt: Date?
     // --- Timestamps ---
     var createdAt: Date
     var updatedAt: Date

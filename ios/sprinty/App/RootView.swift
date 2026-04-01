@@ -58,6 +58,9 @@ struct RootView: View {
         if let homeViewModel {
             ZStack {
                 HomeView(viewModel: homeViewModel, onTalkToCoach: {
+                    if appState.isPaused {
+                        homeViewModel.togglePause()
+                    }
                     withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.45)) {
                         ensureCoachingViewModel(databaseManager: databaseManager)
                         showConversation = true
@@ -112,6 +115,13 @@ struct RootView: View {
             }) {
                 if let checkInViewModel {
                     CheckInView(viewModel: checkInViewModel)
+                }
+            }
+            .onChange(of: appState.isPaused) { _, isPaused in
+                if !isPaused, let databaseManager = appState.databaseManager {
+                    Task {
+                        await rescheduleCheckInNotifications(databaseManager: databaseManager)
+                    }
                 }
             }
             .onChange(of: appState.pendingCheckIn) { _, newValue in
@@ -234,6 +244,10 @@ struct RootView: View {
             }
             if let profile, profile.onboardingCompleted {
                 appState.onboardingCompleted = true
+                appState.isPaused = profile.isPaused
+                if profile.isPaused {
+                    appState.avatarState = .resting
+                }
             }
         } catch {
             // No profile or error — treat as not onboarded

@@ -252,6 +252,48 @@ extension ColorPalette {
     }
 }
 
+// MARK: - Pause Mode Transformation
+
+extension ColorPalette {
+    /// Transforms all color properties for Pause Mode (UX-DR5).
+    /// Light: sage tones → gray-greens. Dark: earth tones → warm grays.
+    /// Avatar tokens are excluded — avatar retains gentle color as the only saturated element.
+    func applyingPauseMode() -> ColorPalette {
+        func transform(_ color: Color) -> Color {
+            color.adjustedSaturation(by: 0.55)
+                .adjustedWarmth(by: 0.04)
+        }
+
+        return ColorPalette(
+            backgroundStart: transform(backgroundStart),
+            backgroundEnd: transform(backgroundEnd),
+            textPrimary: transform(textPrimary),
+            textSecondary: transform(textSecondary),
+            avatarGlow: avatarGlow,
+            avatarGradientStart: avatarGradientStart,
+            avatarGradientEnd: avatarGradientEnd,
+            insightBackground: transform(insightBackground),
+            sprintTrack: transform(sprintTrack),
+            sprintProgressStart: transform(sprintProgressStart),
+            sprintProgressEnd: transform(sprintProgressEnd),
+            primaryActionStart: transform(primaryActionStart),
+            primaryActionEnd: transform(primaryActionEnd),
+            primaryActionText: transform(primaryActionText),
+            coachDialogue: transform(coachDialogue),
+            userDialogue: transform(userDialogue),
+            userAccent: transform(userAccent),
+            coachPortraitGradientStart: coachPortraitGradientStart,
+            coachPortraitGradientEnd: coachPortraitGradientEnd,
+            coachPortraitGlow: coachPortraitGlow,
+            coachNameText: transform(coachNameText),
+            coachStatusText: transform(coachStatusText),
+            dateSeparator: transform(dateSeparator),
+            inputBorder: transform(inputBorder),
+            sendButton: transform(sendButton)
+        )
+    }
+}
+
 // MARK: - Discovery Ambient Mode Shift
 
 extension ColorPalette {

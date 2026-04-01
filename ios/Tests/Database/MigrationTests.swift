@@ -812,6 +812,79 @@ struct MigrationTests {
         #expect(orangeResults.count == 1)
     }
 
+    // --- Story 7.1 Tests ---
+
+    @Test("v14 migration adds isPaused column to UserProfile")
+    func v14IsPausedColumnExists() throws {
+        let db = try createInMemoryDatabase()
+        try db.read { db in
+            let columns = try db.columns(in: "UserProfile")
+            let columnNames = columns.map(\.name)
+            #expect(columnNames.contains("isPaused"))
+        }
+    }
+
+    @Test("v14 migration adds pausedAt column to UserProfile")
+    func v14PausedAtColumnExists() throws {
+        let db = try createInMemoryDatabase()
+        try db.read { db in
+            let columns = try db.columns(in: "UserProfile")
+            let columnNames = columns.map(\.name)
+            #expect(columnNames.contains("pausedAt"))
+        }
+    }
+
+    @Test("UserProfile isPaused defaults to false")
+    func v14IsPausedDefaultsFalse() throws {
+        let db = try createInMemoryDatabase()
+        let profile = UserProfile(
+            id: UUID(),
+            avatarId: "avatar_classic",
+            coachAppearanceId: "coach_sage",
+            coachName: "Sage",
+            onboardingStep: 3,
+            onboardingCompleted: true,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        try db.write { db in
+            try profile.insert(db)
+        }
+        let fetched = try db.read { db in
+            try UserProfile.fetchOne(db, key: profile.id)
+        }
+        #expect(fetched != nil)
+        #expect(fetched?.isPaused == false)
+        #expect(fetched?.pausedAt == nil)
+    }
+
+    @Test("UserProfile isPaused and pausedAt roundtrip")
+    func v14PauseStateRoundTrip() throws {
+        let db = try createInMemoryDatabase()
+        let now = Date()
+        var profile = UserProfile(
+            id: UUID(),
+            avatarId: "avatar_classic",
+            coachAppearanceId: "coach_sage",
+            coachName: "Sage",
+            onboardingStep: 3,
+            onboardingCompleted: true,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        profile.isPaused = true
+        profile.pausedAt = now
+        try db.write { db in
+            try profile.insert(db)
+        }
+        let fetched = try db.read { db in
+            try UserProfile.fetchOne(db, key: profile.id)
+        }
+        #expect(fetched != nil)
+        #expect(fetched?.isPaused == true)
+        #expect(fetched?.pausedAt != nil)
+    }
+
     @Test("SprintStep.forSprint returns ordered steps")
     func sprintStepForSprintQuery() throws {
         let db = try createInMemoryDatabase()
