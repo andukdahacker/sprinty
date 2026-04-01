@@ -59,9 +59,15 @@ final class CheckInNotificationDelegate: NSObject, UNUserNotificationCenterDeleg
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
-        if response.notification.request.identifier == CheckInNotificationService.checkInIdentifier {
+        let identifier = response.notification.request.identifier
+        if identifier == CheckInNotificationService.checkInIdentifier {
             await MainActor.run {
                 appState.pendingCheckIn = true
+                appState.pendingEngagementSource = .checkInNotification
+            }
+        } else if identifier == DriftDetectionService.reEngagementIdentifier {
+            await MainActor.run {
+                appState.pendingEngagementSource = .reEngagementNudge
             }
         }
     }

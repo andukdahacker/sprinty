@@ -21,6 +21,8 @@ struct UserState: Codable, Sendable {
     let lastSessionGapHours: Int?
     let recentSessionIntensity: String
     var isReturningFromCrisis: Bool?
+    var voluntarySessionRate: Float?
+    var autonomyLevel: String?
 
     init(from snapshot: EngagementSnapshot) {
         self.engagementLevel = snapshot.engagementLevel.rawValue
@@ -30,6 +32,8 @@ struct UserState: Codable, Sendable {
         self.lastSessionGapHours = snapshot.lastSessionGapHours
         self.recentSessionIntensity = snapshot.recentSessionIntensity.rawValue
         self.isReturningFromCrisis = nil
+        self.voluntarySessionRate = nil
+        self.autonomyLevel = nil
     }
 }
 

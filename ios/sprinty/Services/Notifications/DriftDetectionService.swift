@@ -29,6 +29,7 @@ struct DriftDetectionConfig: Sendable {
 
 protocol DriftDetectionServiceProtocol: Sendable {
     func evaluateAndSchedule() async
+    func evaluateAndSchedule(autonomyLevel: AutonomyLevel) async
     func cancelReEngagementNudge() async
 }
 
@@ -52,6 +53,10 @@ final class DriftDetectionService: DriftDetectionServiceProtocol, @unchecked Sen
     }
 
     func evaluateAndSchedule() async {
+        await evaluateAndSchedule(autonomyLevel: .none)
+    }
+
+    func evaluateAndSchedule(autonomyLevel: AutonomyLevel) async {
         // Cancel any existing re-engagement nudge first
         await cancelReEngagementNudge()
 
@@ -70,12 +75,27 @@ final class DriftDetectionService: DriftDetectionServiceProtocol, @unchecked Sen
         // No sessions yet — new user, don't nudge
         guard let lastSessionDate else { return }
 
+        // Autonomy-adjusted threshold
+        let thresholdSeconds = Self.autonomyAdjustedThreshold(
+            baseThresholdSeconds: config.inactivityThresholdSeconds,
+            autonomyLevel: autonomyLevel
+        )
+
         // Arm dead-man's-switch: schedule nudge for (threshold - gap) seconds from now.
         // If gap already exceeds threshold, use minimum delay (user already drifted;
         // nudge fires shortly to catch the next drift period if they leave again).
         let gap = Date().timeIntervalSince(lastSessionDate)
-        let timeUntilNudge = max(60, config.inactivityThresholdSeconds - gap)
+        let timeUntilNudge = max(60, thresholdSeconds - gap)
         await scheduleReEngagementNudge(timeInterval: timeUntilNudge)
+    }
+
+    static func autonomyAdjustedThreshold(baseThresholdSeconds: TimeInterval, autonomyLevel: AutonomyLevel) -> TimeInterval {
+        switch autonomyLevel {
+        case .none: return baseThresholdSeconds
+        case .light: return max(baseThresholdSeconds, TimeInterval(96 * 3600))
+        case .moderate: return max(baseThresholdSeconds, TimeInterval(120 * 3600))
+        case .high: return max(baseThresholdSeconds, TimeInterval(168 * 3600))
+        }
     }
 
     // MARK: - Private

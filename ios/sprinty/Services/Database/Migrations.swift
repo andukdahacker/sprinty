@@ -229,5 +229,11 @@ enum DatabaseMigrations {
                 t.add(column: "pausedAt", .text)
             }
         }
+
+        migrator.registerMigration("v15_engagementSource") { db in
+            try db.alter(table: "ConversationSession") { t in
+                t.add(column: "engagementSource", .text).notNull().defaults(to: "organic")
+            }
+        }
     }
 }

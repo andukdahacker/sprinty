@@ -54,13 +54,14 @@ final class CoachingViewModel {
     private let safetyHandler: SafetyHandlerProtocol
     private let safetyStateManager: SafetyStateManagerProtocol
     private let complianceLogger: ComplianceLoggerProtocol
+    private let autonomySnapshotProvider: (() -> AutonomySnapshot?)?
     private var previousSafetyLevel: SafetyLevel?
 
     // MARK: - Safety State
     var currentSafetyUIState: SafetyUIState = .green
     var isReturningFromCrisis: Bool = false
 
-    init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager, embeddingPipeline: EmbeddingPipelineProtocol? = nil, profileUpdateService: ProfileUpdateServiceProtocol? = nil, profileEnricher: ProfileEnricherProtocol? = nil, searchService: SearchServiceProtocol? = nil, sprintService: SprintServiceProtocol? = nil, safetyHandler: SafetyHandlerProtocol = SafetyHandler(), safetyStateManager: SafetyStateManagerProtocol = SafetyStateManager(), complianceLogger: ComplianceLoggerProtocol? = nil) {
+    init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager, embeddingPipeline: EmbeddingPipelineProtocol? = nil, profileUpdateService: ProfileUpdateServiceProtocol? = nil, profileEnricher: ProfileEnricherProtocol? = nil, searchService: SearchServiceProtocol? = nil, sprintService: SprintServiceProtocol? = nil, safetyHandler: SafetyHandlerProtocol = SafetyHandler(), safetyStateManager: SafetyStateManagerProtocol = SafetyStateManager(), complianceLogger: ComplianceLoggerProtocol? = nil, autonomySnapshotProvider: (() -> AutonomySnapshot?)? = nil) {
         self.appState = appState
         self.chatService = chatService
         self.databaseManager = databaseManager
@@ -72,6 +73,7 @@ final class CoachingViewModel {
         self.safetyHandler = safetyHandler
         self.safetyStateManager = safetyStateManager
         self.complianceLogger = complianceLogger ?? ComplianceLogger(databaseManager: databaseManager)
+        self.autonomySnapshotProvider = autonomySnapshotProvider
     }
 
     func loadMessages() {
@@ -208,6 +210,10 @@ final class CoachingViewModel {
             var userState = snapshot.map { UserState(from: $0) }
             if isReturningFromCrisis {
                 userState?.isReturningFromCrisis = true
+            }
+            if let autonomySnapshot = autonomySnapshotProvider?() {
+                userState?.voluntarySessionRate = autonomySnapshot.voluntarySessionRate
+                userState?.autonomyLevel = autonomySnapshot.autonomyLevel.rawValue
             }
 
             // Retrieve RAG context (non-blocking — errors fall back to nil)
@@ -576,6 +582,9 @@ final class CoachingViewModel {
             isReturningFromCrisis = true
         }
 
+        let source = appState.pendingEngagementSource ?? .organic
+        appState.pendingEngagementSource = nil
+
         let session = ConversationSession(
             id: UUID(),
             startedAt: Date(),
@@ -583,7 +592,8 @@ final class CoachingViewModel {
             type: .coaching,
             mode: .discovery,
             safetyLevel: .green,
-            promptVersion: cachedPromptVersion ?? "1.0"
+            promptVersion: cachedPromptVersion ?? "1.0",
+            engagementSource: source
         )
 
         try await databaseManager.dbPool.write { db in

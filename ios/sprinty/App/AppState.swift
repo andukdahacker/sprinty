@@ -11,6 +11,7 @@ final class AppState {
     var avatarState: AvatarState = .active
     var isPaused: Bool = false
     var pendingCheckIn: Bool = false
+    var pendingEngagementSource: EngagementSource?
     var activeSprint: Sprint?
     var databaseManager: DatabaseManager?
 }

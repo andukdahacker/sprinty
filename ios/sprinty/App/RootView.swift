@@ -16,6 +16,8 @@ struct RootView: View {
     @State private var showCheckIn = false
     @State private var checkInNotificationService: CheckInNotificationService?
     @State private var driftDetectionService: DriftDetectionService?
+    @State private var autonomyCalculator: AutonomyCalculator?
+    @State private var autonomySnapshot: AutonomySnapshot?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -89,7 +91,7 @@ struct RootView: View {
                                 }
                                 Task {
                                     await driftDetectionService?.cancelReEngagementNudge()
-                                    await driftDetectionService?.evaluateAndSchedule()
+                                    await driftDetectionService?.evaluateAndSchedule(autonomyLevel: autonomySnapshot?.autonomyLevel ?? .none)
                                 }
                             } label: {
                                 Image(systemName: "chevron.left")
@@ -127,8 +129,7 @@ struct RootView: View {
                     Task { await driftDetectionService?.cancelReEngagementNudge() }
                 } else if let databaseManager = appState.databaseManager {
                     Task {
-                        await rescheduleCheckInNotifications(databaseManager: databaseManager)
-                        await driftDetectionService?.evaluateAndSchedule()
+                        await computeAutonomyAndSchedule(databaseManager: databaseManager)
                     }
                 }
             }
@@ -153,10 +154,10 @@ struct RootView: View {
                 )
                 checkInNotificationService = CheckInNotificationService(databaseManager: databaseManager)
                 driftDetectionService = DriftDetectionService(databaseManager: databaseManager)
+                autonomyCalculator = AutonomyCalculator()
             }
             .task {
-                await rescheduleCheckInNotifications(databaseManager: databaseManager)
-                await driftDetectionService?.evaluateAndSchedule()
+                await computeAutonomyAndSchedule(databaseManager: databaseManager)
             }
         }
     }
@@ -210,7 +211,8 @@ struct RootView: View {
             profileEnricher: profileEnricher,
             safetyHandler: safetyHandler,
             safetyStateManager: safetyStateManager,
-            complianceLogger: complianceLogger
+            complianceLogger: complianceLogger,
+            autonomySnapshotProvider: { autonomySnapshot }
         )
     }
 
@@ -282,6 +284,23 @@ struct RootView: View {
         }
     }
 
+    private func computeAutonomyAndSchedule(databaseManager: DatabaseManager) async {
+        if let calculator = autonomyCalculator {
+            do {
+                let snapshot = try await databaseManager.dbPool.read { db in
+                    try calculator.computeAutonomySnapshot(db: db)
+                }
+                autonomySnapshot = snapshot
+                await driftDetectionService?.evaluateAndSchedule(autonomyLevel: snapshot.autonomyLevel)
+            } catch {
+                await driftDetectionService?.evaluateAndSchedule()
+            }
+        } else {
+            await driftDetectionService?.evaluateAndSchedule()
+        }
+        await rescheduleCheckInNotifications(databaseManager: databaseManager)
+    }
+
     private func rescheduleCheckInNotifications(databaseManager: DatabaseManager) async {
         guard !appState.isPaused else { return }
         guard let service = checkInNotificationService else { return }
@@ -290,13 +309,26 @@ struct RootView: View {
                 try UserProfile.current().fetchOne(db)
             }
             guard let profile else { return }
+            let effectiveCadence = Self.autonomyAdjustedCadence(
+                userCadence: profile.checkInCadence,
+                autonomyLevel: autonomySnapshot?.autonomyLevel ?? .none
+            )
             await service.scheduleCheckInNotification(
-                cadence: profile.checkInCadence,
+                cadence: effectiveCadence,
                 hour: profile.checkInTimeHour,
-                weekday: profile.checkInCadence == "weekly" ? profile.checkInWeekday : nil
+                weekday: effectiveCadence == "weekly" ? (profile.checkInWeekday ?? 2) : nil
             )
         } catch {
             // Profile read failed — notifications will be scheduled on next launch
+        }
+    }
+
+    static func autonomyAdjustedCadence(userCadence: String, autonomyLevel: AutonomyLevel) -> String {
+        switch autonomyLevel {
+        case .none, .light:
+            return userCadence
+        case .moderate, .high:
+            return "weekly"
         }
     }
 

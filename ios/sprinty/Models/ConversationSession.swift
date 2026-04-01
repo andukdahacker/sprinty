@@ -48,6 +48,7 @@ struct ConversationSession: Codable, FetchableRecord, PersistableRecord, Identif
     var promptVersion: String?
     var modeHistory: String?
     var moodHistory: String?
+    var engagementSource: EngagementSource = .organic
 
     static let databaseTableName = "ConversationSession"
 }

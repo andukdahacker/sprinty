@@ -106,7 +106,9 @@ JWT required. Streams response via Server-Sent Events (SSE).
     "avgMessageLength": "medium",
     "sessionCount": 5,
     "lastSessionGapHours": 12,
-    "recentSessionIntensity": "moderate"
+    "recentSessionIntensity": "moderate",
+    "voluntarySessionRate": 0.75,
+    "autonomyLevel": "moderate"
   }
 }
 ```
@@ -129,6 +131,8 @@ JWT required. Streams response via Server-Sent Events (SSE).
   - `sessionCount` (number): Total recent sessions
   - `lastSessionGapHours` (number, optional): Hours since last session
   - `recentSessionIntensity` (string): `light`, `moderate`, `deep`
+  - `voluntarySessionRate` (number, optional): Ratio of organic (user-initiated) sessions to total sessions (0.0–1.0), computed from last 30 days
+  - `autonomyLevel` (string, optional): User's autonomy level. Values: `none`, `light`, `moderate`, `high`. Determines coaching adaptation — at higher levels, coach trusts user judgment more and reduces unsolicited suggestions
 - `ragContext` (string, optional): Pre-formatted past conversation context retrieved via on-device RAG. Contains relevant summaries with dates, domain tags, key moments. Token budget: ~1000 tokens (~4000 characters). Omit if no relevant context or RAG unavailable
 - `sprintContext` (object, optional): Sprint-related context for coaching and retrospectives
   - `activeSprint` (object, optional): Active sprint info

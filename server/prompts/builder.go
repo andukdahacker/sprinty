@@ -225,6 +225,16 @@ The user is returning after a difficult moment. This is important:
 			result = strings.ReplaceAll(result, "{{last_session_gap}}", "unknown")
 		}
 		result = strings.ReplaceAll(result, "{{recent_session_intensity}}", userState.RecentSessionIntensity)
+		if userState.VoluntarySessionRate != nil {
+			result = strings.ReplaceAll(result, "{{voluntary_session_rate}}", fmt.Sprintf("%.2f", *userState.VoluntarySessionRate))
+		} else {
+			result = strings.ReplaceAll(result, "{{voluntary_session_rate}}", "unknown")
+		}
+		if userState.AutonomyLevel != nil {
+			result = strings.ReplaceAll(result, "{{autonomy_level}}", *userState.AutonomyLevel)
+		} else {
+			result = strings.ReplaceAll(result, "{{autonomy_level}}", "unknown")
+		}
 	} else {
 		result = strings.ReplaceAll(result, "{{engagement_level}}", "unknown")
 		result = strings.ReplaceAll(result, "{{recent_moods}}", "unknown")
@@ -232,6 +242,8 @@ The user is returning after a difficult moment. This is important:
 		result = strings.ReplaceAll(result, "{{session_count}}", "unknown")
 		result = strings.ReplaceAll(result, "{{last_session_gap}}", "unknown")
 		result = strings.ReplaceAll(result, "{{recent_session_intensity}}", "unknown")
+		result = strings.ReplaceAll(result, "{{voluntary_session_rate}}", "unknown")
+		result = strings.ReplaceAll(result, "{{autonomy_level}}", "unknown")
 	}
 
 	// Replace RAG context

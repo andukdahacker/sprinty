@@ -39,7 +39,7 @@ func createTestPromptBuilder(t *testing.T) *prompts.Builder {
 		"mood.md":              "Mood selection.",
 		"tagging.md":           "Domain tagging.",
 		"cultural.md":          "Cultural.",
-		"context-injection.md": "{{sprint_context}} {{retrieved_memories}} Coach: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
+		"context-injection.md": "{{sprint_context}} {{retrieved_memories}} Coach: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}. Rate: {{voluntary_session_rate}}. Level: {{autonomy_level}}.",
 		"mode-transitions.md": "Mode transitions: analyze user intent.",
 		"challenger.md":       "Challenger capability: push back constructively.",
 		"summarize.md":        "Summarize the coaching conversation.",
@@ -1267,5 +1267,162 @@ func TestNonGreenSafetyLevelInDoneEvent(t *testing.T) {
 	}
 	if !foundSafetyLevel {
 		t.Error("expected done event to contain safetyLevel 'yellow'")
+	}
+}
+
+// --- Story 7.3 Tests ---
+
+// Test 6.12: UserState with autonomy fields parsed correctly
+func TestChatHandlerAutonomyFields(t *testing.T) {
+	builder := createTestPromptBuilder(t)
+	mux := setupMuxWithBuilder(builder)
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	token := createValidToken(t)
+
+	rate := 0.75
+	level := "moderate"
+	reqBody := providers.ChatRequest{
+		Messages: []providers.ChatMessage{
+			{Role: "user", Content: "I've been making good progress on my own."},
+		},
+		Mode:          "discovery",
+		PromptVersion: "1.0",
+		UserState: &providers.UserState{
+			EngagementLevel:        "medium",
+			RecentMoods:            []string{"warm"},
+			AvgMessageLength:       "medium",
+			SessionCount:           15,
+			RecentSessionIntensity: "moderate",
+			VoluntarySessionRate:   &rate,
+			AutonomyLevel:          &level,
+		},
+	}
+
+	body, _ := json.Marshal(reqBody)
+	req, _ := http.NewRequest("POST", srv.URL+"/v1/chat", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	// Verify the request was accepted and streamed correctly
+	scanner := bufio.NewScanner(resp.Body)
+	var foundDone bool
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "event: done") {
+			foundDone = true
+		}
+	}
+	if !foundDone {
+		t.Error("expected done event in SSE stream")
+	}
+}
+
+// Test 6.13: Prompt builder injects autonomy template variables
+func TestPromptBuilderAutonomyInjection(t *testing.T) {
+	dir := t.TempDir()
+	sectionsDir := filepath.Join(dir, "sections")
+	os.MkdirAll(sectionsDir, 0o755)
+	files := map[string]string{
+		"base-persona.md":      "You are {{coach_name}}, a coach.",
+		"mode-discovery.md":    "Discovery mode.",
+		"mode-directive.md":    "Directive.",
+		"safety.md":            "Safety.",
+		"mood.md":              "Mood.",
+		"tagging.md":           "Tags.",
+		"cultural.md":          "Cultural.",
+		"context-injection.md": "Rate: {{voluntary_session_rate}}. Level: {{autonomy_level}}. Gap: {{last_session_gap}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Intensity: {{recent_session_intensity}}. {{sprint_context}} {{retrieved_memories}} Coach: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}.",
+		"mode-transitions.md":  "Mode transitions.",
+		"challenger.md":        "Challenger.",
+		"summarize.md":         "Summarize.",
+		"sprint-retro.md":      "Sprint retro.",
+		"check-in.md":          "Check-in.",
+		"autonomy.md":          "Autonomy.",
+	}
+	for name, content := range files {
+		os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
+	}
+	builder, err := prompts.NewBuilder(sectionsDir)
+	if err != nil {
+		t.Fatalf("failed to create builder: %v", err)
+	}
+
+	rate := 0.82
+	level := "moderate"
+	userState := &providers.UserState{
+		EngagementLevel:        "high",
+		RecentMoods:            []string{"focused"},
+		AvgMessageLength:       "long",
+		SessionCount:           25,
+		RecentSessionIntensity: "deep",
+		VoluntarySessionRate:   &rate,
+		AutonomyLevel:          &level,
+	}
+
+	result := builder.Build("discovery", "Coach", nil, userState, "", nil)
+
+	if !strings.Contains(result, "Rate: 0.82") {
+		t.Errorf("expected voluntary session rate injection, got: %s", result)
+	}
+	if !strings.Contains(result, "Level: moderate") {
+		t.Errorf("expected autonomy level injection, got: %s", result)
+	}
+}
+
+func TestPromptBuilderAutonomyNilFallback(t *testing.T) {
+	dir := t.TempDir()
+	sectionsDir := filepath.Join(dir, "sections")
+	os.MkdirAll(sectionsDir, 0o755)
+	files := map[string]string{
+		"base-persona.md":      "Base.",
+		"mode-discovery.md":    "Discovery.",
+		"mode-directive.md":    "Directive.",
+		"safety.md":            "Safety.",
+		"mood.md":              "Mood.",
+		"tagging.md":           "Tags.",
+		"cultural.md":          "Cultural.",
+		"context-injection.md": "Rate: {{voluntary_session_rate}}. Level: {{autonomy_level}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}. {{sprint_context}} {{retrieved_memories}} Coach: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}.",
+		"mode-transitions.md":  "Mode transitions.",
+		"challenger.md":        "Challenger.",
+		"summarize.md":         "Summarize.",
+		"sprint-retro.md":      "Sprint retro.",
+		"check-in.md":          "Check-in.",
+		"autonomy.md":          "Autonomy.",
+	}
+	for name, content := range files {
+		os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
+	}
+	builder, err := prompts.NewBuilder(sectionsDir)
+	if err != nil {
+		t.Fatalf("failed to create builder: %v", err)
+	}
+
+	// UserState without autonomy fields
+	userState := &providers.UserState{
+		EngagementLevel:        "low",
+		RecentMoods:            []string{},
+		AvgMessageLength:       "short",
+		SessionCount:           2,
+		RecentSessionIntensity: "light",
+	}
+
+	result := builder.Build("discovery", "Coach", nil, userState, "", nil)
+
+	if !strings.Contains(result, "Rate: unknown") {
+		t.Errorf("expected 'unknown' fallback for voluntary session rate, got: %s", result)
+	}
+	if !strings.Contains(result, "Level: unknown") {
+		t.Errorf("expected 'unknown' fallback for autonomy level, got: %s", result)
 	}
 }

@@ -11,6 +11,8 @@ Context for this conversation:
 - Sessions completed: {{session_count}}
 - Time since last session: {{last_session_gap}}
 - Recent session intensity: {{recent_session_intensity}}
+- Voluntary session rate: {{voluntary_session_rate}}
+- Autonomy level: {{autonomy_level}}
 
 {{sprint_context}}
 
