@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		00E50876E8550A038F7CA0AA /* InsightCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B9129FD9B941D805114BB2 /* InsightCardView.swift */; };
 		02ADA38FB5695A23E144FD25 /* SearchOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00B8336CE0A97B8DF9D04E8 /* SearchOverlayView.swift */; };
+		04901998D41191A78C6BB36C /* DriftDetectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FE93F5891555561CDE0A9A1 /* DriftDetectionService.swift */; };
 		06C14566B2646F075BD532E5 /* ChatEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C5FCFCC4C0883E93FA0BA1E /* ChatEvent.swift */; };
 		08B3AF8853C8CA4704D2E7FC /* vocab.txt in Resources */ = {isa = PBXBuildFile; fileRef = F225726C20E84024A5F2938A /* vocab.txt */; };
 		08F250EF3CA00218DF629181 /* CheckInViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08F7B60D2EE6B0A7D82698EA /* CheckInViewModel.swift */; };
@@ -88,6 +89,7 @@
 		68B010D552610C6D0A3FBB3B /* SprintProposalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AF30F266C11F16A6485217A /* SprintProposalView.swift */; };
 		6B2C432B2BF6CA9614926BEC /* CheckInNotificationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0E50533E4090F833A002F0 /* CheckInNotificationServiceTests.swift */; };
 		6CC328C79F0AF23004E25C7D /* ConversationSummaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D9C195BC7A7A3CFA9D97208 /* ConversationSummaryTests.swift */; };
+		6E56D76A8DEDCE782F150DA9 /* MockDriftDetectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64CBE64336C2728762DAD313 /* MockDriftDetectionService.swift */; };
 		6EDA16D0AA1C58B1D080AB2A /* HomeViewModelPauseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 574AE90694FAB83AF04E69A4 /* HomeViewModelPauseTests.swift */; };
 		6EE765AE33053B29290F15A2 /* MemoryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A3F91C81BE3AF00766E5678 /* MemoryItem.swift */; };
 		6F7BC4A5600C1A559D914244 /* CoachingViewModelSafetyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D5222266E74EF3FB692FDB7 /* CoachingViewModelSafetyTests.swift */; };
@@ -135,6 +137,7 @@
 		B1E9E9B9384D5CAC5D7EDB82 /* CopyStandardsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DC9EAB01D91F13B57D52A48 /* CopyStandardsTests.swift */; };
 		B38C5EB602580236039284F7 /* MockVectorSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9524795A3E29ECE2C85E32B3 /* MockVectorSearch.swift */; };
 		B4867CA56E749DC15FA6B93D /* MockSprintService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F295B16667511F391106C4BA /* MockSprintService.swift */; };
+		B491E531F10F29E0A6F258CC /* DriftDetectionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4304911E0F45BA6036B1177B /* DriftDetectionServiceTests.swift */; };
 		B760BE54516397DEE527DDC5 /* Sprint.swift in Sources */ = {isa = PBXBuildFile; fileRef = E520123DE32482CF25E01C67 /* Sprint.swift */; };
 		B8F56D94C389DE5793FDA791 /* PreviewData.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE6E9743FD9267AD6617A6D9 /* PreviewData.swift */; };
 		B91FDDF2DCF6A516822511DE /* CheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94EE8235CFF1F03E4BEB1C0C /* CheckInView.swift */; };
@@ -247,6 +250,7 @@
 		40A893855590161ED0EFD59E /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		40DC9705311A1137CAC20868 /* HomeViewModelInsightTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModelInsightTests.swift; sourceTree = "<group>"; };
 		421E3610D0DDE7B777581989 /* sprintyTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = sprintyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4304911E0F45BA6036B1177B /* DriftDetectionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriftDetectionServiceTests.swift; sourceTree = "<group>"; };
 		43933FB6995BF55049699F81 /* HomeViewModelAvatarTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModelAvatarTests.swift; sourceTree = "<group>"; };
 		44B63B792ADB921078035CB0 /* SearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchService.swift; sourceTree = "<group>"; };
 		4509AB3F657CD73651D1FD5A /* ComplianceLoggerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplianceLoggerTests.swift; sourceTree = "<group>"; };
@@ -274,6 +278,7 @@
 		5FF5E00BFD0AA672EF73FF8D /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		621A3EF306094C2117FBA392 /* CheckIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckIn.swift; sourceTree = "<group>"; };
 		632985B26A26EEB557943E31 /* ConversationSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationSession.swift; sourceTree = "<group>"; };
+		64CBE64336C2728762DAD313 /* MockDriftDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDriftDetectionService.swift; sourceTree = "<group>"; };
 		658500F71B12F942A3A3ADCF /* TextInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInputView.swift; sourceTree = "<group>"; };
 		65D6278FFCC717CBB34CF6E9 /* TypographyScale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypographyScale.swift; sourceTree = "<group>"; };
 		6706CAA4E4CA51ACDB15EBF0 /* RadiusTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadiusTokens.swift; sourceTree = "<group>"; };
@@ -318,6 +323,7 @@
 		9D5222266E74EF3FB692FDB7 /* CoachingViewModelSafetyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachingViewModelSafetyTests.swift; sourceTree = "<group>"; };
 		9D98CFAD50E4F28B7E98B749 /* MockProfileEnricher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockProfileEnricher.swift; sourceTree = "<group>"; };
 		9E5803C14EAA1E8FD1692E51 /* SummaryGeneratorProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummaryGeneratorProtocol.swift; sourceTree = "<group>"; };
+		9FE93F5891555561CDE0A9A1 /* DriftDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriftDetectionService.swift; sourceTree = "<group>"; };
 		A063994192FA46D1B9AC2521 /* VectorSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VectorSearchTests.swift; sourceTree = "<group>"; };
 		A08D97BD76B19D8FDF7FB1D2 /* ProfileEnricherProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileEnricherProtocol.swift; sourceTree = "<group>"; };
 		A0A0DF5922537722145B554E /* ProfileUpdateServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileUpdateServiceProtocol.swift; sourceTree = "<group>"; };
@@ -791,6 +797,7 @@
 				2EEA5FADA65C41F39C5758B1 /* MockChatService.swift */,
 				465D7985F04DBC92DEA98829 /* MockCheckInNotificationService.swift */,
 				55493D9E0CE5862B1E8A2435 /* MockComplianceLogger.swift */,
+				64CBE64336C2728762DAD313 /* MockDriftDetectionService.swift */,
 				222F4412A34E4ED00A190502 /* MockEmbeddingPipeline.swift */,
 				7A1149749ED032CA8CC6B056 /* MockEmbeddingService.swift */,
 				2C5E8EAF09AD7C5F4F24AF27 /* MockInsightService.swift */,
@@ -828,6 +835,7 @@
 			children = (
 				2746A34C3922F033BB500514 /* AuthServiceTests.swift */,
 				2A0E50533E4090F833A002F0 /* CheckInNotificationServiceTests.swift */,
+				4304911E0F45BA6036B1177B /* DriftDetectionServiceTests.swift */,
 				EB6D27F2EBCF2BE2D7152D94 /* EmbeddingPipelineIntegrationTests.swift */,
 				C9FFD41B428564F0D4A27595 /* EmbeddingPipelineTests.swift */,
 				7423075CE3A883674B09AC44 /* EmbeddingServiceTests.swift */,
@@ -986,6 +994,7 @@
 			isa = PBXGroup;
 			children = (
 				965DEC3873BF7C4F36D0A283 /* CheckInNotificationService.swift */,
+				9FE93F5891555561CDE0A9A1 /* DriftDetectionService.swift */,
 			);
 			path = Notifications;
 			sourceTree = "<group>";
@@ -1130,6 +1139,7 @@
 				5FFC8228E34CA343BB6316C8 /* ConversationSessionQueryTests.swift in Sources */,
 				6CC328C79F0AF23004E25C7D /* ConversationSummaryTests.swift in Sources */,
 				B1E9E9B9384D5CAC5D7EDB82 /* CopyStandardsTests.swift in Sources */,
+				B491E531F10F29E0A6F258CC /* DriftDetectionServiceTests.swift in Sources */,
 				3508DC360F4D9F27B80946F4 /* EmbeddingPipelineIntegrationTests.swift in Sources */,
 				A738D0665FCAC38A9970A307 /* EmbeddingPipelineTests.swift in Sources */,
 				F1AA6BB6B892FA2395295FBE /* EmbeddingServiceTests.swift in Sources */,
@@ -1150,6 +1160,7 @@
 				422860371E17ECF49ED434E8 /* MockChatService.swift in Sources */,
 				4C73D7426EB1D35AE796678F /* MockCheckInNotificationService.swift in Sources */,
 				DC0D03EF2CA422B150B1D613 /* MockComplianceLogger.swift in Sources */,
+				6E56D76A8DEDCE782F150DA9 /* MockDriftDetectionService.swift in Sources */,
 				D00504385718DF16F94A115D /* MockEmbeddingPipeline.swift in Sources */,
 				4C861B8801F9F652441644B4 /* MockEmbeddingService.swift in Sources */,
 				FF8C2B1BEF446CB315F3AE65 /* MockInsightService.swift in Sources */,
@@ -1225,6 +1236,7 @@
 				AFA2579FC8F3DACCB8443105 /* DateSeparatorView.swift in Sources */,
 				BAEAF42FCB000D480AA0A947 /* DialogueTurnView.swift in Sources */,
 				4A4BEE11FCA7F50CE7CA442F /* DomainState.swift in Sources */,
+				04901998D41191A78C6BB36C /* DriftDetectionService.swift in Sources */,
 				63930965D8EA36E7D447D427 /* EmbeddingPipeline.swift in Sources */,
 				395473D98FDABB645F3CBA81 /* EmbeddingPipelineProtocol.swift in Sources */,
 				4FAE40CF81FCC3187BD74D48 /* EmbeddingService.swift in Sources */,

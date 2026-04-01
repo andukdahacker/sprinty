@@ -15,6 +15,7 @@ struct RootView: View {
     @State private var checkInViewModel: CheckInViewModel?
     @State private var showCheckIn = false
     @State private var checkInNotificationService: CheckInNotificationService?
+    @State private var driftDetectionService: DriftDetectionService?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -86,6 +87,10 @@ struct RootView: View {
                                 withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) {
                                     showConversation = false
                                 }
+                                Task {
+                                    await driftDetectionService?.cancelReEngagementNudge()
+                                    await driftDetectionService?.evaluateAndSchedule()
+                                }
                             } label: {
                                 Image(systemName: "chevron.left")
                                     .font(.title3.weight(.semibold))
@@ -118,9 +123,12 @@ struct RootView: View {
                 }
             }
             .onChange(of: appState.isPaused) { _, isPaused in
-                if !isPaused, let databaseManager = appState.databaseManager {
+                if isPaused {
+                    Task { await driftDetectionService?.cancelReEngagementNudge() }
+                } else if let databaseManager = appState.databaseManager {
                     Task {
                         await rescheduleCheckInNotifications(databaseManager: databaseManager)
+                        await driftDetectionService?.evaluateAndSchedule()
                     }
                 }
             }
@@ -144,9 +152,11 @@ struct RootView: View {
                     insightService: insightService
                 )
                 checkInNotificationService = CheckInNotificationService(databaseManager: databaseManager)
+                driftDetectionService = DriftDetectionService(databaseManager: databaseManager)
             }
             .task {
                 await rescheduleCheckInNotifications(databaseManager: databaseManager)
+                await driftDetectionService?.evaluateAndSchedule()
             }
         }
     }
