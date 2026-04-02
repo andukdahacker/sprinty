@@ -11,7 +11,7 @@ struct EngagementSourceTests {
     // MARK: - Test 6.1: Encoding/decoding and database round-trip
 
     @Test func test_engagementSource_encodingDecoding() throws {
-        let sources: [EngagementSource] = [.organic, .checkInNotification, .reEngagementNudge]
+        let sources: [EngagementSource] = [.organic, .checkInNotification, .reEngagementNudge, .milestoneNotification, .pauseSuggestionNotification]
         for source in sources {
             let data = try JSONEncoder().encode(source)
             let decoded = try JSONDecoder().decode(EngagementSource.self, from: data)
@@ -23,13 +23,15 @@ struct EngagementSourceTests {
         #expect(EngagementSource.organic.rawValue == "organic")
         #expect(EngagementSource.checkInNotification.rawValue == "checkInNotification")
         #expect(EngagementSource.reEngagementNudge.rawValue == "reEngagementNudge")
+        #expect(EngagementSource.milestoneNotification.rawValue == "milestoneNotification")
+        #expect(EngagementSource.pauseSuggestionNotification.rawValue == "pauseSuggestionNotification")
     }
 
     @Test func test_engagementSource_databaseRoundTrip() throws {
         let dbPool = try makeTestDB()
         let dbManager = DatabaseManager(dbPool: dbPool)
 
-        let sources: [EngagementSource] = [.organic, .checkInNotification, .reEngagementNudge]
+        let sources: [EngagementSource] = [.organic, .checkInNotification, .reEngagementNudge, .milestoneNotification, .pauseSuggestionNotification]
 
         for source in sources {
             let session = ConversationSession(

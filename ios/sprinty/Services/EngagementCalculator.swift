@@ -100,6 +100,10 @@ struct EngagementCalculator: Sendable {
         return Array(moods.prefix(5))
     }
 
+    func computeSessionIntensitySync(session: ConversationSession, in db: Database) throws -> SessionIntensity {
+        try computeSessionIntensity(session: session, in: db)
+    }
+
     private func computeSessionIntensity(session: ConversationSession, in db: Database) throws -> SessionIntensity {
         let messageCount = try Message
             .filter(Column("sessionId") == session.id)

@@ -9,14 +9,16 @@ protocol CheckInNotificationServiceProtocol: Sendable {
 }
 
 final class CheckInNotificationService: CheckInNotificationServiceProtocol, @unchecked Sendable {
-    private let notificationCenter: UNUserNotificationCenter
+    private let notificationCenter: NotificationCenterScheduling
     private let databaseManager: DatabaseManager
+    private let scheduler: NotificationSchedulerProtocol?
 
     static let checkInIdentifier = "com.ducdo.sprinty.checkin"
 
-    init(databaseManager: DatabaseManager, notificationCenter: UNUserNotificationCenter = .current()) {
+    init(databaseManager: DatabaseManager, notificationCenter: NotificationCenterScheduling = UNUserNotificationCenter.current(), scheduler: NotificationSchedulerProtocol? = nil) {
         self.notificationCenter = notificationCenter
         self.databaseManager = databaseManager
+        self.scheduler = scheduler
     }
 
     func requestPermissionIfNeeded() async -> Bool {
@@ -24,8 +26,10 @@ final class CheckInNotificationService: CheckInNotificationServiceProtocol, @unc
         guard settings.authorizationStatus == .notDetermined else {
             return settings.authorizationStatus == .authorized
         }
+        // requestAuthorization is only on UNUserNotificationCenter
+        guard let center = notificationCenter as? UNUserNotificationCenter else { return false }
         do {
-            return try await notificationCenter.requestAuthorization(options: [.alert])
+            return try await center.requestAuthorization(options: [.alert])
         } catch {
             return false
         }
@@ -41,10 +45,6 @@ final class CheckInNotificationService: CheckInNotificationServiceProtocol, @unc
         // Check for active sprint — no sprint = no check-in notifications
         guard await hasActiveSprint() else { return }
 
-        // Check Pause Mode
-        // Note: Pause Mode check should be done at the call site (AppState is @MainActor)
-        // The caller should not call this when isPaused is true
-
         var dateComponents = DateComponents()
         dateComponents.hour = hour
 
@@ -54,10 +54,17 @@ final class CheckInNotificationService: CheckInNotificationServiceProtocol, @unc
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
 
+        // Route through scheduler for cap enforcement if available
+        if let scheduler {
+            await scheduler.scheduleIfAllowed(type: .checkIn, trigger: trigger)
+            return
+        }
+
+        // Fallback: schedule directly (backward compatibility)
         let content = UNMutableNotificationContent()
         content.title = ""
         content.body = "Your coach has a thought for you."
-        content.sound = nil // Silent notification
+        content.sound = nil
 
         let request = UNNotificationRequest(
             identifier: Self.checkInIdentifier,

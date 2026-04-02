@@ -5,4 +5,6 @@ enum EngagementSource: String, Codable, DatabaseValueConvertible, Sendable {
     case organic
     case checkInNotification
     case reEngagementNudge
+    case milestoneNotification
+    case pauseSuggestionNotification
 }

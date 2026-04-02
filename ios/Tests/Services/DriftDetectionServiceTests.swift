@@ -9,6 +9,8 @@ import GRDB
 final class SpyNotificationCenter: NotificationCenterScheduling, @unchecked Sendable {
     var addedRequests: [UNNotificationRequest] = []
     var removedIdentifiers: [[String]] = []
+    var stubbedSettings: UNNotificationSettings?
+    var stubbedPendingRequests: [UNNotificationRequest] = []
 
     func add(_ request: UNNotificationRequest) async throws {
         addedRequests.append(request)
@@ -16,6 +18,18 @@ final class SpyNotificationCenter: NotificationCenterScheduling, @unchecked Send
 
     func removePendingNotificationRequests(withIdentifiers identifiers: [String]) {
         removedIdentifiers.append(identifiers)
+    }
+
+    func pendingNotificationRequests() async -> [UNNotificationRequest] {
+        stubbedPendingRequests
+    }
+
+    func notificationSettings() async -> UNNotificationSettings {
+        // UNNotificationSettings can't be directly constructed; tests using
+        // NotificationScheduler should use the mock scheduler instead.
+        // This default is only used by SpyNotificationCenter in DriftDetection tests
+        // which don't call notificationSettings().
+        fatalError("SpyNotificationCenter.notificationSettings() not stubbed — use MockNotificationScheduler for scheduler tests")
     }
 }
 

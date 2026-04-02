@@ -235,5 +235,15 @@ enum DatabaseMigrations {
                 t.add(column: "engagementSource", .text).notNull().defaults(to: "organic")
             }
         }
+
+        migrator.registerMigration("v16_notificationDelivery") { db in
+            try db.create(table: "notificationDelivery") { t in
+                t.primaryKey("id", .text).notNull()
+                t.column("type", .text).notNull()
+                t.column("scheduledAt", .datetime).notNull()
+                t.column("deliveredAt", .datetime)
+                t.column("priority", .integer).notNull()
+            }
+        }
     }
 }

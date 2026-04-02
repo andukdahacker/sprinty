@@ -1,5 +1,7 @@
 import SwiftUI
+import UserNotifications
 import OSLog
+import GRDB
 
 struct RootView: View {
     @Environment(AppState.self) private var appState
@@ -16,6 +18,7 @@ struct RootView: View {
     @State private var showCheckIn = false
     @State private var checkInNotificationService: CheckInNotificationService?
     @State private var driftDetectionService: DriftDetectionService?
+    @State private var notificationScheduler: NotificationScheduler?
     @State private var autonomyCalculator: AutonomyCalculator?
     @State private var autonomySnapshot: AutonomySnapshot?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -92,6 +95,7 @@ struct RootView: View {
                                 Task {
                                     await driftDetectionService?.cancelReEngagementNudge()
                                     await driftDetectionService?.evaluateAndSchedule(autonomyLevel: autonomySnapshot?.autonomyLevel ?? .none)
+                                    await checkPauseSuggestion(databaseManager: databaseManager)
                                 }
                             } label: {
                                 Image(systemName: "chevron.left")
@@ -126,7 +130,10 @@ struct RootView: View {
             }
             .onChange(of: appState.isPaused) { _, isPaused in
                 if isPaused {
-                    Task { await driftDetectionService?.cancelReEngagementNudge() }
+                    Task {
+                        await notificationScheduler?.removeAllScheduledNotifications()
+                        await driftDetectionService?.cancelReEngagementNudge()
+                    }
                 } else if let databaseManager = appState.databaseManager {
                     Task {
                         await computeAutonomyAndSchedule(databaseManager: databaseManager)
@@ -138,6 +145,16 @@ struct RootView: View {
                     appState.pendingCheckIn = false
                     ensureCheckInViewModel(databaseManager: databaseManager)
                     showCheckIn = true
+                }
+            }
+            .onChange(of: appState.pendingEngagementSource) { _, source in
+                guard let source else { return }
+                if source == .milestoneNotification || source == .pauseSuggestionNotification {
+                    appState.pendingEngagementSource = nil
+                    ensureCoachingViewModel(databaseManager: databaseManager)
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.45)) {
+                        showConversation = true
+                    }
                 }
             }
         } else {
@@ -152,8 +169,10 @@ struct RootView: View {
                     databaseManager: databaseManager,
                     insightService: insightService
                 )
-                checkInNotificationService = CheckInNotificationService(databaseManager: databaseManager)
-                driftDetectionService = DriftDetectionService(databaseManager: databaseManager)
+                let scheduler = NotificationScheduler(databaseManager: databaseManager)
+                notificationScheduler = scheduler
+                checkInNotificationService = CheckInNotificationService(databaseManager: databaseManager, scheduler: scheduler)
+                driftDetectionService = DriftDetectionService(databaseManager: databaseManager, scheduler: scheduler)
                 autonomyCalculator = AutonomyCalculator()
             }
             .task {
@@ -168,7 +187,8 @@ struct RootView: View {
         sprintDetailViewModel = SprintDetailViewModel(
             appState: appState,
             databaseManager: databaseManager,
-            chatService: chatService
+            chatService: chatService,
+            notificationScheduler: notificationScheduler
         )
     }
 
@@ -285,6 +305,11 @@ struct RootView: View {
     }
 
     private func computeAutonomyAndSchedule(databaseManager: DatabaseManager) async {
+        // Clean up old notification delivery records
+        try? await databaseManager.dbPool.write { db in
+            try NotificationDelivery.cleanupOldEntries(in: db)
+        }
+
         if let calculator = autonomyCalculator {
             do {
                 let snapshot = try await databaseManager.dbPool.read { db in
@@ -299,6 +324,7 @@ struct RootView: View {
             await driftDetectionService?.evaluateAndSchedule()
         }
         await rescheduleCheckInNotifications(databaseManager: databaseManager)
+        await checkPauseSuggestion(databaseManager: databaseManager)
     }
 
     private func rescheduleCheckInNotifications(databaseManager: DatabaseManager) async {
@@ -320,6 +346,34 @@ struct RootView: View {
             )
         } catch {
             // Profile read failed — notifications will be scheduled on next launch
+        }
+    }
+
+    private func checkPauseSuggestion(databaseManager: DatabaseManager) async {
+        guard let scheduler = notificationScheduler else { return }
+        do {
+            let shouldSuggestPause = try await databaseManager.dbPool.read { db in
+                let cutoff = Date().addingTimeInterval(-24 * 3600)
+                let recentSessions = try ConversationSession
+                    .filter(Column("startedAt") >= cutoff)
+                    .order(Column("startedAt").desc)
+                    .fetchAll(db)
+
+                let calculator = EngagementCalculator(dbPool: databaseManager.dbPool)
+                var deepCount = 0
+                for session in recentSessions {
+                    let intensity = try calculator.computeSessionIntensitySync(session: session, in: db)
+                    if intensity == .deep { deepCount += 1 }
+                }
+                return deepCount >= 3
+            }
+
+            if shouldSuggestPause {
+                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 10, repeats: false)
+                await scheduler.scheduleIfAllowed(type: .pauseSuggestion, trigger: trigger)
+            }
+        } catch {
+            // Non-critical
         }
     }
 

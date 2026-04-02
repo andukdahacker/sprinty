@@ -7,6 +7,8 @@ import GRDB
 protocol NotificationCenterScheduling: Sendable {
     func add(_ request: UNNotificationRequest) async throws
     func removePendingNotificationRequests(withIdentifiers identifiers: [String])
+    func pendingNotificationRequests() async -> [UNNotificationRequest]
+    func notificationSettings() async -> UNNotificationSettings
 }
 
 extension UNUserNotificationCenter: NotificationCenterScheduling {}
@@ -38,6 +40,7 @@ protocol DriftDetectionServiceProtocol: Sendable {
 final class DriftDetectionService: DriftDetectionServiceProtocol, @unchecked Sendable {
     private let notificationCenter: NotificationCenterScheduling
     private let databaseManager: DatabaseManager
+    private let scheduler: NotificationSchedulerProtocol?
     let config: DriftDetectionConfig
 
     static let reEngagementIdentifier = "com.ducdo.sprinty.reengagement"
@@ -45,11 +48,13 @@ final class DriftDetectionService: DriftDetectionServiceProtocol, @unchecked Sen
     init(
         databaseManager: DatabaseManager,
         config: DriftDetectionConfig = DriftDetectionConfig(),
-        notificationCenter: NotificationCenterScheduling = UNUserNotificationCenter.current()
+        notificationCenter: NotificationCenterScheduling = UNUserNotificationCenter.current(),
+        scheduler: NotificationSchedulerProtocol? = nil
     ) {
         self.databaseManager = databaseManager
         self.config = config
         self.notificationCenter = notificationCenter
+        self.scheduler = scheduler
     }
 
     func evaluateAndSchedule() async {
@@ -101,15 +106,22 @@ final class DriftDetectionService: DriftDetectionServiceProtocol, @unchecked Sen
     // MARK: - Private
 
     private func scheduleReEngagementNudge(timeInterval: TimeInterval) async {
-        let content = UNMutableNotificationContent()
-        content.title = ""
-        content.body = "Your coach has a thought for you."
-        content.sound = nil
-
         let trigger = UNTimeIntervalNotificationTrigger(
             timeInterval: timeInterval,
             repeats: false
         )
+
+        // Route through scheduler for cap enforcement if available
+        if let scheduler {
+            await scheduler.scheduleIfAllowed(type: .reEngagement, trigger: trigger)
+            return
+        }
+
+        // Fallback: schedule directly (backward compatibility)
+        let content = UNMutableNotificationContent()
+        content.title = ""
+        content.body = "Your coach has a thought for you."
+        content.sound = nil
 
         let request = UNNotificationRequest(
             identifier: Self.reEngagementIdentifier,

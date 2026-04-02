@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import UIKit
+import UserNotifications
 import GRDB
 
 @MainActor
@@ -34,12 +35,14 @@ final class SprintDetailViewModel {
     private let appState: AppState
     private let databaseManager: DatabaseManager
     private let chatService: ChatServiceProtocol?
+    private let notificationScheduler: NotificationSchedulerProtocol?
     private var celebrationTask: Task<Void, Never>?
 
-    init(appState: AppState, databaseManager: DatabaseManager, chatService: ChatServiceProtocol? = nil) {
+    init(appState: AppState, databaseManager: DatabaseManager, chatService: ChatServiceProtocol? = nil, notificationScheduler: NotificationSchedulerProtocol? = nil) {
         self.appState = appState
         self.databaseManager = databaseManager
         self.chatService = chatService
+        self.notificationScheduler = notificationScheduler
     }
 
     func load() async {
@@ -119,7 +122,13 @@ final class SprintDetailViewModel {
                     await generateNarrativeRetro(for: sprint, steps: updatedSteps)
                 }
 
-                // 2. THEN mark sprint complete
+                // 2. Schedule milestone notification (fires after user navigates away)
+                if let scheduler = notificationScheduler {
+                    let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+                    await scheduler.scheduleIfAllowed(type: .sprintMilestone, trigger: trigger)
+                }
+
+                // 3. THEN mark sprint complete
                 try await databaseManager.dbPool.write { db in
                     if var activeSprint = try Sprint.active().fetchOne(db) {
                         activeSprint.status = .complete
@@ -129,7 +138,7 @@ final class SprintDetailViewModel {
                 self.sprint?.status = .complete
                 appState.activeSprint = nil
 
-                // 3. Differentiated celebration for sprint completion
+                // 4. Differentiated celebration for sprint completion
                 triggerSprintCompletion(reduceMotion: reduceMotion)
             } else if sprintReactivated {
                 self.sprint?.status = .active

@@ -5,7 +5,7 @@ import UserNotifications
 @main
 struct SprintyApp: App {
     @State private var appState = AppState()
-    @State private var notificationDelegate: CheckInNotificationDelegate?
+    @State private var notificationDelegate: NotificationDelegate?
     @State private var authService: AuthService?
     @State private var subscriptionService: SubscriptionService?
     @State private var transactionListenerTask: Task<Void, Never>?
@@ -18,7 +18,7 @@ struct SprintyApp: App {
                 .environment(appState)
                 .environment(\.coachingTheme, themeFor(context: .home, colorScheme: colorScheme))
                 .task {
-                    let delegate = CheckInNotificationDelegate(appState: appState)
+                    let delegate = NotificationDelegate(appState: appState)
                     notificationDelegate = delegate
                     UNUserNotificationCenter.current().delegate = delegate
                     await bootstrap()
@@ -72,7 +72,7 @@ struct SprintyApp: App {
     }
 }
 
-final class CheckInNotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
+final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
     @MainActor private let appState: AppState
 
     @MainActor init(appState: AppState) {
@@ -85,14 +85,22 @@ final class CheckInNotificationDelegate: NSObject, UNUserNotificationCenterDeleg
         didReceive response: UNNotificationResponse
     ) async {
         let identifier = response.notification.request.identifier
-        if identifier == CheckInNotificationService.checkInIdentifier {
+        if identifier == NotificationType.checkIn.identifier {
             await MainActor.run {
                 appState.pendingCheckIn = true
                 appState.pendingEngagementSource = .checkInNotification
             }
-        } else if identifier == DriftDetectionService.reEngagementIdentifier {
+        } else if identifier == NotificationType.reEngagement.identifier {
             await MainActor.run {
                 appState.pendingEngagementSource = .reEngagementNudge
+            }
+        } else if identifier == NotificationType.sprintMilestone.identifier {
+            await MainActor.run {
+                appState.pendingEngagementSource = .milestoneNotification
+            }
+        } else if identifier == NotificationType.pauseSuggestion.identifier {
+            await MainActor.run {
+                appState.pendingEngagementSource = .pauseSuggestionNotification
             }
         }
     }
