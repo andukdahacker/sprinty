@@ -73,7 +73,7 @@ struct ComplianceLoggingIntegrationTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Response"),
-            .done(safetyLevel: "yellow", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil),
+            .done(safetyLevel: "yellow", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil, guardrail: nil),
         ]
         let (viewModel, _, mockLogger, db) = try await makeViewModel(chatService: mockChat)
 
@@ -96,7 +96,7 @@ struct ComplianceLoggingIntegrationTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Response"),
-            .done(safetyLevel: "orange", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil),
+            .done(safetyLevel: "orange", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil, guardrail: nil),
         ]
         let (viewModel, _, mockLogger, db) = try await makeViewModel(chatService: mockChat)
 
@@ -118,7 +118,7 @@ struct ComplianceLoggingIntegrationTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Response"),
-            .done(safetyLevel: "red", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil),
+            .done(safetyLevel: "red", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil, guardrail: nil),
         ]
         let (viewModel, _, mockLogger, db) = try await makeViewModel(chatService: mockChat)
 
@@ -140,7 +140,7 @@ struct ComplianceLoggingIntegrationTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Response"),
-            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil, guardrail: nil),
         ]
         let (viewModel, _, mockLogger, db) = try await makeViewModel(chatService: mockChat)
 
@@ -162,7 +162,7 @@ struct ComplianceLoggingIntegrationTests {
         // Unknown safetyLevel → nil → failsafe classification to yellow
         mockChat.stubbedEvents = [
             .token(text: "Response"),
-            .done(safetyLevel: "unknown_value", domainTags: [], mood: "welcoming", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil),
+            .done(safetyLevel: "unknown_value", domainTags: [], mood: "welcoming", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil, guardrail: nil),
         ]
         let (viewModel, _, mockLogger, db) = try await makeViewModel(chatService: mockChat)
 

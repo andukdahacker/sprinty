@@ -129,7 +129,7 @@ struct CoachingViewModelSprintTests {
         let chatService = MockChatService()
         chatService.stubbedEvents = [
             .token(text: "Hello"),
-            .done(safetyLevel: "green", domainTags: [], mood: "warm", mode: "discovery", memoryReferenced: false, challengerUsed: false, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: "v1", profileUpdate: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "warm", mode: "discovery", memoryReferenced: false, challengerUsed: false, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: "v1", profileUpdate: nil, guardrail: nil)
         ]
         let sprintService = MockSprintService()
         let sprint = Sprint(id: UUID(), name: "Active Sprint", startDate: Date(timeIntervalSinceNow: -3 * 86400), endDate: Date(timeIntervalSinceNow: 4 * 86400), status: .active)

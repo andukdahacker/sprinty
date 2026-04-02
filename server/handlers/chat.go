@@ -68,6 +68,12 @@ func ChatHandler(promptBuilder *prompts.Builder) http.HandlerFunc {
 		}
 		req.SystemPrompt = promptBuilder.Build(req.Mode, coachName, req.Profile, req.UserState, req.RagContext, req.SprintContext)
 
+		// Check guardrail flag from middleware
+		guardrailActive := middleware.GuardrailActiveFromContext(r.Context())
+		if guardrailActive {
+			req.SystemPrompt += prompts.GuardrailAddendum
+		}
+
 		logArgs := []any{
 			"mode", req.Mode,
 			"messageCount", len(req.Messages),
@@ -125,6 +131,10 @@ func ChatHandler(promptBuilder *prompts.Builder) http.HandlerFunc {
 				}
 				if event.Degraded {
 					donePayload["degraded"] = true
+				}
+				// Guardrail flag: set when active, UNLESS safety concern detected
+				if guardrailActive && (event.SafetyLevel == "green" || event.SafetyLevel == "") {
+					donePayload["guardrail"] = true
 				}
 				if len(event.ProfileUpdate) > 0 {
 					donePayload["profileUpdate"] = json.RawMessage(event.ProfileUpdate)

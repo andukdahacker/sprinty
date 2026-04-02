@@ -76,7 +76,7 @@ struct SSEParserTests {
         let sseEvent = SSEEvent(type: "done", data: json)
         let chatEvent = try ChatEvent.from(sseEvent: sseEvent)
 
-        if case .done(let safety, let tags, let mood, _, _, _, let usage, _, _) = chatEvent {
+        if case .done(let safety, let tags, let mood, _, _, _, let usage, _, _, _) = chatEvent {
             #expect(safety == "green")
             #expect(tags.isEmpty)
             #expect(mood == "welcoming")

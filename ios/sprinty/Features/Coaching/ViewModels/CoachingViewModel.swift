@@ -57,6 +57,10 @@ final class CoachingViewModel {
     private let autonomySnapshotProvider: (() -> AutonomySnapshot?)?
     private var previousSafetyLevel: SafetyLevel?
 
+    // MARK: - Guardrail State
+    var isGuardrailActive: Bool = false
+    private var guardrailActivatedDate: Date?
+
     // MARK: - Safety State
     var currentSafetyUIState: SafetyUIState = .green
     var isReturningFromCrisis: Bool = false
@@ -171,6 +175,14 @@ final class CoachingViewModel {
 
         localError = nil
 
+        // Reset guardrail state on new day
+        if isGuardrailActive, let activatedDate = guardrailActivatedDate {
+            if !Calendar.current.isDateInToday(activatedDate) {
+                isGuardrailActive = false
+                guardrailActivatedDate = nil
+            }
+        }
+
         do {
             let session = try await getOrCreateSession()
             currentSession = session
@@ -234,7 +246,7 @@ final class CoachingViewModel {
                             self.streamingText += tokenText
                         case .sprintProposal(let proposal):
                             self.sprintProposal = proposal
-                        case .done(let safetyLevel, _, let mood, let mode, let memoryReferenced, let challengerUsed, _, let promptVersion, let profileUpdate):
+                        case .done(let safetyLevel, _, let mood, let mode, let memoryReferenced, let challengerUsed, _, let promptVersion, let profileUpdate, let guardrail):
                             // Cache promptVersion from first done event per session
                             if let promptVersion, self.cachedPromptVersion == nil {
                                 self.cachedPromptVersion = promptVersion
@@ -325,6 +337,12 @@ final class CoachingViewModel {
                             }
 
                             self.challengerActive = challengerUsed ?? false
+
+                            // Guardrail: set active state when server signals daily limit reached
+                            if guardrail == true {
+                                self.isGuardrailActive = true
+                                self.guardrailActivatedDate = Date()
+                            }
 
                             if let profileUpdate, let profileUpdateService = self.profileUpdateService {
                                 Task { [weak self] in

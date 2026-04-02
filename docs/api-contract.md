@@ -250,6 +250,7 @@ data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "mode": "d
   - `domainStates` (object, optional): Domain state updates as `{domain: {status?, conversationCount?, lastUpdated?}}`
   - `corrections` (array of strings, optional): Explicit corrections the user made about their situation (audit-only)
 - `degraded` (boolean, optional): Present and `true` when the response was served by a fallback provider instead of the preferred tier provider. Omitted when not degraded.
+- `guardrail` (boolean, optional): Present and `true` when the daily session soft limit has been reached. The response contains a coaching wind-down rather than an error. Omitted when not guardrailed. Not set when safety level is non-green (safety always takes priority).
 - `usage` (object): Token consumption
   - `inputTokens` (number): Input token count
   - `outputTokens` (number): Output token count

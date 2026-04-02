@@ -60,6 +60,8 @@ func main() {
 
 	authMW := middleware.AuthMiddleware(cfg.JWTSecret)
 	tierMW := middleware.TierMiddleware(registry)
+	sessionTracker := middleware.NewSessionTracker()
+	guardrailsMW := middleware.GuardrailsMiddleware(sessionTracker, cfg)
 
 	mux := http.NewServeMux()
 
@@ -70,7 +72,7 @@ func main() {
 
 	// Protected routes: logging(auth(tier(handler)))
 	mux.Handle("POST /v1/auth/refresh", authMW(http.HandlerFunc(handlers.RefreshHandler(cfg.JWTSecret, appStoreClient))))
-	mux.Handle("POST /v1/chat", authMW(tierMW(http.HandlerFunc(handlers.ChatHandler(promptBuilder)))))
+	mux.Handle("POST /v1/chat", authMW(tierMW(guardrailsMW(http.HandlerFunc(handlers.ChatHandler(promptBuilder))))))
 
 	handler := middleware.LoggingMiddleware(mux)
 

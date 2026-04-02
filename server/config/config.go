@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 )
 
 type Config struct {
@@ -26,6 +27,10 @@ type Config struct {
 	AppleIssuerID   string
 	AppleBundleID   string
 	ApplePrivateKey string
+
+	// Soft guardrail daily session limits
+	FreeTierDailySessionLimit    int
+	PremiumTierDailySessionLimit int
 }
 
 func Load() (*Config, error) {
@@ -102,21 +107,37 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("config: at least one provider API key (ANTHROPIC_API_KEY or OPENAI_API_KEY) is required in %s environment", env)
 	}
 
+	// Soft guardrail daily session limits
+	freeTierDailySessionLimit := 5
+	if v := os.Getenv("FREE_TIER_DAILY_SESSION_LIMIT"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			freeTierDailySessionLimit = n
+		}
+	}
+	premiumTierDailySessionLimit := 0
+	if v := os.Getenv("PREMIUM_TIER_DAILY_SESSION_LIMIT"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			premiumTierDailySessionLimit = n
+		}
+	}
+
 	cfg := &Config{
-		JWTSecret:           jwtSecret,
-		Environment:         env,
-		Port:                port,
-		AnthropicAPIKey:     anthropicKey,
-		OpenAIAPIKey:        openaiKey,
-		SentryDSN:           os.Getenv("SENTRY_DSN"),
-		FreeTierProvider:    freeTierProvider,
-		FreeTierModel:       freeTierModel,
-		PremiumTierProvider: premiumTierProvider,
-		PremiumTierModel:    premiumTierModel,
-		AppleKeyID:          appleKeyID,
-		AppleIssuerID:       appleIssuerID,
-		AppleBundleID:       appleBundleID,
-		ApplePrivateKey:     applePrivateKey,
+		JWTSecret:                    jwtSecret,
+		Environment:                  env,
+		Port:                         port,
+		AnthropicAPIKey:              anthropicKey,
+		OpenAIAPIKey:                 openaiKey,
+		SentryDSN:                    os.Getenv("SENTRY_DSN"),
+		FreeTierProvider:             freeTierProvider,
+		FreeTierModel:                freeTierModel,
+		PremiumTierProvider:          premiumTierProvider,
+		PremiumTierModel:             premiumTierModel,
+		AppleKeyID:                   appleKeyID,
+		AppleIssuerID:                appleIssuerID,
+		AppleBundleID:                appleBundleID,
+		ApplePrivateKey:              applePrivateKey,
+		FreeTierDailySessionLimit:    freeTierDailySessionLimit,
+		PremiumTierDailySessionLimit: premiumTierDailySessionLimit,
 	}
 
 	slog.Info("config loaded",

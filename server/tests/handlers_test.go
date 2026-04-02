@@ -19,6 +19,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/ducdo/sprinty/server/auth"
+	"github.com/ducdo/sprinty/server/config"
 	"github.com/ducdo/sprinty/server/handlers"
 	"github.com/ducdo/sprinty/server/middleware"
 	"github.com/ducdo/sprinty/server/prompts"
@@ -97,12 +98,17 @@ func setupMuxWithBuilder(builder *prompts.Builder) *http.ServeMux {
 	registry.Register("free", mockProvider)
 	registry.Register("premium", mockProvider)
 	tierMW := middleware.TierMiddleware(registry)
+	sessionTracker := middleware.NewSessionTracker()
+	guardrailsMW := middleware.GuardrailsMiddleware(sessionTracker, &config.Config{
+		FreeTierDailySessionLimit:    5,
+		PremiumTierDailySessionLimit: 0,
+	})
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", handlers.HealthHandler)
 	mux.HandleFunc("POST /v1/auth/register", handlers.RegisterHandler(testSecret, nil))
 	mux.Handle("POST /v1/auth/refresh", authMW(http.HandlerFunc(handlers.RefreshHandler(testSecret, nil))))
-	mux.Handle("POST /v1/chat", authMW(tierMW(http.HandlerFunc(handlers.ChatHandler(builder)))))
+	mux.Handle("POST /v1/chat", authMW(tierMW(guardrailsMW(http.HandlerFunc(handlers.ChatHandler(builder))))))
 	return mux
 }
 
@@ -1785,5 +1791,147 @@ func TestChatHandlerNoProviderInContext(t *testing.T) {
 
 	if w.Code != http.StatusInternalServerError {
 		t.Errorf("expected 500 when no provider in context, got %d", w.Code)
+	}
+}
+
+// --- Story 8.3 Tests ---
+
+func setupMuxWithGuardrailLimit(t *testing.T, freeLimit int) *http.ServeMux {
+	t.Helper()
+	builder := createTestPromptBuilder(t)
+	mockProvider := providers.NewMockProvider()
+	authMW := middleware.AuthMiddleware(testSecret)
+	registry := middleware.NewProviderRegistry(mockProvider)
+	registry.Register("free", mockProvider)
+	registry.Register("premium", mockProvider)
+	tierMW := middleware.TierMiddleware(registry)
+	tracker := middleware.NewSessionTracker()
+	guardrailsMW := middleware.GuardrailsMiddleware(tracker, &config.Config{
+		FreeTierDailySessionLimit:    freeLimit,
+		PremiumTierDailySessionLimit: 0,
+	})
+
+	mux := http.NewServeMux()
+	mux.Handle("POST /v1/chat", authMW(tierMW(guardrailsMW(http.HandlerFunc(handlers.ChatHandler(builder))))))
+	return mux
+}
+
+func TestChatGuardrailDoneEvent(t *testing.T) {
+	mux := setupMuxWithGuardrailLimit(t, 1) // limit of 1 — first request normal, second guardrailed
+	token := createValidToken(t)
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+
+	// First request — should be normal (under limit)
+	req1 := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req1.Header.Set("Authorization", "Bearer "+token)
+	w1 := httptest.NewRecorder()
+	mux.ServeHTTP(w1, req1)
+	if w1.Code != http.StatusOK {
+		t.Fatalf("first request: expected 200, got %d", w1.Code)
+	}
+
+	// Verify first response does NOT have guardrail flag
+	body1 := w1.Body.String()
+	if strings.Contains(body1, `"guardrail"`) {
+		t.Error("first request should not have guardrail flag")
+	}
+
+	// Second request — should be guardrailed (count=1 >= limit=1)
+	req2 := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 := httptest.NewRecorder()
+	mux.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusOK {
+		t.Fatalf("second request: expected 200, got %d", w2.Code)
+	}
+
+	// Verify done event contains "guardrail": true
+	body2 := w2.Body.String()
+	scanner := bufio.NewScanner(strings.NewReader(body2))
+	foundGuardrail := false
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "data: ") && strings.Contains(line, "safetyLevel") {
+			var doneData map[string]any
+			if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &doneData); err == nil {
+				if g, ok := doneData["guardrail"].(bool); ok && g {
+					foundGuardrail = true
+				}
+			}
+		}
+	}
+	if !foundGuardrail {
+		t.Errorf("expected guardrail:true in done event, body: %s", body2)
+	}
+}
+
+func TestChatGuardrailSafetyException(t *testing.T) {
+	// Use a mock provider that returns non-green safety level
+	builder := createTestPromptBuilder(t)
+	safetyProvider := &providers.MockProvider{StubbedSafetyLevel: "yellow"}
+	authMW := middleware.AuthMiddleware(testSecret)
+	registry := middleware.NewProviderRegistry(safetyProvider)
+	registry.Register("free", safetyProvider)
+	tierMW := middleware.TierMiddleware(registry)
+	tracker := middleware.NewSessionTracker()
+	guardrailsMW := middleware.GuardrailsMiddleware(tracker, &config.Config{
+		FreeTierDailySessionLimit:    1,
+		PremiumTierDailySessionLimit: 0,
+	})
+
+	mux := http.NewServeMux()
+	mux.Handle("POST /v1/chat", authMW(tierMW(guardrailsMW(http.HandlerFunc(handlers.ChatHandler(builder))))))
+
+	token := createValidToken(t)
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+
+	// First request to reach limit
+	req1 := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req1.Header.Set("Authorization", "Bearer "+token)
+	w1 := httptest.NewRecorder()
+	mux.ServeHTTP(w1, req1)
+
+	// Second request — guardrail active but safety level is "yellow"
+	req2 := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 := httptest.NewRecorder()
+	mux.ServeHTTP(w2, req2)
+
+	// Verify done event does NOT contain guardrail flag (safety exception)
+	body2 := w2.Body.String()
+	scanner := bufio.NewScanner(strings.NewReader(body2))
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "data: ") && strings.Contains(line, "safetyLevel") {
+			var doneData map[string]any
+			if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &doneData); err == nil {
+				if _, ok := doneData["guardrail"]; ok {
+					t.Error("safety exception: guardrail flag should NOT be present when safetyLevel is non-green")
+				}
+			}
+		}
+	}
+}
+
+func TestChatSummarizePassesThroughGuardrail(t *testing.T) {
+	mux := setupMuxWithGuardrailLimit(t, 1)
+	token := createValidToken(t)
+
+	// First request to reach limit
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+	req1 := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req1.Header.Set("Authorization", "Bearer "+token)
+	w1 := httptest.NewRecorder()
+	mux.ServeHTTP(w1, req1)
+
+	// Summarize request — should not be blocked
+	summarizePayload := `{"messages":[{"role":"user","content":"hello"},{"role":"assistant","content":"hi"}],"mode":"summarize","promptVersion":"1.0"}`
+	req2 := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(summarizePayload))
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 := httptest.NewRecorder()
+	mux.ServeHTTP(w2, req2)
+
+	if w2.Code != http.StatusOK {
+		t.Errorf("summarize should succeed even with guardrail, got %d", w2.Code)
 	}
 }

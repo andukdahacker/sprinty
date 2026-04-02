@@ -72,7 +72,7 @@ struct CheckInViewModelTests {
         chatService.stubbedEvents = [
             .token(text: "You're doing great. "),
             .token(text: "Keep going."),
-            .done(safetyLevel: "green", domainTags: [], mood: "supportive", mode: "check_in", memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: "supportive", mode: "check_in", memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil, guardrail: nil)
         ]
 
         let sprintService = MockSprintService()
@@ -105,7 +105,7 @@ struct CheckInViewModelTests {
         let chatService = MockChatService()
         chatService.stubbedEvents = [
             .token(text: "Hello."),
-            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: "check_in", memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: "check_in", memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil, guardrail: nil)
         ]
 
         let sprintService = MockSprintService()
@@ -136,7 +136,7 @@ struct CheckInViewModelTests {
         let chatService = MockChatService()
         chatService.stubbedEvents = [
             .token(text: "Great progress!"),
-            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: "check_in", memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: "check_in", memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 5, outputTokens: 3), promptVersion: nil, profileUpdate: nil, guardrail: nil)
         ]
 
         let sprintService = MockSprintService()

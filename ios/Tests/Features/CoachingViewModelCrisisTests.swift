@@ -105,7 +105,7 @@ struct CoachingViewModelCrisisTests {
 
         mockChat.stubbedEvents = [
             .token(text: "Response"),
-            .done(safetyLevel: "orange", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil),
+            .done(safetyLevel: "orange", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil, guardrail: nil),
         ]
 
         let (viewModel, _, _, _, db, _) = try await makeViewModel(
@@ -146,7 +146,7 @@ struct CoachingViewModelCrisisTests {
 
         mockChat.stubbedEvents = [
             .token(text: "Response"),
-            .done(safetyLevel: "red", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil),
+            .done(safetyLevel: "red", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil, guardrail: nil),
         ]
 
         let (viewModel, _, _, _, db, _) = try await makeViewModel(
@@ -182,7 +182,7 @@ struct CoachingViewModelCrisisTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Hi"),
-            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil, guardrail: nil),
         ]
 
         let (viewModel, _, _, _, _, _) = try await makeViewModel(chatService: mockChat, dbManager: db)
@@ -208,7 +208,7 @@ struct CoachingViewModelCrisisTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Welcome back"),
-            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil, guardrail: nil),
         ]
 
         let (viewModel, _, _, _, _, _) = try await makeViewModel(chatService: mockChat, dbManager: db)
@@ -246,7 +246,7 @@ struct CoachingViewModelCrisisTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Response"),
-            .done(safetyLevel: "yellow", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil),
+            .done(safetyLevel: "yellow", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil, guardrail: nil),
         ]
 
         let (viewModel, _, _, _, _, _) = try await makeViewModel(
@@ -290,7 +290,7 @@ struct CoachingViewModelCrisisTests {
         // Use an invalid safety level to trigger failsafe source
         mockChat.stubbedEvents = [
             .token(text: "Response"),
-            .done(safetyLevel: "invalid_level", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil),
+            .done(safetyLevel: "invalid_level", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil, guardrail: nil),
         ]
 
         let (viewModel, _, _, _, _, _) = try await makeViewModel(
@@ -335,7 +335,7 @@ struct CoachingViewModelCrisisTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Response"),
-            .done(safetyLevel: "orange", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil),
+            .done(safetyLevel: "orange", domainTags: [], mood: "gentle", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil, guardrail: nil),
         ]
 
         let (viewModel, _, _, _, _, _) = try await makeViewModel(
@@ -398,7 +398,7 @@ struct CoachingViewModelCrisisTests {
         // Make stream empty to avoid sendMessage complexity
         mockChat.stubbedEvents = [
             .token(text: "Hi"),
-            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil),
+            .done(safetyLevel: "green", domainTags: [], mood: "welcoming", mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 5), promptVersion: nil, profileUpdate: nil, guardrail: nil),
         ]
 
         let (viewModel, _, _, _, _, _) = try await makeViewModel(chatService: mockChat, dbManager: db)

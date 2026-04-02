@@ -92,7 +92,7 @@ final class CheckInViewModel {
                     case .token(let text):
                         fullResponse += text
                         self.coachResponse = fullResponse
-                    case .done(let safetyLevel, _, _, _, _, _, _, _, _):
+                    case .done(let safetyLevel, _, _, _, _, _, _, _, _, _):
                         // Save assistant message
                         let assistantMessage = Message(
                             id: UUID(),

@@ -3,7 +3,7 @@ import Foundation
 enum ChatEvent: Sendable {
     case token(text: String)
     case sprintProposal(SprintProposalData)
-    case done(safetyLevel: String, domainTags: [String], mood: String?, mode: String?, memoryReferenced: Bool?, challengerUsed: Bool?, usage: ChatUsage, promptVersion: String?, profileUpdate: ProfileUpdate?)
+    case done(safetyLevel: String, domainTags: [String], mood: String?, mode: String?, memoryReferenced: Bool?, challengerUsed: Bool?, usage: ChatUsage, promptVersion: String?, profileUpdate: ProfileUpdate?, guardrail: Bool?)
 }
 
 struct ChatUsage: Codable, Sendable {
@@ -38,7 +38,8 @@ extension ChatEvent {
                 challengerUsed: parsed.challengerUsed,
                 usage: parsed.usage,
                 promptVersion: parsed.promptVersion,
-                profileUpdate: parsed.profileUpdate
+                profileUpdate: parsed.profileUpdate,
+                guardrail: parsed.guardrail
             )
         default:
             throw ChatEventParseError.unknownEventType(sseEvent.type)
@@ -65,4 +66,5 @@ private struct DoneEventData: Codable {
     let usage: ChatUsage
     let promptVersion: String?
     let profileUpdate: ProfileUpdate?
+    let guardrail: Bool?
 }

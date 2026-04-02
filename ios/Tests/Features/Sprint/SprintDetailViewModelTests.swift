@@ -348,7 +348,7 @@ struct SprintDetailViewModelTests {
         mockChat.stubbedEvents = [
             .token(text: "Here's the chapter we just finished... "),
             .token(text: "Great work on this sprint!"),
-            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 20), promptVersion: nil, profileUpdate: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 20), promptVersion: nil, profileUpdate: nil, guardrail: nil)
         ]
 
         let (sprint, steps) = try await createActiveSprint(in: db, stepCount: 2, withCoachContext: true)
@@ -372,7 +372,7 @@ struct SprintDetailViewModelTests {
         mockChat.stubbedEvents = [
             .token(text: "Here's the chapter "),
             .token(text: "we just finished."),
-            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 20), promptVersion: nil, profileUpdate: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 20), promptVersion: nil, profileUpdate: nil, guardrail: nil)
         ]
 
         let (sprint, steps) = try await createActiveSprint(in: db, stepCount: 2)
@@ -415,7 +415,7 @@ struct SprintDetailViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Retro text"),
-            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 20), promptVersion: nil, profileUpdate: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 20), promptVersion: nil, profileUpdate: nil, guardrail: nil)
         ]
 
         // Create a complete sprint without retro (no active sprint exists)
@@ -498,7 +498,7 @@ struct SprintDetailViewModelTests {
         let mockChat = MockChatService()
         mockChat.stubbedEvents = [
             .token(text: "Retro"),
-            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 20), promptVersion: nil, profileUpdate: nil)
+            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 20), promptVersion: nil, profileUpdate: nil, guardrail: nil)
         ]
 
         let (sprint, _) = try await createActiveSprint(in: db, stepCount: 2)

@@ -90,6 +90,7 @@ type ChatEvent struct {
 	ChallengerUsed   bool            `json:"challengerUsed,omitempty"`
 	Usage            *Usage          `json:"usage,omitempty"`
 	Degraded         bool            `json:"degraded,omitempty"`
+	Guardrail        bool            `json:"guardrail,omitempty"`
 	SummaryData      any             `json:"summaryData,omitempty"`
 	SprintProposal   json.RawMessage `json:"sprintProposal,omitempty"`
 	ProfileUpdate    json.RawMessage `json:"profileUpdate,omitempty"`

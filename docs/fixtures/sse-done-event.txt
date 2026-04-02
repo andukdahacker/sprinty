@@ -1,2 +1,5 @@
 event: done
-data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "mode": "discovery", "challengerUsed": false, "usage": {"inputTokens": 50, "outputTokens": 12}, "promptVersion": "abc123"}
+data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "mode": "discovery", "memoryReferenced": false, "challengerUsed": false, "usage": {"inputTokens": 50, "outputTokens": 12}, "promptVersion": "abc123"}
+
+event: done
+data: {"safetyLevel": "green", "domainTags": [], "mood": "gentle", "mode": "discovery", "memoryReferenced": false, "challengerUsed": false, "usage": {"inputTokens": 50, "outputTokens": 12}, "promptVersion": "abc123", "guardrail": true}
