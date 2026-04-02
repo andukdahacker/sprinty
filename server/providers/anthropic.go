@@ -146,16 +146,20 @@ type AnthropicProvider struct {
 	model  anthropic.Model
 }
 
-// NewAnthropicProvider creates a new Anthropic provider with auto-retries disabled.
-func NewAnthropicProvider(apiKey string) *AnthropicProvider {
+// NewAnthropicProvider creates a new Anthropic provider with the specified model.
+func NewAnthropicProvider(apiKey string, model anthropic.Model) *AnthropicProvider {
 	client := anthropic.NewClient(
 		option.WithAPIKey(apiKey),
 		option.WithMaxRetries(0),
 	)
 	return &AnthropicProvider{
 		client: &client,
-		model:  anthropic.ModelClaudeHaiku4_5,
+		model:  model,
 	}
+}
+
+func (p *AnthropicProvider) Name() string {
+	return "anthropic/" + string(p.model)
 }
 
 func (p *AnthropicProvider) StreamChat(ctx context.Context, req ChatRequest) (<-chan ChatEvent, error) {

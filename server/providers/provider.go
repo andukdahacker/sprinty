@@ -89,6 +89,7 @@ type ChatEvent struct {
 	MemoryReferenced bool            `json:"memoryReferenced,omitempty"`
 	ChallengerUsed   bool            `json:"challengerUsed,omitempty"`
 	Usage            *Usage          `json:"usage,omitempty"`
+	Degraded         bool            `json:"degraded,omitempty"`
 	SummaryData      any             `json:"summaryData,omitempty"`
 	SprintProposal   json.RawMessage `json:"sprintProposal,omitempty"`
 	ProfileUpdate    json.RawMessage `json:"profileUpdate,omitempty"`
@@ -96,4 +97,5 @@ type ChatEvent struct {
 
 type Provider interface {
 	StreamChat(ctx context.Context, req ChatRequest) (<-chan ChatEvent, error)
+	Name() string
 }

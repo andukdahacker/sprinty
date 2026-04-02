@@ -12,6 +12,10 @@ func NewMockProvider() *MockProvider {
 	return &MockProvider{}
 }
 
+func (m *MockProvider) Name() string {
+	return "mock"
+}
+
 func (m *MockProvider) StreamChat(ctx context.Context, req ChatRequest) (<-chan ChatEvent, error) {
 	ch := make(chan ChatEvent)
 

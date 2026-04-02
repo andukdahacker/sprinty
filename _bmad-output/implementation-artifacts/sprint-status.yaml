@@ -36,6 +36,9 @@
 
 generated: 2026-03-17
 last_updated: 2026-04-02
+# Story 8.2 code review completed: 2026-04-02
+# Story 8.2 dev completed: 2026-04-02
+# Story 8.2 context created: 2026-04-02
 # Story 8.1 code review completed: 2026-04-02
 # Story 8.1 dev started: 2026-04-01
 # Story 8.1 context created: 2026-04-01
@@ -216,7 +219,7 @@ development_status:
   # Epic 8: Premium Coaching & Monetization
   epic-8: in-progress
   8-1-storekit-2-subscription-integration: done
-  8-2-tier-based-model-routing: backlog
+  8-2-tier-based-model-routing: done
   8-3-soft-guardrails: backlog
   epic-8-retrospective: optional
 

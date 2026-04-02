@@ -93,11 +93,16 @@ func setupMuxWithBuilder(builder *prompts.Builder) *http.ServeMux {
 		builder, _ = prompts.NewBuilder(sectionsDir)
 	}
 
+	registry := middleware.NewProviderRegistry(mockProvider)
+	registry.Register("free", mockProvider)
+	registry.Register("premium", mockProvider)
+	tierMW := middleware.TierMiddleware(registry)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", handlers.HealthHandler)
 	mux.HandleFunc("POST /v1/auth/register", handlers.RegisterHandler(testSecret, nil))
 	mux.Handle("POST /v1/auth/refresh", authMW(http.HandlerFunc(handlers.RefreshHandler(testSecret, nil))))
-	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(mockProvider, builder))))
+	mux.Handle("POST /v1/chat", authMW(tierMW(http.HandlerFunc(handlers.ChatHandler(builder)))))
 	return mux
 }
 
@@ -575,6 +580,10 @@ type errorProvider struct {
 	err error
 }
 
+func (p *errorProvider) Name() string {
+	return "error-mock"
+}
+
 func (p *errorProvider) StreamChat(ctx context.Context, req providers.ChatRequest) (<-chan providers.ChatEvent, error) {
 	return nil, p.err
 }
@@ -638,9 +647,12 @@ func TestChatProviderError502(t *testing.T) {
 	// Create a provider that returns an anthropic-like error
 	errProvider := &errorProvider{err: errors.New("provider error")}
 	authMW := middleware.AuthMiddleware(testSecret)
+	registry := middleware.NewProviderRegistry(errProvider)
+	registry.Register("free", errProvider)
+	tierMW := middleware.TierMiddleware(registry)
 
 	mux := http.NewServeMux()
-	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(errProvider, builder))))
+	mux.Handle("POST /v1/chat", authMW(tierMW(http.HandlerFunc(handlers.ChatHandler(builder)))))
 
 	token := createValidToken(t)
 	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
@@ -736,9 +748,12 @@ func TestChatHandler_DoneEvent_ModeTransition(t *testing.T) {
 	builder := createTestPromptBuilder(t)
 	mockProvider := &providers.MockProvider{StubbedMode: "directive"}
 	authMW := middleware.AuthMiddleware(testSecret)
+	registry := middleware.NewProviderRegistry(mockProvider)
+	registry.Register("free", mockProvider)
+	tierMW := middleware.TierMiddleware(registry)
 
 	mux := http.NewServeMux()
-	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(mockProvider, builder))))
+	mux.Handle("POST /v1/chat", authMW(tierMW(http.HandlerFunc(handlers.ChatHandler(builder)))))
 
 	token := createValidToken(t)
 	chatPayload := `{"messages":[{"role":"user","content":"I want a plan"}],"mode":"discovery","promptVersion":"1.0"}`
@@ -775,9 +790,12 @@ func TestChatHandler_DoneEvent_ChallengerUsed(t *testing.T) {
 	builder := createTestPromptBuilder(t)
 	mockProvider := &providers.MockProvider{StubbedChallengerUsed: true}
 	authMW := middleware.AuthMiddleware(testSecret)
+	registry := middleware.NewProviderRegistry(mockProvider)
+	registry.Register("free", mockProvider)
+	tierMW := middleware.TierMiddleware(registry)
 
 	mux := http.NewServeMux()
-	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(mockProvider, builder))))
+	mux.Handle("POST /v1/chat", authMW(tierMW(http.HandlerFunc(handlers.ChatHandler(builder)))))
 
 	token := createValidToken(t)
 	chatPayload := `{"messages":[{"role":"user","content":"I'm going to quit my job tomorrow"}],"mode":"discovery","promptVersion":"1.0"}`
@@ -814,9 +832,12 @@ func TestChatHandler_DoneEvent_ModeFallbackWhenEmpty(t *testing.T) {
 	builder := createTestPromptBuilder(t)
 	mockProvider := &providers.MockProvider{} // StubbedMode empty, should fall back to req.Mode
 	authMW := middleware.AuthMiddleware(testSecret)
+	registry := middleware.NewProviderRegistry(mockProvider)
+	registry.Register("free", mockProvider)
+	tierMW := middleware.TierMiddleware(registry)
 
 	mux := http.NewServeMux()
-	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(mockProvider, builder))))
+	mux.Handle("POST /v1/chat", authMW(tierMW(http.HandlerFunc(handlers.ChatHandler(builder)))))
 
 	token := createValidToken(t)
 	chatPayload := `{"messages":[{"role":"user","content":"hello"}],"mode":"directive","promptVersion":"1.0"}`
@@ -1219,11 +1240,16 @@ func setupMuxWithProvider(provider *providers.MockProvider) *http.ServeMux {
 	}
 	builder, _ := prompts.NewBuilder(sectionsDir)
 
+	registry := middleware.NewProviderRegistry(provider)
+	registry.Register("free", provider)
+	registry.Register("premium", provider)
+	tierMW := middleware.TierMiddleware(registry)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", handlers.HealthHandler)
 	mux.HandleFunc("POST /v1/auth/register", handlers.RegisterHandler(testSecret, nil))
 	mux.Handle("POST /v1/auth/refresh", authMW(http.HandlerFunc(handlers.RefreshHandler(testSecret, nil))))
-	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(provider, builder))))
+	mux.Handle("POST /v1/chat", authMW(tierMW(http.HandlerFunc(handlers.ChatHandler(builder)))))
 	return mux
 }
 
@@ -1599,5 +1625,165 @@ func TestRegisterDeflateCompressed(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// --- Story 8.2 Tests ---
+
+// Test that tier routing selects the correct provider for free vs premium users.
+func TestChatHandlerTierRouting(t *testing.T) {
+	builder := createTestPromptBuilder(t)
+	freeProvider := providers.NewMockProvider()
+	premiumProvider := &providers.MockProvider{StubbedMode: "directive"} // distinct to identify
+
+	authMW := middleware.AuthMiddleware(testSecret)
+	registry := middleware.NewProviderRegistry(freeProvider)
+	registry.Register("free", freeProvider)
+	registry.Register("premium", premiumProvider)
+	tierMW := middleware.TierMiddleware(registry)
+
+	mux := http.NewServeMux()
+	mux.Handle("POST /v1/chat", authMW(tierMW(http.HandlerFunc(handlers.ChatHandler(builder)))))
+
+	// Free tier token
+	freeToken := createValidToken(t) // creates free tier token
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+freeToken)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("free tier: expected 200, got %d", w.Code)
+	}
+
+	// Parse done event — free provider has StubbedMode="" which falls back to req.Mode ("discovery")
+	body := w.Body.String()
+	scanner := bufio.NewScanner(strings.NewReader(body))
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "data: ") && strings.Contains(line, "mode") && strings.Contains(line, "safetyLevel") {
+			var doneData map[string]any
+			if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &doneData); err == nil {
+				if mode, ok := doneData["mode"].(string); ok && mode != "discovery" {
+					t.Errorf("free tier: expected mode 'discovery', got %q", mode)
+				}
+			}
+		}
+	}
+
+	// Premium tier token
+	premiumToken, err := auth.CreateToken(testSecret, "premium-device-id", "premium", nil)
+	if err != nil {
+		t.Fatalf("failed to create premium token: %v", err)
+	}
+
+	req2 := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req2.Header.Set("Authorization", "Bearer "+premiumToken)
+	w2 := httptest.NewRecorder()
+	mux.ServeHTTP(w2, req2)
+
+	if w2.Code != http.StatusOK {
+		t.Fatalf("premium tier: expected 200, got %d", w2.Code)
+	}
+
+	// Premium provider has StubbedMode="directive"
+	body2 := w2.Body.String()
+	scanner2 := bufio.NewScanner(strings.NewReader(body2))
+	foundDirective := false
+	for scanner2.Scan() {
+		line := scanner2.Text()
+		if strings.HasPrefix(line, "data: ") && strings.Contains(line, "mode") && strings.Contains(line, "safetyLevel") {
+			var doneData map[string]any
+			if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &doneData); err == nil {
+				if mode, ok := doneData["mode"].(string); ok && mode == "directive" {
+					foundDirective = true
+				}
+			}
+		}
+	}
+	if !foundDirective {
+		t.Error("premium tier: expected mode 'directive' from premium provider, but didn't find it")
+	}
+}
+
+// Test that both tiers receive identical system prompts (same promptVersion).
+func TestChatHandlerBothTiersReceiveSameSystemPrompt(t *testing.T) {
+	builder := createTestPromptBuilder(t)
+	freeProvider := providers.NewMockProvider()
+	premiumProvider := providers.NewMockProvider()
+
+	authMW := middleware.AuthMiddleware(testSecret)
+	registry := middleware.NewProviderRegistry(freeProvider)
+	registry.Register("free", freeProvider)
+	registry.Register("premium", premiumProvider)
+	tierMW := middleware.TierMiddleware(registry)
+
+	mux := http.NewServeMux()
+	mux.Handle("POST /v1/chat", authMW(tierMW(http.HandlerFunc(handlers.ChatHandler(builder)))))
+
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+
+	// Free tier request
+	freeToken := createValidToken(t)
+	req1 := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req1.Header.Set("Authorization", "Bearer "+freeToken)
+	w1 := httptest.NewRecorder()
+	mux.ServeHTTP(w1, req1)
+
+	// Premium tier request
+	premiumToken, _ := auth.CreateToken(testSecret, "premium-device", "premium", nil)
+	req2 := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req2.Header.Set("Authorization", "Bearer "+premiumToken)
+	w2 := httptest.NewRecorder()
+	mux.ServeHTTP(w2, req2)
+
+	// Both should get same promptVersion in done event
+	extractPromptVersion := func(body string) string {
+		scanner := bufio.NewScanner(strings.NewReader(body))
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.HasPrefix(line, "data: ") && strings.Contains(line, "promptVersion") {
+				var doneData map[string]any
+				if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &doneData); err == nil {
+					if pv, ok := doneData["promptVersion"].(string); ok {
+						return pv
+					}
+				}
+			}
+		}
+		return ""
+	}
+
+	pv1 := extractPromptVersion(w1.Body.String())
+	pv2 := extractPromptVersion(w2.Body.String())
+
+	if pv1 == "" {
+		t.Fatal("free tier: no promptVersion found in done event")
+	}
+	if pv1 != pv2 {
+		t.Errorf("expected same promptVersion for both tiers, got free=%q premium=%q", pv1, pv2)
+	}
+}
+
+// Test that missing provider in context returns proper error.
+func TestChatHandlerNoProviderInContext(t *testing.T) {
+	builder := createTestPromptBuilder(t)
+	authMW := middleware.AuthMiddleware(testSecret)
+
+	// Wire WITHOUT tier middleware — provider won't be in context
+	mux := http.NewServeMux()
+	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(builder))))
+
+	token := createValidToken(t)
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500 when no provider in context, got %d", w.Code)
 	}
 }

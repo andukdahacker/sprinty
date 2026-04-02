@@ -11,13 +11,14 @@ import (
 	"net/http"
 
 	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/openai/openai-go"
 
 	"github.com/ducdo/sprinty/server/middleware"
 	"github.com/ducdo/sprinty/server/prompts"
 	"github.com/ducdo/sprinty/server/providers"
 )
 
-func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) http.HandlerFunc {
+func ChatHandler(promptBuilder *prompts.Builder) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Gzip/deflate request body decompression
 		body := r.Body
@@ -38,6 +39,13 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 		var req providers.ChatRequest
 		if err := json.NewDecoder(body).Decode(&req); err != nil {
 			WriteError(w, http.StatusBadRequest, "malformed_request", "Request body must be valid JSON.")
+			return
+		}
+
+		// Get tier-selected provider from context
+		provider, ok := middleware.ProviderFromContext(r.Context())
+		if !ok {
+			WriteError(w, http.StatusInternalServerError, "provider_unavailable", "Your coach needs a moment. Try again shortly.")
 			return
 		}
 
@@ -64,6 +72,7 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 			"mode", req.Mode,
 			"messageCount", len(req.Messages),
 			"promptVersion", req.PromptVersion,
+			"provider", provider.Name(),
 		}
 		if claims, ok := middleware.ClaimsFromContext(r.Context()); ok {
 			logArgs = append(logArgs, "deviceId", claims.DeviceID, "tier", claims.Tier)
@@ -113,6 +122,9 @@ func ChatHandler(provider providers.Provider, promptBuilder *prompts.Builder) ht
 					"challengerUsed":   event.ChallengerUsed,
 					"usage":            event.Usage,
 					"promptVersion":    promptBuilder.ContentHash(),
+				}
+				if event.Degraded {
+					donePayload["degraded"] = true
 				}
 				if len(event.ProfileUpdate) > 0 {
 					donePayload["profileUpdate"] = json.RawMessage(event.ProfileUpdate)
@@ -272,11 +284,34 @@ func handleProviderError(w http.ResponseWriter, err error) {
 		RetryAfter int    `json:"retryAfter,omitempty"`
 	}
 
-	var apiErr *anthropic.Error
-	if errors.As(err, &apiErr) {
-		slog.Warn("provider error", "status", apiErr.StatusCode)
+	// Check for Anthropic errors
+	var anthropicErr *anthropic.Error
+	if errors.As(err, &anthropicErr) {
+		slog.Warn("provider error", "provider", "anthropic", "status", anthropicErr.StatusCode)
 
-		switch apiErr.StatusCode {
+		switch anthropicErr.StatusCode {
+		case 429:
+			WriteJSON(w, http.StatusTooManyRequests, errorResponse{
+				Error:      "rate_limited",
+				Message:    "Your coach needs a moment. Try again shortly.",
+				RetryAfter: 30,
+			})
+		default:
+			WriteJSON(w, http.StatusBadGateway, errorResponse{
+				Error:      "provider_unavailable",
+				Message:    "Your coach needs a moment. Try again shortly.",
+				RetryAfter: 10,
+			})
+		}
+		return
+	}
+
+	// Check for OpenAI errors
+	var openaiErr *openai.Error
+	if errors.As(err, &openaiErr) {
+		slog.Warn("provider error", "provider", "openai", "status", openaiErr.StatusCode)
+
+		switch openaiErr.StatusCode {
 		case 429:
 			WriteJSON(w, http.StatusTooManyRequests, errorResponse{
 				Error:      "rate_limited",

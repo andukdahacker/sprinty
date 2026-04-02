@@ -15,6 +15,12 @@ type Config struct {
 	OpenAIAPIKey    string
 	SentryDSN       string
 
+	// Tier-based model routing
+	FreeTierProvider    string
+	FreeTierModel       string
+	PremiumTierProvider string
+	PremiumTierModel    string
+
 	// Apple App Store Server API credentials (optional in dev, required in staging/production)
 	AppleKeyID      string
 	AppleIssuerID   string
@@ -61,23 +67,65 @@ func Load() (*Config, error) {
 		)
 	}
 
+	// Tier-based model routing with sensible defaults
+	freeTierProvider := os.Getenv("FREE_TIER_PROVIDER")
+	if freeTierProvider == "" {
+		freeTierProvider = "anthropic"
+	}
+	freeTierModel := os.Getenv("FREE_TIER_MODEL")
+	if freeTierModel == "" {
+		freeTierModel = "claude-haiku-4-5-20251001"
+	}
+	premiumTierProvider := os.Getenv("PREMIUM_TIER_PROVIDER")
+	if premiumTierProvider == "" {
+		premiumTierProvider = "anthropic"
+	}
+	premiumTierModel := os.Getenv("PREMIUM_TIER_MODEL")
+	if premiumTierModel == "" {
+		premiumTierModel = "claude-sonnet-4-6-20250514"
+	}
+
+	openaiKey := os.Getenv("OPENAI_API_KEY")
+
+	// Validate: warn if OpenAI configured as tier provider but key is missing
+	if openaiKey == "" {
+		if freeTierProvider == "openai" {
+			slog.Warn("FREE_TIER_PROVIDER is 'openai' but OPENAI_API_KEY is not set")
+		}
+		if premiumTierProvider == "openai" {
+			slog.Warn("PREMIUM_TIER_PROVIDER is 'openai' but OPENAI_API_KEY is not set")
+		}
+	}
+
+	// Validate: at least one provider API key must be configured (non-dev)
+	if (env == "staging" || env == "production") && anthropicKey == "" && openaiKey == "" {
+		return nil, fmt.Errorf("config: at least one provider API key (ANTHROPIC_API_KEY or OPENAI_API_KEY) is required in %s environment", env)
+	}
+
 	cfg := &Config{
-		JWTSecret:       jwtSecret,
-		Environment:     env,
-		Port:            port,
-		AnthropicAPIKey: anthropicKey,
-		OpenAIAPIKey:    os.Getenv("OPENAI_API_KEY"),
-		SentryDSN:       os.Getenv("SENTRY_DSN"),
-		AppleKeyID:      appleKeyID,
-		AppleIssuerID:   appleIssuerID,
-		AppleBundleID:   appleBundleID,
-		ApplePrivateKey: applePrivateKey,
+		JWTSecret:           jwtSecret,
+		Environment:         env,
+		Port:                port,
+		AnthropicAPIKey:     anthropicKey,
+		OpenAIAPIKey:        openaiKey,
+		SentryDSN:           os.Getenv("SENTRY_DSN"),
+		FreeTierProvider:    freeTierProvider,
+		FreeTierModel:       freeTierModel,
+		PremiumTierProvider: premiumTierProvider,
+		PremiumTierModel:    premiumTierModel,
+		AppleKeyID:          appleKeyID,
+		AppleIssuerID:       appleIssuerID,
+		AppleBundleID:       appleBundleID,
+		ApplePrivateKey:     applePrivateKey,
 	}
 
 	slog.Info("config loaded",
 		"environment", cfg.Environment,
 		"port", cfg.Port,
 		"hasAnthropicKey", cfg.AnthropicAPIKey != "",
+		"hasOpenAIKey", cfg.OpenAIAPIKey != "",
+		"freeTier", cfg.FreeTierProvider+"/"+cfg.FreeTierModel,
+		"premiumTier", cfg.PremiumTierProvider+"/"+cfg.PremiumTierModel,
 	)
 
 	return cfg, nil

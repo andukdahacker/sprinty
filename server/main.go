@@ -10,6 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/openai/openai-go"
+
 	"github.com/ducdo/sprinty/server/appstore"
 	"github.com/ducdo/sprinty/server/config"
 	"github.com/ducdo/sprinty/server/handlers"
@@ -27,15 +30,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Provider selection: real Anthropic if API key set, mock otherwise
-	var provider providers.Provider
-	if cfg.AnthropicAPIKey != "" {
-		provider = providers.NewAnthropicProvider(cfg.AnthropicAPIKey)
-		slog.Info("using Anthropic provider")
-	} else {
-		provider = providers.NewMockProvider()
-		slog.Info("using mock provider (no ANTHROPIC_API_KEY set)")
-	}
+	// Build provider registry for tier-based routing
+	registry := buildProviderRegistry(cfg)
+
 
 	// Prompt builder
 	execPath, err := os.Executable()
@@ -62,6 +59,7 @@ func main() {
 	}
 
 	authMW := middleware.AuthMiddleware(cfg.JWTSecret)
+	tierMW := middleware.TierMiddleware(registry)
 
 	mux := http.NewServeMux()
 
@@ -70,9 +68,9 @@ func main() {
 	mux.HandleFunc("POST /v1/auth/register", handlers.RegisterHandler(cfg.JWTSecret, appStoreClient))
 	mux.HandleFunc("GET /v1/prompt/{version}", handlers.PromptVersionHandler(promptBuilder))
 
-	// Protected routes
+	// Protected routes: logging(auth(tier(handler)))
 	mux.Handle("POST /v1/auth/refresh", authMW(http.HandlerFunc(handlers.RefreshHandler(cfg.JWTSecret, appStoreClient))))
-	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(provider, promptBuilder))))
+	mux.Handle("POST /v1/chat", authMW(tierMW(http.HandlerFunc(handlers.ChatHandler(promptBuilder)))))
 
 	handler := middleware.LoggingMiddleware(mux)
 
@@ -105,4 +103,50 @@ func main() {
 	}
 
 	slog.Info("server stopped cleanly")
+}
+
+func buildProviderRegistry(cfg *config.Config) *middleware.ProviderRegistry {
+	providerMap := make(map[string]providers.Provider)
+
+	makeProvider := func(providerName, model string) providers.Provider {
+		key := providerName + "/" + model
+		if p, ok := providerMap[key]; ok {
+			return p
+		}
+
+		var p providers.Provider
+		switch providerName {
+		case "anthropic":
+			if cfg.AnthropicAPIKey == "" {
+				slog.Warn("anthropic provider requested but ANTHROPIC_API_KEY not set, using mock", "model", model)
+				p = providers.NewMockProvider()
+			} else {
+				p = providers.NewAnthropicProvider(cfg.AnthropicAPIKey, anthropic.Model(model))
+				slog.Info("created anthropic provider", "model", model)
+			}
+		case "openai":
+			if cfg.OpenAIAPIKey == "" {
+				slog.Warn("openai provider requested but OPENAI_API_KEY not set, using mock", "model", model)
+				p = providers.NewMockProvider()
+			} else {
+				p = providers.NewOpenAIProvider(cfg.OpenAIAPIKey, openai.ChatModel(model))
+				slog.Info("created openai provider", "model", model)
+			}
+		default:
+			slog.Warn("unknown provider, using mock", "provider", providerName)
+			p = providers.NewMockProvider()
+		}
+
+		providerMap[key] = p
+		return p
+	}
+
+	freeProvider := makeProvider(cfg.FreeTierProvider, cfg.FreeTierModel)
+	premiumProvider := makeProvider(cfg.PremiumTierProvider, cfg.PremiumTierModel)
+
+	registry := middleware.NewProviderRegistry(freeProvider)
+	registry.Register("free", freeProvider)
+	registry.Register("premium", premiumProvider)
+
+	return registry
 }

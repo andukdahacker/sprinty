@@ -249,6 +249,7 @@ data: {"safetyLevel": "green", "domainTags": [], "mood": "welcoming", "mode": "d
   - `personalityTraits` (array of strings, optional): Newly observed personality traits
   - `domainStates` (object, optional): Domain state updates as `{domain: {status?, conversationCount?, lastUpdated?}}`
   - `corrections` (array of strings, optional): Explicit corrections the user made about their situation (audit-only)
+- `degraded` (boolean, optional): Present and `true` when the response was served by a fallback provider instead of the preferred tier provider. Omitted when not degraded.
 - `usage` (object): Token consumption
   - `inputTokens` (number): Input token count
   - `outputTokens` (number): Output token count
