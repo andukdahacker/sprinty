@@ -36,6 +36,7 @@
 
 generated: 2026-03-17
 last_updated: 2026-04-02
+# Story 9.2 context created: 2026-04-02
 # Story 9.1 code review completed: 2026-04-02
 # Story 9.1 dev completed: 2026-04-02
 # Story 9.1 dev started: 2026-04-02
@@ -233,7 +234,7 @@ development_status:
   # Epic 9: Notifications & Nudges
   epic-9: in-progress
   9-1-local-notification-infrastructure: done
-  9-2-check-in-and-sprint-milestone-notifications: backlog
+  9-2-check-in-and-sprint-milestone-notifications: ready-for-dev
   9-3-notification-preferences: backlog
   epic-9-retrospective: optional
 
