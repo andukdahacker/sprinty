@@ -11,10 +11,15 @@ type Config struct {
 	Environment string
 	Port        string
 
-	// Future — stubbed for later stories
 	AnthropicAPIKey string
 	OpenAIAPIKey    string
 	SentryDSN       string
+
+	// Apple App Store Server API credentials (optional in dev, required in staging/production)
+	AppleKeyID      string
+	AppleIssuerID   string
+	AppleBundleID   string
+	ApplePrivateKey string
 }
 
 func Load() (*Config, error) {
@@ -41,6 +46,21 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("config: ANTHROPIC_API_KEY is required in %s environment", env)
 	}
 
+	appleKeyID := os.Getenv("APPLE_KEY_ID")
+	appleIssuerID := os.Getenv("APPLE_ISSUER_ID")
+	appleBundleID := os.Getenv("APPLE_BUNDLE_ID")
+	applePrivateKey := os.Getenv("APPLE_PRIVATE_KEY")
+
+	if (env == "staging" || env == "production") && (appleKeyID == "" || appleIssuerID == "" || appleBundleID == "" || applePrivateKey == "") {
+		slog.Warn("Apple App Store credentials not fully configured — subscription validation will be disabled",
+			"environment", env,
+			"hasKeyID", appleKeyID != "",
+			"hasIssuerID", appleIssuerID != "",
+			"hasBundleID", appleBundleID != "",
+			"hasPrivateKey", applePrivateKey != "",
+		)
+	}
+
 	cfg := &Config{
 		JWTSecret:       jwtSecret,
 		Environment:     env,
@@ -48,6 +68,10 @@ func Load() (*Config, error) {
 		AnthropicAPIKey: anthropicKey,
 		OpenAIAPIKey:    os.Getenv("OPENAI_API_KEY"),
 		SentryDSN:       os.Getenv("SENTRY_DSN"),
+		AppleKeyID:      appleKeyID,
+		AppleIssuerID:   appleIssuerID,
+		AppleBundleID:   appleBundleID,
+		ApplePrivateKey: applePrivateKey,
 	}
 
 	slog.Info("config loaded",

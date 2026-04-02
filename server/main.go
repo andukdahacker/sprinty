@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ducdo/sprinty/server/appstore"
 	"github.com/ducdo/sprinty/server/config"
 	"github.com/ducdo/sprinty/server/handlers"
 	"github.com/ducdo/sprinty/server/middleware"
@@ -55,17 +56,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	appStoreClient := appstore.NewClient(cfg.AppleKeyID, cfg.AppleIssuerID, cfg.AppleBundleID, cfg.ApplePrivateKey)
+	if appStoreClient == nil {
+		slog.Info("appstore client not configured — subscription validation disabled (dev mode)")
+	}
+
 	authMW := middleware.AuthMiddleware(cfg.JWTSecret)
 
 	mux := http.NewServeMux()
 
 	// Public routes
 	mux.HandleFunc("GET /health", handlers.HealthHandler)
-	mux.HandleFunc("POST /v1/auth/register", handlers.RegisterHandler(cfg.JWTSecret))
+	mux.HandleFunc("POST /v1/auth/register", handlers.RegisterHandler(cfg.JWTSecret, appStoreClient))
 	mux.HandleFunc("GET /v1/prompt/{version}", handlers.PromptVersionHandler(promptBuilder))
 
 	// Protected routes
-	mux.Handle("POST /v1/auth/refresh", authMW(http.HandlerFunc(handlers.RefreshHandler(cfg.JWTSecret))))
+	mux.Handle("POST /v1/auth/refresh", authMW(http.HandlerFunc(handlers.RefreshHandler(cfg.JWTSecret, appStoreClient))))
 	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(provider, promptBuilder))))
 
 	handler := middleware.LoggingMiddleware(mux)

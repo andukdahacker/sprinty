@@ -1,3 +1,4 @@
+import StoreKit
 import SwiftUI
 import UserNotifications
 
@@ -5,6 +6,9 @@ import UserNotifications
 struct SprintyApp: App {
     @State private var appState = AppState()
     @State private var notificationDelegate: CheckInNotificationDelegate?
+    @State private var authService: AuthService?
+    @State private var subscriptionService: SubscriptionService?
+    @State private var transactionListenerTask: Task<Void, Never>?
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -28,9 +32,30 @@ struct SprintyApp: App {
             appState.databaseManager = databaseManager
 
             let apiClient = try APIClient.fromConfiguration()
-            let authService = AuthService(apiClient: apiClient)
-            try await authService.ensureAuthenticated()
+            let auth = AuthService(apiClient: apiClient)
+            authService = auth
+            try await auth.ensureAuthenticated()
             appState.isAuthenticated = true
+
+            // Parse tier from JWT
+            if let tierString = auth.tierFromCurrentToken(),
+               let tier = Tier(rawValue: tierString) {
+                appState.tier = tier
+            }
+
+            // Wire up subscription service and start transaction listener
+            let subService = SubscriptionService(authService: auth) { [appState] in
+                let tierString = auth.tierFromCurrentToken()
+                await MainActor.run {
+                    if let tierString, let tier = Tier(rawValue: tierString) {
+                        appState.tier = tier
+                    }
+                }
+            }
+            subscriptionService = subService
+            transactionListenerTask = Task {
+                await subService.listenForTransactionUpdates()
+            }
         } catch {
             appState.isAuthenticated = false
             if let appError = error as? AppError {

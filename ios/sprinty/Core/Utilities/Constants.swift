@@ -6,4 +6,5 @@ enum Constants {
     static let keychainAuthJWTKey = "auth-jwt"
     static let appGroupIdentifier = "group.com.ducdo.sprinty"
     static let databaseFilename = "sprinty.sqlite"
+    static let premiumProductId = "com.ducdo.sprinty.premium.monthly"
 }

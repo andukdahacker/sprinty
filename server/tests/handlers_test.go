@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/flate"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -94,8 +95,8 @@ func setupMuxWithBuilder(builder *prompts.Builder) *http.ServeMux {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", handlers.HealthHandler)
-	mux.HandleFunc("POST /v1/auth/register", handlers.RegisterHandler(testSecret))
-	mux.Handle("POST /v1/auth/refresh", authMW(http.HandlerFunc(handlers.RefreshHandler(testSecret))))
+	mux.HandleFunc("POST /v1/auth/register", handlers.RegisterHandler(testSecret, nil))
+	mux.Handle("POST /v1/auth/refresh", authMW(http.HandlerFunc(handlers.RefreshHandler(testSecret, nil))))
 	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(mockProvider, builder))))
 	return mux
 }
@@ -1220,8 +1221,8 @@ func setupMuxWithProvider(provider *providers.MockProvider) *http.ServeMux {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", handlers.HealthHandler)
-	mux.HandleFunc("POST /v1/auth/register", handlers.RegisterHandler(testSecret))
-	mux.Handle("POST /v1/auth/refresh", authMW(http.HandlerFunc(handlers.RefreshHandler(testSecret))))
+	mux.HandleFunc("POST /v1/auth/register", handlers.RegisterHandler(testSecret, nil))
+	mux.Handle("POST /v1/auth/refresh", authMW(http.HandlerFunc(handlers.RefreshHandler(testSecret, nil))))
 	mux.Handle("POST /v1/chat", authMW(http.HandlerFunc(handlers.ChatHandler(provider, builder))))
 	return mux
 }
@@ -1424,5 +1425,179 @@ func TestPromptBuilderAutonomyNilFallback(t *testing.T) {
 	}
 	if !strings.Contains(result, "Level: unknown") {
 		t.Errorf("expected 'unknown' fallback for autonomy level, got: %s", result)
+	}
+}
+
+// --- Story 8.1 Tests ---
+
+func TestRegisterWithTransactionID(t *testing.T) {
+	mux := setupMux()
+	payload := `{"deviceId": "550e8400-e29b-41d4-a716-446655440000", "transactionId": 12345}`
+	req := httptest.NewRequest("POST", "/v1/auth/register", strings.NewReader(payload))
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	var body map[string]string
+	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	token := body["token"]
+	if token == "" {
+		t.Fatal("expected non-empty token")
+	}
+
+	// With nil appStoreClient, tier should remain "free"
+	claims, err := auth.ValidateToken(testSecret, token)
+	if err != nil {
+		t.Fatalf("token validation failed: %v", err)
+	}
+	if claims.Tier != "free" {
+		t.Errorf("expected tier free (nil appStoreClient), got %q", claims.Tier)
+	}
+}
+
+func TestRegisterWithoutTransactionID(t *testing.T) {
+	mux := setupMux()
+	payload := `{"deviceId": "550e8400-e29b-41d4-a716-446655440000"}`
+	req := httptest.NewRequest("POST", "/v1/auth/register", strings.NewReader(payload))
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	var body map[string]string
+	json.NewDecoder(w.Body).Decode(&body)
+	claims, err := auth.ValidateToken(testSecret, body["token"])
+	if err != nil {
+		t.Fatalf("token validation failed: %v", err)
+	}
+	if claims.Tier != "free" {
+		t.Errorf("expected tier free, got %q", claims.Tier)
+	}
+}
+
+func TestRefreshWithoutBody(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+	req := httptest.NewRequest("POST", "/v1/auth/refresh", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.ContentLength = 0
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	var body map[string]string
+	json.NewDecoder(w.Body).Decode(&body)
+	claims, err := auth.ValidateToken(testSecret, body["token"])
+	if err != nil {
+		t.Fatalf("token validation failed: %v", err)
+	}
+	// Should preserve existing tier from claims
+	if claims.Tier != "free" {
+		t.Errorf("expected tier free, got %q", claims.Tier)
+	}
+}
+
+func TestRefreshWithTransactionID(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+	payload := `{"transactionId": 12345}`
+	req := httptest.NewRequest("POST", "/v1/auth/refresh", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	var body map[string]string
+	json.NewDecoder(w.Body).Decode(&body)
+	claims, err := auth.ValidateToken(testSecret, body["token"])
+	if err != nil {
+		t.Fatalf("token validation failed: %v", err)
+	}
+	// With nil appStoreClient, RefreshHandler preserves existing tier from claims (fail-safe)
+	if claims.Tier != "free" {
+		t.Errorf("expected tier free (nil appStoreClient preserves claims), got %q", claims.Tier)
+	}
+}
+
+func createPremiumToken(t *testing.T) string {
+	t.Helper()
+	token, err := auth.CreateToken(testSecret, "550e8400-e29b-41d4-a716-446655440000", "premium", nil)
+	if err != nil {
+		t.Fatalf("failed to create token: %v", err)
+	}
+	return token
+}
+
+func TestRefreshPreservesPremiumTierWithoutBody(t *testing.T) {
+	mux := setupMux()
+	token := createPremiumToken(t)
+	req := httptest.NewRequest("POST", "/v1/auth/refresh", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.ContentLength = 0
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	var body map[string]string
+	json.NewDecoder(w.Body).Decode(&body)
+	claims, err := auth.ValidateToken(testSecret, body["token"])
+	if err != nil {
+		t.Fatalf("token validation failed: %v", err)
+	}
+	if claims.Tier != "premium" {
+		t.Errorf("expected tier premium preserved, got %q", claims.Tier)
+	}
+}
+
+func TestRegisterGzipCompressed(t *testing.T) {
+	mux := setupMux()
+
+	var buf bytes.Buffer
+	gzw := gzip.NewWriter(&buf)
+	gzw.Write([]byte(`{"deviceId": "test-gzip-device"}`))
+	gzw.Close()
+
+	req := httptest.NewRequest("POST", "/v1/auth/register", &buf)
+	req.Header.Set("Content-Encoding", "gzip")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestRegisterDeflateCompressed(t *testing.T) {
+	mux := setupMux()
+
+	var buf bytes.Buffer
+	fw, _ := flate.NewWriter(&buf, flate.DefaultCompression)
+	fw.Write([]byte(`{"deviceId": "test-deflate-device"}`))
+	fw.Close()
+
+	req := httptest.NewRequest("POST", "/v1/auth/register", &buf)
+	req.Header.Set("Content-Encoding", "deflate")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 }

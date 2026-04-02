@@ -33,7 +33,8 @@ No auth required. Idempotent — same UUID returns a fresh JWT each time (statel
 **Request**
 ```json
 {
-  "deviceId": "550e8400-e29b-41d4-a716-446655440000"
+  "deviceId": "550e8400-e29b-41d4-a716-446655440000",
+  "transactionId": 1234567890
 }
 ```
 
@@ -56,8 +57,9 @@ No auth required. Idempotent — same UUID returns a fresh JWT each time (statel
 ```
 
 - `deviceId` (string): Device UUID from request
+- `transactionId` (number|null, optional): Apple StoreKit 2 transaction ID. If present, server validates with Apple and sets tier accordingly. Omit or null for free-tier registration
 - `userId` (string|null): Always null until user account linking (future story)
-- `tier` (string): Always `"free"` at registration. Values: `free`, `premium`
+- `tier` (string): `"free"` by default, `"premium"` if valid transaction ID provided. Values: `free`, `premium`
 - `iat` (number): Issued-at Unix timestamp
 - `exp` (number): Expiry Unix timestamp (30 days from `iat`)
 
@@ -71,7 +73,18 @@ No auth required. Idempotent — same UUID returns a fresh JWT each time (statel
 
 JWT required.
 
-**Request**: Empty body. JWT provided via `Authorization: Bearer <token>` header.
+**Request**: Optional JSON body. JWT provided via `Authorization: Bearer <token>` header.
+
+Without body: refreshes JWT preserving existing claims (including tier).
+
+With body:
+```json
+{
+  "transactionId": 1234567890
+}
+```
+
+- `transactionId` (number, optional): Apple StoreKit 2 transaction ID. If present, server validates with Apple and updates tier in the new JWT. If absent or body is empty, existing tier from JWT claims is preserved.
 
 **Response** `200 OK`
 ```json
@@ -80,7 +93,7 @@ JWT required.
 }
 ```
 
-Returns a new JWT with refreshed 30-day expiry, preserving all existing claims.
+Returns a new JWT with refreshed 30-day expiry. Tier is updated if transactionId is provided and valid, otherwise preserved from existing claims.
 
 **Errors**
 - `401` — `invalid_jwt`: Token is malformed or signature invalid

@@ -84,6 +84,7 @@ schemes:
         sprintyTests: [test]
     run:
       config: Debug
+      storeKitConfiguration: Sprinty.storekit
     test:
       config: Debug
       targets:

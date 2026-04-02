@@ -1,0 +1,42 @@
+{
+  "identifier" : "F1A2B3C4-D5E6-7890-ABCD-EF1234567890",
+  "type" : "Configuration",
+  "version" : 3,
+  "subscriptionGroups" : [
+    {
+      "id" : "premium_coaching",
+      "localizations" : [
+        {
+          "description" : "Unlock deeper, more nuanced coaching powered by a more capable AI model.",
+          "displayName" : "Premium Coaching",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "Premium Coaching",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "9.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "A1B2C3D4-E5F6-7890-1234-567890ABCDEF",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Monthly premium coaching subscription",
+              "displayName" : "Premium Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "name" : "Premium Monthly",
+          "productID" : "com.ducdo.sprinty.premium.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Premium Monthly",
+          "subscriptionGroupID" : "premium_coaching",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ]
+}
