@@ -6,6 +6,7 @@ protocol CheckInNotificationServiceProtocol: Sendable {
     func scheduleCheckInNotification(cadence: String, hour: Int, weekday: Int?) async
     func cancelCheckInNotifications() async
     func requestPermissionIfNeeded() async -> Bool
+    func rescheduleCheckIn(profile: UserProfile?) async
 }
 
 final class CheckInNotificationService: CheckInNotificationServiceProtocol, @unchecked Sendable {
@@ -77,6 +78,25 @@ final class CheckInNotificationService: CheckInNotificationServiceProtocol, @unc
         } catch {
             // Notification scheduling failed — non-critical
         }
+    }
+
+    func rescheduleCheckIn(profile: UserProfile?) async {
+        let resolvedProfile: UserProfile?
+        if let profile {
+            resolvedProfile = profile
+        } else {
+            resolvedProfile = try? await databaseManager.dbPool.read { db in
+                try UserProfile.current().fetchOne(db)
+            }
+        }
+        guard let resolvedProfile else { return }
+
+        await cancelCheckInNotifications()
+        await scheduleCheckInNotification(
+            cadence: resolvedProfile.checkInCadence,
+            hour: resolvedProfile.checkInTimeHour,
+            weekday: resolvedProfile.checkInCadence == "weekly" ? resolvedProfile.checkInWeekday : nil
+        )
     }
 
     func cancelCheckInNotifications() async {

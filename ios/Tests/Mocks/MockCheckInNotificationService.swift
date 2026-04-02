@@ -5,9 +5,11 @@ final class MockCheckInNotificationService: CheckInNotificationServiceProtocol, 
     var scheduleCallCount = 0
     var cancelCallCount = 0
     var requestPermissionCallCount = 0
+    var rescheduleCallCount = 0
     var lastCadence: String?
     var lastHour: Int?
     var lastWeekday: Int?
+    var lastRescheduleProfile: UserProfile?
     var stubbedPermissionResult = true
 
     func scheduleCheckInNotification(cadence: String, hour: Int, weekday: Int?) async {
@@ -24,5 +26,10 @@ final class MockCheckInNotificationService: CheckInNotificationServiceProtocol, 
     func requestPermissionIfNeeded() async -> Bool {
         requestPermissionCallCount += 1
         return stubbedPermissionResult
+    }
+
+    func rescheduleCheckIn(profile: UserProfile?) async {
+        rescheduleCallCount += 1
+        lastRescheduleProfile = profile
     }
 }

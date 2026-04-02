@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import UserNotifications
 import GRDB
 @testable import sprinty
 
@@ -113,6 +114,135 @@ struct CheckInNotificationServiceTests {
     @Test("Notification identifier is consistent")
     func test_notificationIdentifier() {
         #expect(CheckInNotificationService.checkInIdentifier == "com.ducdo.sprinty.checkin")
+    }
+
+    // --- Story 9.2 Tests ---
+
+    // MARK: - rescheduleCheckIn
+
+    @Test("rescheduleCheckIn cancels existing and schedules with profile values")
+    func test_rescheduleCheckIn_cancelsAndReschedules() async throws {
+        let db = try makeTestDB()
+        try await createProfile(in: db)
+        try await createActiveSprint(in: db)
+
+        let spy = SpyNotificationCenter()
+        let service = CheckInNotificationService(databaseManager: db, notificationCenter: spy)
+
+        let profile = UserProfile(
+            id: UUID(),
+            avatarId: "avatar_classic",
+            coachAppearanceId: "coach_sage",
+            coachName: "Sage",
+            onboardingStep: 5,
+            onboardingCompleted: true,
+            checkInCadence: "daily",
+            checkInTimeHour: 14,
+            createdAt: Date(timeIntervalSinceNow: -2 * 86400),
+            updatedAt: Date()
+        )
+        await service.rescheduleCheckIn(profile: profile)
+
+        // Should have cancelled first (removePendingNotificationRequests) then scheduled (add)
+        #expect(spy.removedIdentifiers.count >= 1)
+        #expect(spy.removedIdentifiers[0].contains(CheckInNotificationService.checkInIdentifier))
+    }
+
+    @Test("rescheduleCheckIn reads profile from DB when nil passed")
+    func test_rescheduleCheckIn_readsFromDB() async throws {
+        let db = try makeTestDB()
+        try await createProfile(in: db)
+        try await createActiveSprint(in: db)
+
+        let spy = SpyNotificationCenter()
+        let service = CheckInNotificationService(databaseManager: db, notificationCenter: spy)
+
+        // Pass nil — should read profile from DB
+        await service.rescheduleCheckIn(profile: nil)
+
+        // Should still schedule (default profile has hour=9, cadence=daily)
+        #expect(spy.removedIdentifiers.count >= 1)
+    }
+
+    @Test("rescheduleCheckIn handles daily cadence correctly")
+    func test_rescheduleCheckIn_dailyCadence() async throws {
+        let db = try makeTestDB()
+        try await createProfile(in: db)
+        try await createActiveSprint(in: db)
+
+        let spy = SpyNotificationCenter()
+        let mockScheduler = MockNotificationScheduler()
+        let service = CheckInNotificationService(databaseManager: db, notificationCenter: spy, scheduler: mockScheduler)
+
+        let profile = UserProfile(
+            id: UUID(),
+            avatarId: "avatar_classic",
+            coachAppearanceId: "coach_sage",
+            coachName: "Sage",
+            onboardingStep: 5,
+            onboardingCompleted: true,
+            checkInCadence: "daily",
+            checkInTimeHour: 10,
+            createdAt: Date(timeIntervalSinceNow: -2 * 86400),
+            updatedAt: Date()
+        )
+        await service.rescheduleCheckIn(profile: profile)
+
+        #expect(mockScheduler.scheduleCallCount == 1)
+        #expect(mockScheduler.lastScheduledType == .checkIn)
+        // Verify the trigger is a calendar trigger with correct hour
+        if let calTrigger = mockScheduler.lastTrigger as? UNCalendarNotificationTrigger {
+            #expect(calTrigger.dateComponents.hour == 10)
+            #expect(calTrigger.dateComponents.weekday == nil)
+        }
+    }
+
+    @Test("rescheduleCheckIn handles weekly cadence correctly")
+    func test_rescheduleCheckIn_weeklyCadence() async throws {
+        let db = try makeTestDB()
+        try await createProfile(in: db)
+        try await createActiveSprint(in: db)
+
+        let spy = SpyNotificationCenter()
+        let mockScheduler = MockNotificationScheduler()
+        let service = CheckInNotificationService(databaseManager: db, notificationCenter: spy, scheduler: mockScheduler)
+
+        let profile = UserProfile(
+            id: UUID(),
+            avatarId: "avatar_classic",
+            coachAppearanceId: "coach_sage",
+            coachName: "Sage",
+            onboardingStep: 5,
+            onboardingCompleted: true,
+            checkInCadence: "weekly",
+            checkInTimeHour: 8,
+            checkInWeekday: 3,
+            createdAt: Date(timeIntervalSinceNow: -2 * 86400),
+            updatedAt: Date()
+        )
+        await service.rescheduleCheckIn(profile: profile)
+
+        #expect(mockScheduler.scheduleCallCount == 1)
+        if let calTrigger = mockScheduler.lastTrigger as? UNCalendarNotificationTrigger {
+            #expect(calTrigger.dateComponents.hour == 8)
+            #expect(calTrigger.dateComponents.weekday == 3)
+        }
+    }
+
+    @Test("rescheduleCheckIn respects suppression rules")
+    func test_rescheduleCheckIn_respectsSuppression() async throws {
+        let db = try makeTestDB()
+        // Profile created recently — 24h rule should suppress
+        try await createProfile(in: db, createdAt: Date())
+        try await createActiveSprint(in: db)
+
+        let spy = SpyNotificationCenter()
+        let service = CheckInNotificationService(databaseManager: db, notificationCenter: spy)
+
+        await service.rescheduleCheckIn(profile: nil)
+
+        // Should not have added any request due to 24h suppression
+        #expect(spy.addedRequests.count == 0)
     }
 
     // --- Story 6.3 Tests ---

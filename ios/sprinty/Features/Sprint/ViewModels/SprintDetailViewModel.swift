@@ -37,6 +37,7 @@ final class SprintDetailViewModel {
     private let chatService: ChatServiceProtocol?
     private let notificationScheduler: NotificationSchedulerProtocol?
     private var celebrationTask: Task<Void, Never>?
+    private var notifiedMilestones: Set<Int> = []
 
     init(appState: AppState, databaseManager: DatabaseManager, chatService: ChatServiceProtocol? = nil, notificationScheduler: NotificationSchedulerProtocol? = nil) {
         self.appState = appState
@@ -146,6 +147,8 @@ final class SprintDetailViewModel {
                     appState.activeSprint = sprint
                 }
             } else if stepToWrite.completed {
+                // Check for 50% milestone
+                await checkIntermediateMilestone(steps: updatedSteps, sprintId: stepToWrite.sprintId)
                 triggerCelebration(reduceMotion: reduceMotion)
             }
         } catch {
@@ -210,6 +213,22 @@ final class SprintDetailViewModel {
             self.sprint?.narrativeRetro = finalText
         } catch {
             // Retro is non-critical — log error, keep placeholder
+        }
+    }
+
+    private func checkIntermediateMilestone(steps: [SprintStep], sprintId: UUID) async {
+        guard !steps.isEmpty else { return }
+        let completedCount = steps.filter(\.completed).count
+        let total = steps.count
+        let percentComplete = (completedCount * 100) / total
+
+        // Fire 50% milestone if crossed and not already notified
+        if percentComplete >= 50, !notifiedMilestones.contains(50) {
+            notifiedMilestones.insert(50)
+            if let scheduler = notificationScheduler {
+                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+                await scheduler.scheduleIfAllowed(type: .sprintMilestone, trigger: trigger)
+            }
         }
     }
 

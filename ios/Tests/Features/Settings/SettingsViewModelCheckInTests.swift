@@ -34,7 +34,7 @@ struct SettingsViewModelCheckInTests {
         }
     }
 
-    @Test("updateCheckInCadence calls notification service to reschedule")
+    @Test("updateCheckInCadence calls rescheduleCheckIn")
     @MainActor
     func test_updateCadence_reschedulesNotification() async throws {
         let db = try makeTestDB()
@@ -49,13 +49,10 @@ struct SettingsViewModelCheckInTests {
         // Wait for background Task to complete
         try await Task.sleep(for: .milliseconds(200))
 
-        #expect(mockNotifService.scheduleCallCount == 1)
-        #expect(mockNotifService.lastCadence == "weekly")
-        #expect(mockNotifService.lastHour == 10)
-        #expect(mockNotifService.lastWeekday != nil)
+        #expect(mockNotifService.rescheduleCallCount == 1)
     }
 
-    @Test("updateCheckInTime calls notification service to reschedule")
+    @Test("updateCheckInTime calls rescheduleCheckIn")
     @MainActor
     func test_updateTime_reschedulesNotification() async throws {
         let db = try makeTestDB()
@@ -69,10 +66,55 @@ struct SettingsViewModelCheckInTests {
 
         try await Task.sleep(for: .milliseconds(200))
 
-        #expect(mockNotifService.scheduleCallCount == 1)
-        #expect(mockNotifService.lastHour == 14)
-        #expect(mockNotifService.lastCadence == "daily")
-        #expect(mockNotifService.lastWeekday == nil)
+        #expect(mockNotifService.rescheduleCallCount == 1)
+    }
+
+    // --- Story 9.2 Tests ---
+
+    @Test("Profile hour change triggers reschedule")
+    @MainActor
+    func test_updateTime_triggersReschedule() async throws {
+        let db = try makeTestDB()
+        try await createProfile(in: db)
+
+        let mockNotifService = MockCheckInNotificationService()
+        let vm = SettingsViewModel(databaseManager: db, notificationService: mockNotifService)
+        await vm.loadProfile()
+
+        vm.updateCheckInTime(15)
+
+        try await Task.sleep(for: .milliseconds(200))
+
+        #expect(mockNotifService.rescheduleCallCount == 1)
+
+        // Verify the hour was persisted in DB
+        let profile = try await db.dbPool.read { dbConn in
+            try UserProfile.fetchOne(dbConn)
+        }
+        #expect(profile?.checkInTimeHour == 15)
+    }
+
+    @Test("Profile cadence change triggers reschedule")
+    @MainActor
+    func test_updateCadence_triggersReschedule() async throws {
+        let db = try makeTestDB()
+        try await createProfile(in: db)
+
+        let mockNotifService = MockCheckInNotificationService()
+        let vm = SettingsViewModel(databaseManager: db, notificationService: mockNotifService)
+        await vm.loadProfile()
+
+        vm.updateCheckInCadence("weekly")
+
+        try await Task.sleep(for: .milliseconds(200))
+
+        #expect(mockNotifService.rescheduleCallCount == 1)
+
+        let profile = try await db.dbPool.read { dbConn in
+            try UserProfile.fetchOne(dbConn)
+        }
+        #expect(profile?.checkInCadence == "weekly")
+        #expect(profile?.checkInWeekday != nil)
     }
 
     @Test("No notification service does not crash")

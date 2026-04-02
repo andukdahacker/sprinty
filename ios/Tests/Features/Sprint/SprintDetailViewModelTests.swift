@@ -491,6 +491,115 @@ struct SprintDetailViewModelTests {
         #expect(computeJustCompleted(lastStepCompletedAt: nil, sprintStatus: .complete) == false)
     }
 
+    // --- Story 9.2 Tests ---
+
+    // MARK: - 50% Milestone Notification
+
+    @Test("50% milestone notification fires when crossing threshold")
+    @MainActor func test_toggleStep_50percentMilestone_fires() async throws {
+        let db = try makeTestDB()
+        let appState = AppState()
+        let mockScheduler = MockNotificationScheduler()
+        let (sprint, _) = try await createActiveSprint(in: db, stepCount: 4)
+        appState.activeSprint = sprint
+        let vm = SprintDetailViewModel(appState: appState, databaseManager: db, notificationScheduler: mockScheduler)
+        await vm.load()
+
+        // Complete step 1 (25%) — no milestone
+        await vm.toggleStep(vm.steps[0])
+        #expect(mockScheduler.scheduleCallCount == 0)
+
+        // Complete step 2 (50%) — 50% milestone should fire
+        await vm.toggleStep(vm.steps[1])
+        #expect(mockScheduler.scheduleCallCount == 1)
+        #expect(mockScheduler.lastScheduledType == .sprintMilestone)
+    }
+
+    @Test("50% milestone not fired twice for same sprint")
+    @MainActor func test_toggleStep_50percentMilestone_noDuplicate() async throws {
+        let db = try makeTestDB()
+        let appState = AppState()
+        let mockScheduler = MockNotificationScheduler()
+        let (sprint, _) = try await createActiveSprint(in: db, stepCount: 4)
+        appState.activeSprint = sprint
+        let vm = SprintDetailViewModel(appState: appState, databaseManager: db, notificationScheduler: mockScheduler)
+        await vm.load()
+
+        // Complete steps 1 and 2 (50%)
+        await vm.toggleStep(vm.steps[0])
+        await vm.toggleStep(vm.steps[1])
+        #expect(mockScheduler.scheduleCallCount == 1)
+
+        // Complete step 3 (75%) — should NOT fire again
+        await vm.toggleStep(vm.steps[2])
+        #expect(mockScheduler.scheduleCallCount == 1)
+    }
+
+    @Test("100% milestone still fires via allDone path")
+    @MainActor func test_toggleStep_100percentMilestone_stillFires() async throws {
+        let db = try makeTestDB()
+        let appState = AppState()
+        let mockScheduler = MockNotificationScheduler()
+        let mockChat = MockChatService()
+        mockChat.stubbedEvents = [
+            .token(text: "Retro"),
+            .done(safetyLevel: "green", domainTags: [], mood: nil, mode: nil, memoryReferenced: nil, challengerUsed: nil, usage: ChatUsage(inputTokens: 10, outputTokens: 20), promptVersion: nil, profileUpdate: nil, guardrail: nil)
+        ]
+        let (sprint, _) = try await createActiveSprint(in: db, stepCount: 2)
+        appState.activeSprint = sprint
+        let vm = SprintDetailViewModel(appState: appState, databaseManager: db, chatService: mockChat, notificationScheduler: mockScheduler)
+        await vm.load()
+
+        // Complete all steps
+        await vm.toggleStep(vm.steps[0])
+        // Step 1 of 2 = 50% — fires 50% milestone
+        #expect(mockScheduler.scheduleCallCount == 1)
+
+        await vm.toggleStep(vm.steps[1])
+        // allDone fires 100% milestone
+        #expect(mockScheduler.scheduleCallCount == 2)
+    }
+
+    @Test("Step below 50% does not fire milestone")
+    @MainActor func test_toggleStep_below50percent_noMilestone() async throws {
+        let db = try makeTestDB()
+        let appState = AppState()
+        let mockScheduler = MockNotificationScheduler()
+        let (sprint, _) = try await createActiveSprint(in: db, stepCount: 6)
+        appState.activeSprint = sprint
+        let vm = SprintDetailViewModel(appState: appState, databaseManager: db, notificationScheduler: mockScheduler)
+        await vm.load()
+
+        // Complete step 1 of 6 (~17%) — no milestone
+        await vm.toggleStep(vm.steps[0])
+        #expect(mockScheduler.scheduleCallCount == 0)
+
+        // Complete step 2 of 6 (~33%) — still no milestone
+        await vm.toggleStep(vm.steps[1])
+        #expect(mockScheduler.scheduleCallCount == 0)
+    }
+
+    @Test("Odd step count rounds correctly — 3 of 5 triggers 50% milestone")
+    @MainActor func test_toggleStep_oddStepCount_50percentRounding() async throws {
+        let db = try makeTestDB()
+        let appState = AppState()
+        let mockScheduler = MockNotificationScheduler()
+        let (sprint, _) = try await createActiveSprint(in: db, stepCount: 5)
+        appState.activeSprint = sprint
+        let vm = SprintDetailViewModel(appState: appState, databaseManager: db, notificationScheduler: mockScheduler)
+        await vm.load()
+
+        // Complete 2 of 5 (40%) — no milestone
+        await vm.toggleStep(vm.steps[0])
+        await vm.toggleStep(vm.steps[1])
+        #expect(mockScheduler.scheduleCallCount == 0)
+
+        // Complete 3 of 5 (60%) — crosses 50%
+        await vm.toggleStep(vm.steps[2])
+        #expect(mockScheduler.scheduleCallCount == 1)
+        #expect(mockScheduler.lastScheduledType == .sprintMilestone)
+    }
+
     @Test("Sprint completion uses differentiated celebration — avatar celebrating state")
     @MainActor func test_toggleStep_sprintCompletion_usesDifferentiatedCelebration() async throws {
         let db = try makeTestDB()

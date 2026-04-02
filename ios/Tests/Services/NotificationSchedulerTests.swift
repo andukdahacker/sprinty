@@ -406,4 +406,182 @@ struct NotificationSchedulerTests {
         #expect(mock.scheduleCallCount == 1)
         #expect(mock.lastScheduledType == .sprintMilestone)
     }
+
+    // --- Story 9.2 Tests ---
+
+    // MARK: - 9.2-4.1: Pause suggestion verification
+
+    @Test func test_pauseSuggestion_schedulesViaPauseSuggestionType() async throws {
+        let dbManager = try makeTestDB()
+        let (scheduler, spy) = makeScheduler(dbManager: dbManager)
+        try createProfile(in: dbManager)
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 10, repeats: false)
+        await scheduler.scheduleIfAllowed(type: .pauseSuggestion, trigger: trigger)
+
+        #expect(spy.addedRequests.count == 1)
+        #expect(spy.addedRequests[0].identifier == NotificationType.pauseSuggestion.identifier)
+        #expect(spy.addedRequests[0].content.body == "Your coach thinks you might need a breather.")
+    }
+
+    // MARK: - 9.2-4.2: Re-engagement verification
+
+    @Test func test_reEngagement_usesEmotionSafeCopy() async throws {
+        let dbManager = try makeTestDB()
+        let (scheduler, spy) = makeScheduler(dbManager: dbManager)
+        try createProfile(in: dbManager)
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 60, repeats: false)
+        await scheduler.scheduleIfAllowed(type: .reEngagement, trigger: trigger)
+
+        #expect(spy.addedRequests.count == 1)
+        #expect(spy.addedRequests[0].content.body == "Your coach has a thought for you.")
+        #expect(spy.addedRequests[0].identifier == NotificationType.reEngagement.identifier)
+    }
+
+    @Test func test_reEngagement_cancelledExplicitlyViaDriftService() async throws {
+        let dbManager = try makeTestDB()
+        let spy = SpyNotificationCenter()
+        let driftService = DriftDetectionService(databaseManager: dbManager, notificationCenter: spy)
+
+        await driftService.cancelReEngagementNudge()
+
+        #expect(spy.removedIdentifiers.count == 1)
+        #expect(spy.removedIdentifiers[0].contains(DriftDetectionService.reEngagementIdentifier))
+    }
+
+    // MARK: - 9.2-4.3: Cross-type calm budget tests
+
+    @Test func test_crossTypeCalmBudget_2perDayHardCap() async throws {
+        let dbManager = try makeTestDB()
+        let (scheduler, spy) = makeScheduler(dbManager: dbManager)
+        try createProfile(in: dbManager)
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 60, repeats: false)
+
+        // Schedule milestone (priority 1) and check-in (priority 2)
+        await scheduler.scheduleIfAllowed(type: .sprintMilestone, trigger: trigger)
+        await scheduler.scheduleIfAllowed(type: .checkIn, trigger: trigger)
+        #expect(spy.addedRequests.count == 2)
+        #expect(try todayDeliveryCount(in: dbManager) == 2)
+
+        // Third notification of lower priority blocked
+        await scheduler.scheduleIfAllowed(type: .pauseSuggestion, trigger: trigger)
+        #expect(spy.addedRequests.count == 2) // still 2
+        #expect(try todayDeliveryCount(in: dbManager) == 2)
+    }
+
+    @Test func test_crossTypeCalmBudget_priorityDisplacement() async throws {
+        let dbManager = try makeTestDB()
+        let (scheduler, spy) = makeScheduler(dbManager: dbManager)
+        try createProfile(in: dbManager)
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 60, repeats: false)
+
+        // Fill with low-priority: pauseSuggestion (3) and reEngagement (4)
+        await scheduler.scheduleIfAllowed(type: .pauseSuggestion, trigger: trigger)
+        await scheduler.scheduleIfAllowed(type: .reEngagement, trigger: trigger)
+        #expect(spy.addedRequests.count == 2)
+
+        // Milestone (priority 1) displaces reEngagement (priority 4 = lowest)
+        await scheduler.scheduleIfAllowed(type: .sprintMilestone, trigger: trigger)
+        #expect(spy.addedRequests.count == 3)
+        #expect(spy.removedIdentifiers.count == 1)
+        #expect(spy.removedIdentifiers[0] == [NotificationType.reEngagement.identifier])
+        #expect(try todayDeliveryCount(in: dbManager) == 2) // hard cap maintained
+    }
+
+    @Test func test_crossTypeCalmBudget_checkInDisplacesReEngagement() async throws {
+        let dbManager = try makeTestDB()
+        let (scheduler, spy) = makeScheduler(dbManager: dbManager)
+        try createProfile(in: dbManager)
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 60, repeats: false)
+
+        // Fill with: pauseSuggestion (3) and reEngagement (4)
+        await scheduler.scheduleIfAllowed(type: .pauseSuggestion, trigger: trigger)
+        await scheduler.scheduleIfAllowed(type: .reEngagement, trigger: trigger)
+        #expect(spy.addedRequests.count == 2)
+
+        // CheckIn (priority 2) displaces reEngagement (priority 4)
+        await scheduler.scheduleIfAllowed(type: .checkIn, trigger: trigger)
+        #expect(spy.addedRequests.count == 3)
+        #expect(spy.removedIdentifiers[0] == [NotificationType.reEngagement.identifier])
+    }
+
+    // MARK: - 9.2-4.4: Pause Mode suppression tests (all 4 types)
+
+    @Test func test_pauseMode_suppressesCheckIn() async throws {
+        let dbManager = try makeTestDB()
+        let (scheduler, spy) = makeScheduler(dbManager: dbManager)
+        try createProfile(in: dbManager, isPaused: true)
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 60, repeats: false)
+        await scheduler.scheduleIfAllowed(type: .checkIn, trigger: trigger)
+        #expect(spy.addedRequests.count == 0)
+    }
+
+    @Test func test_pauseMode_suppressesMilestone() async throws {
+        let dbManager = try makeTestDB()
+        let (scheduler, spy) = makeScheduler(dbManager: dbManager)
+        try createProfile(in: dbManager, isPaused: true)
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 60, repeats: false)
+        await scheduler.scheduleIfAllowed(type: .sprintMilestone, trigger: trigger)
+        #expect(spy.addedRequests.count == 0)
+    }
+
+    @Test func test_pauseMode_suppressesPauseSuggestion() async throws {
+        let dbManager = try makeTestDB()
+        let (scheduler, spy) = makeScheduler(dbManager: dbManager)
+        try createProfile(in: dbManager, isPaused: true)
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 60, repeats: false)
+        await scheduler.scheduleIfAllowed(type: .pauseSuggestion, trigger: trigger)
+        #expect(spy.addedRequests.count == 0)
+    }
+
+    @Test func test_pauseMode_suppressesReEngagement() async throws {
+        let dbManager = try makeTestDB()
+        let (scheduler, spy) = makeScheduler(dbManager: dbManager)
+        try createProfile(in: dbManager, isPaused: true)
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 60, repeats: false)
+        await scheduler.scheduleIfAllowed(type: .reEngagement, trigger: trigger)
+        #expect(spy.addedRequests.count == 0)
+    }
+
+    // MARK: - 9.2-4.5: Notification content tests (all 4 types)
+
+    @Test func test_checkInContent_emptyTitle_nilSound_noBadge_correctBody() {
+        let content = NotificationType.checkIn.content
+        #expect(content.title == "")
+        #expect(content.body == "Your coach has a thought for you.")
+        #expect(content.sound == nil)
+        #expect(content.badge == nil)
+    }
+
+    @Test func test_milestoneContent_emptyTitle_nilSound_noBadge_correctBody() {
+        let content = NotificationType.sprintMilestone.content
+        #expect(content.title == "")
+        #expect(content.body == "You hit a milestone. Your coach noticed.")
+        #expect(content.sound == nil)
+        #expect(content.badge == nil)
+    }
+
+    @Test func test_pauseSuggestionContent_emptyTitle_nilSound_noBadge_correctBody() {
+        let content = NotificationType.pauseSuggestion.content
+        #expect(content.title == "")
+        #expect(content.body == "Your coach thinks you might need a breather.")
+        #expect(content.sound == nil)
+        #expect(content.badge == nil)
+    }
+
+    @Test func test_reEngagementContent_emptyTitle_nilSound_noBadge_correctBody() {
+        let content = NotificationType.reEngagement.content
+        #expect(content.title == "")
+        #expect(content.body == "Your coach has a thought for you.")
+        #expect(content.sound == nil)
+        #expect(content.badge == nil)
+    }
 }

@@ -88,8 +88,6 @@ final class SettingsViewModel {
         if newCadence == "weekly" && checkInWeekday == nil {
             checkInWeekday = Calendar.current.component(.weekday, from: Date())
         }
-        let weekday = checkInWeekday
-        let hour = checkInTimeHour
         Task { [weak self] in
             guard let self else { return }
             do {
@@ -103,11 +101,7 @@ final class SettingsViewModel {
                         try profile.update(db)
                     }
                 }
-                await notificationService?.scheduleCheckInNotification(
-                    cadence: newCadence,
-                    hour: hour,
-                    weekday: newCadence == "weekly" ? weekday : nil
-                )
+                await notificationService?.rescheduleCheckIn(profile: nil)
             } catch {
                 // Write failed — local state already updated for responsiveness
             }
@@ -116,8 +110,6 @@ final class SettingsViewModel {
 
     func updateCheckInTime(_ newHour: Int) {
         checkInTimeHour = newHour
-        let cadence = checkInCadence
-        let weekday = checkInWeekday
         Task { [weak self] in
             guard let self else { return }
             do {
@@ -128,11 +120,7 @@ final class SettingsViewModel {
                         try profile.update(db)
                     }
                 }
-                await notificationService?.scheduleCheckInNotification(
-                    cadence: cadence,
-                    hour: newHour,
-                    weekday: cadence == "weekly" ? weekday : nil
-                )
+                await notificationService?.rescheduleCheckIn(profile: nil)
             } catch {
                 // Write failed — local state already updated for responsiveness
             }

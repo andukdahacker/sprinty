@@ -1,6 +1,6 @@
 # Story 9.2: Check-in & Sprint Milestone Notifications
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -26,29 +26,29 @@ So that I stay on track and feel acknowledged when I make progress.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `rescheduleCheckIn()` to CheckInNotificationService (AC: #1, #7)
-  - [ ] 1.1 Add `rescheduleCheckIn(profile: UserProfile)` method that cancels existing check-in notification and re-schedules using `profile.checkInTimeHour`, `profile.checkInCadence`, and `profile.checkInWeekday`
-  - [ ] 1.2 Ensure the method reads profile from DB if not passed, and routes through NotificationScheduler
-  - [ ] 1.3 Extend existing `CheckInNotificationServiceTests.swift` with tests: reschedule cancels old + schedules new, handles daily and weekly cadence, respects all suppression rules
+- [x] Task 1: Add `rescheduleCheckIn()` to CheckInNotificationService (AC: #1, #7)
+  - [x] 1.1 Add `rescheduleCheckIn(profile: UserProfile)` method that cancels existing check-in notification and re-schedules using `profile.checkInTimeHour`, `profile.checkInCadence`, and `profile.checkInWeekday`
+  - [x] 1.2 Ensure the method reads profile from DB if not passed, and routes through NotificationScheduler
+  - [x] 1.3 Extend existing `CheckInNotificationServiceTests.swift` with tests: reschedule cancels old + schedules new, handles daily and weekly cadence, respects all suppression rules
 
-- [ ] Task 2: Add intermediate sprint milestone notifications (AC: #2)
-  - [ ] 2.1 In `SprintDetailViewModel`, detect when step completion crosses the 50% threshold (e.g., completing step 3 of 6 steps). Currently only fires at 100% (final step `allDone`).
-  - [ ] 2.2 Track which milestone thresholds have already fired per sprint to prevent duplicates. Options: add a `milestonesNotified` field on Sprint model (requires migration v17), or check `NotificationDelivery` records filtered by sprint context, or use a simple in-memory set on the ViewModel (lost on restart but acceptable since milestones are step-completion-driven)
-  - [ ] 2.3 Keep existing 100% (final step) milestone notification from Story 9.1 unchanged
-  - [ ] 2.4 Write tests: 50% threshold fires, duplicate prevention for same threshold, 100% still fires, step completion below 50% does not fire, odd step counts round correctly (e.g., 3 of 5 = 60% triggers 50% milestone)
+- [x] Task 2: Add intermediate sprint milestone notifications (AC: #2)
+  - [x] 2.1 In `SprintDetailViewModel`, detect when step completion crosses the 50% threshold (e.g., completing step 3 of 6 steps). Currently only fires at 100% (final step `allDone`).
+  - [x] 2.2 Track which milestone thresholds have already fired per sprint to prevent duplicates. Options: add a `milestonesNotified` field on Sprint model (requires migration v17), or check `NotificationDelivery` records filtered by sprint context, or use a simple in-memory set on the ViewModel (lost on restart but acceptable since milestones are step-completion-driven)
+  - [x] 2.3 Keep existing 100% (final step) milestone notification from Story 9.1 unchanged
+  - [x] 2.4 Write tests: 50% threshold fires, duplicate prevention for same threshold, 100% still fires, step completion below 50% does not fire, odd step counts round correctly (e.g., 3 of 5 = 60% triggers 50% milestone)
 
-- [ ] Task 3: Wire up check-in rescheduling from profile changes (AC: #7)
-  - [ ] 3.1 Identify where `UserProfile.checkInTimeHour` / `checkInCadence` is updated (likely `MemoryView` profile editing or a settings flow)
-  - [ ] 3.2 After profile save, call `rescheduleCheckIn()` so the next notification fires at the new time
-  - [ ] 3.3 If no existing UI updates these fields yet (Story 9.3 handles full Settings UI), add the reschedule hook at the profile-save call site so it triggers automatically when 9.3 adds the UI
-  - [ ] 3.4 Write test: profile hour change triggers cancel + reschedule
+- [x] Task 3: Wire up check-in rescheduling from profile changes (AC: #7)
+  - [x] 3.1 Identify where `UserProfile.checkInTimeHour` / `checkInCadence` is updated (likely `MemoryView` profile editing or a settings flow)
+  - [x] 3.2 After profile save, call `rescheduleCheckIn()` so the next notification fires at the new time
+  - [x] 3.3 If no existing UI updates these fields yet (Story 9.3 handles full Settings UI), add the reschedule hook at the profile-save call site so it triggers automatically when 9.3 adds the UI
+  - [x] 3.4 Write test: profile hour change triggers cancel + reschedule
 
-- [ ] Task 4: Comprehensive notification scenario tests (AC: #3, #4, #5, #6)
-  - [ ] 4.1 **Pause suggestion verification:** Confirm `RootView.checkPauseSuggestion()` detects 3+ deep sessions in 24h (deep = `EngagementCalculator` intensity `.deep`) and schedules via `NotificationScheduler.scheduleIfAllowed(type: .pauseSuggestion, trigger:)` with 10-second delay trigger
-  - [ ] 4.2 **Re-engagement verification:** Confirm `DriftDetectionService` routes through `NotificationScheduler`, uses emotion-safe copy "Your coach has a thought for you.", and cancels pending re-engagement via explicit `cancelReEngagementNudge()` call (NOTE: cancellation happens when coaching view closes, NOT automatically on app open — this is by design since the daily greeting handles return)
-  - [ ] 4.3 **Cross-type calm budget tests:** Schedule multiple notification types in same day, verify 2/day hard cap enforced, verify priority displacement (milestone priority 1 displaces check-in priority 2)
-  - [ ] 4.4 **Pause Mode suppression tests:** Verify all 4 notification types suppressed when `isPaused == true`
-  - [ ] 4.5 **Notification content tests:** Verify all 4 types produce empty title `""`, nil sound, no badge, correct body copy per `NotificationType.content`
+- [x] Task 4: Comprehensive notification scenario tests (AC: #3, #4, #5, #6)
+  - [x] 4.1 **Pause suggestion verification:** Confirm `RootView.checkPauseSuggestion()` detects 3+ deep sessions in 24h (deep = `EngagementCalculator` intensity `.deep`) and schedules via `NotificationScheduler.scheduleIfAllowed(type: .pauseSuggestion, trigger:)` with 10-second delay trigger
+  - [x] 4.2 **Re-engagement verification:** Confirm `DriftDetectionService` routes through `NotificationScheduler`, uses emotion-safe copy "Your coach has a thought for you.", and cancels pending re-engagement via explicit `cancelReEngagementNudge()` call (NOTE: cancellation happens when coaching view closes, NOT automatically on app open — this is by design since the daily greeting handles return)
+  - [x] 4.3 **Cross-type calm budget tests:** Schedule multiple notification types in same day, verify 2/day hard cap enforced, verify priority displacement (milestone priority 1 displaces check-in priority 2)
+  - [x] 4.4 **Pause Mode suppression tests:** Verify all 4 notification types suppressed when `isPaused == true`
+  - [x] 4.5 **Notification content tests:** Verify all 4 types produce empty title `""`, nil sound, no badge, correct body copy per `NotificationType.content`
 
 ## Dev Notes
 
@@ -186,9 +186,26 @@ All notifications: empty title `""`, nil sound, no badge count. Silent only.
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6 (1M context)
 
 ### Debug Log References
+- Full regression: 725 tests, 722 passing, 3 pre-existing failures (ChatEventCodableTests, SSEParserTests — unrelated to this story)
 
 ### Completion Notes List
+- **Task 1:** Added `rescheduleCheckIn(profile:)` to `CheckInNotificationServiceProtocol` and implementation. Method cancels existing check-in notification and re-schedules using profile's cadence/hour/weekday. Reads from DB if profile parameter is nil. 5 new tests covering daily/weekly cadence, DB fallback, and suppression rules.
+- **Task 2:** Added 50% intermediate milestone detection in `SprintDetailViewModel.toggleStep()`. Uses in-memory `notifiedMilestones` set for duplicate prevention per ViewModel lifecycle. Existing 100% milestone path unchanged. 5 new tests covering threshold detection, duplicate prevention, odd step counts.
+- **Task 3:** Refactored `SettingsViewModel.updateCheckInCadence()` and `updateCheckInTime()` to use `rescheduleCheckIn()` instead of manual `scheduleCheckInNotification()` calls. Updated existing tests and added 2 new tests verifying profile save triggers reschedule.
+- **Task 4:** Added 14 comprehensive scenario tests to `NotificationSchedulerTests.swift`: pause suggestion type verification, re-engagement emotion-safe copy verification, DriftDetectionService cancellation, cross-type calm budget with 2/day hard cap, priority displacement across types, Pause Mode suppression for all 4 types individually, and notification content verification for all 4 types.
+
+### Change Log
+- Story 9.2 implementation completed (Date: 2026-04-03)
 
 ### File List
+- `ios/sprinty/Services/Notifications/CheckInNotificationService.swift` — Added `rescheduleCheckIn(profile:)` method to protocol and implementation
+- `ios/sprinty/Features/Sprint/ViewModels/SprintDetailViewModel.swift` — Added 50% milestone detection via `checkIntermediateMilestone()` and `notifiedMilestones` tracking set
+- `ios/sprinty/Features/Settings/ViewModels/SettingsViewModel.swift` — Refactored `updateCheckInCadence/Time` to use `rescheduleCheckIn()`
+- `ios/Tests/Services/CheckInNotificationServiceTests.swift` — Added 5 reschedule tests (Story 9.2)
+- `ios/Tests/Services/NotificationSchedulerTests.swift` — Added 14 cross-type scenario tests (Story 9.2)
+- `ios/Tests/Features/Sprint/SprintDetailViewModelTests.swift` — Added 5 milestone notification tests (Story 9.2)
+- `ios/Tests/Features/Settings/SettingsViewModelCheckInTests.swift` — Updated 2 existing tests, added 3 new tests: 2 reschedule verification + 1 nil-service safety test (Story 9.2)
+- `ios/Tests/Mocks/MockCheckInNotificationService.swift` — Added `rescheduleCheckIn` mock recording
