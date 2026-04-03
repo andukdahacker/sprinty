@@ -13,6 +13,7 @@ final class AppState {
     var isPaused: Bool = false
     var pendingCheckIn: Bool = false
     var pendingEngagementSource: EngagementSource?
+    var showConversation: Bool = false
     var activeSprint: Sprint?
     var databaseManager: DatabaseManager?
     var connectivityMonitor: ConnectivityMonitorProtocol?

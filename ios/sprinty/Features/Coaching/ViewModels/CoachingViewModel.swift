@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import GRDB
 import OSLog
+import WidgetKit
 
 @MainActor
 @Observable
@@ -418,6 +419,7 @@ final class CoachingViewModel {
             let sprint = try await sprintService.createSprint(from: proposal, durationWeeks: proposal.durationWeeks)
             appState.activeSprint = sprint
             sprintProposal = nil
+            WidgetCenter.shared.reloadAllTimelines()
         } catch {
             Logger(subsystem: Bundle.main.bundleIdentifier ?? "sprinty", category: "sprint")
                 .error("Sprint creation failed: \(error)")

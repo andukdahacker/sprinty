@@ -35,6 +35,20 @@
                ReferencedContainer = "container:sprinty.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "C1350086915B127D3ECB8682"
+               BuildableName = "sprinty_widgetExtension.appex"
+               BlueprintName = "sprinty_widgetExtension"
+               ReferencedContainer = "container:sprinty.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

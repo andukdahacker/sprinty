@@ -3,6 +3,7 @@ import Observation
 import UIKit
 import UserNotifications
 import GRDB
+import WidgetKit
 
 @MainActor
 @Observable
@@ -154,15 +155,21 @@ final class SprintDetailViewModel {
 
                 // 4. Differentiated celebration for sprint completion
                 triggerSprintCompletion(reduceMotion: reduceMotion)
+                WidgetCenter.shared.reloadAllTimelines()
             } else if sprintReactivated {
                 self.sprint?.status = .active
                 if let sprint = self.sprint {
                     appState.activeSprint = sprint
                 }
+                WidgetCenter.shared.reloadAllTimelines()
             } else if stepToWrite.completed {
                 // Check for 50% milestone
                 await checkIntermediateMilestone(steps: updatedSteps, sprintId: stepToWrite.sprintId)
                 triggerCelebration(reduceMotion: reduceMotion)
+                WidgetCenter.shared.reloadAllTimelines()
+            } else {
+                // Step uncompleted — refresh widgets to reflect updated progress
+                WidgetCenter.shared.reloadAllTimelines()
             }
         } catch {
             localError = .databaseError(underlying: error)
@@ -262,6 +269,8 @@ final class SprintDetailViewModel {
                     guard !Task.isCancelled else { return }
                     self?.recentlySyncedStepIds = []
                 }
+
+                WidgetCenter.shared.reloadAllTimelines()
             }
         } catch {
             // Step sync is DB-only — should always succeed

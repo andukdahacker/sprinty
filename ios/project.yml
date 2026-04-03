@@ -59,6 +59,43 @@ targets:
         product: GRDB
       - package: SQLiteVecKit
         product: SQLiteVecKit
+      - target: sprinty_widgetExtension
+        embed:
+          codeSign: true
+
+  sprinty_widgetExtension:
+    type: app-extension
+    platform: iOS
+    info:
+      path: sprinty_widgetExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Sprinty Widgets
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    sources:
+      - path: sprinty_widgetExtension
+      - path: sprinty/Core/Utilities/Constants.swift
+      - path: sprinty/Services/Database/DatabaseManager.swift
+      - path: sprinty/Services/Database/Migrations.swift
+      - path: sprinty/Models/Sprint.swift
+      - path: sprinty/Models/SprintStep.swift
+      - path: sprinty/Models/UserProfile.swift
+      - path: sprinty/Core/State/AvatarState.swift
+      - path: sprinty/Core/Utilities/AvatarOptions.swift
+      - path: sprinty/Core/Errors/AppError.swift
+      - path: sprinty/Models/DomainState.swift
+      - path: sprinty/Features/Widgets/WidgetDataProvider.swift
+    resources:
+      - path: sprinty/Resources/Assets.xcassets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ducdo.sprinty.widgets
+        CODE_SIGN_ENTITLEMENTS: sprinty_widgetExtension/sprinty_widgetExtension.entitlements
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+    dependencies:
+      - package: GRDB
+        product: GRDB
 
   sprintyTests:
     type: bundle.unit-test
@@ -81,6 +118,7 @@ schemes:
     build:
       targets:
         sprinty: all
+        sprinty_widgetExtension: all
         sprintyTests: [test]
     run:
       config: Debug
@@ -96,6 +134,7 @@ schemes:
     build:
       targets:
         sprinty: all
+        sprinty_widgetExtension: all
         sprintyTests: [test]
     run:
       config: Staging
@@ -110,6 +149,7 @@ schemes:
     build:
       targets:
         sprinty: all
+        sprinty_widgetExtension: all
     run:
       config: Release
     profile:

@@ -1,6 +1,7 @@
 import StoreKit
 import SwiftUI
 import UserNotifications
+import WidgetKit
 
 @main
 struct SprintyApp: App {
@@ -27,6 +28,11 @@ struct SprintyApp: App {
                     notificationDelegate = delegate
                     UNUserNotificationCenter.current().delegate = delegate
                     await bootstrap()
+                }
+                .onOpenURL { url in
+                    if url.scheme == "sprinty" && url.host == "coach" {
+                        appState.showConversation = true
+                    }
                 }
         }
     }

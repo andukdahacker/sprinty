@@ -140,6 +140,15 @@ struct RootView: View {
                     CheckInView(viewModel: checkInViewModel)
                 }
             }
+            .onChange(of: appState.showConversation) { _, shouldShow in
+                if shouldShow {
+                    appState.showConversation = false
+                    ensureCoachingViewModel(databaseManager: databaseManager)
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.45)) {
+                        showConversation = true
+                    }
+                }
+            }
             .onChange(of: appState.isPaused) { _, isPaused in
                 if isPaused {
                     Task {
