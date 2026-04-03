@@ -1,6 +1,11 @@
 import Foundation
 import GRDB
 
+enum SprintStepSyncStatus: String, Codable, Sendable, DatabaseValueConvertible {
+    case synced
+    case pendingSync
+}
+
 struct SprintStep: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable {
     var id: UUID
     var sprintId: UUID
@@ -9,6 +14,7 @@ struct SprintStep: Codable, FetchableRecord, PersistableRecord, Identifiable, Se
     var completedAt: Date?
     var order: Int
     var coachContext: String?
+    var syncStatus: SprintStepSyncStatus = .synced
 
     static let databaseTableName = "SprintStep"
 }
@@ -16,5 +22,10 @@ struct SprintStep: Codable, FetchableRecord, PersistableRecord, Identifiable, Se
 extension SprintStep {
     static func forSprint(id: UUID) -> QueryInterfaceRequest<SprintStep> {
         filter(Column("sprintId") == id).order(Column("order").asc)
+    }
+
+    static func pendingSync() -> QueryInterfaceRequest<SprintStep> {
+        filter(Column("syncStatus") == SprintStepSyncStatus.pendingSync.rawValue)
+            .order(Column("completedAt").asc)
     }
 }

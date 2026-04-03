@@ -257,5 +257,11 @@ enum DatabaseMigrations {
                 t.add(column: "deliveryStatus", .text).notNull().defaults(to: "sent")
             }
         }
+
+        migrator.registerMigration("v19_sprintStepSyncStatus") { db in
+            try db.alter(table: "SprintStep") { t in
+                t.add(column: "syncStatus", .text).notNull().defaults(to: "synced")
+            }
+        }
     }
 }

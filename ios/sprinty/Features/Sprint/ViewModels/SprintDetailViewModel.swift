@@ -12,6 +12,8 @@ final class SprintDetailViewModel {
     var isLoading: Bool = false
     var localError: AppError?
     var isGeneratingRetro: Bool = false
+    var retroPending: Bool = false
+    var recentlySyncedStepIds: Set<UUID> = []
 
     var progress: Double {
         guard !steps.isEmpty else { return 0 }
@@ -73,6 +75,7 @@ final class SprintDetailViewModel {
 
             // Retry retro generation if sprint is complete but retro is missing
             if sprint?.status == .complete, sprint?.narrativeRetro == nil {
+                retroPending = true
                 if let sprint = self.sprint {
                     Task { [weak self] in
                         await self?.generateNarrativeRetro(for: sprint, steps: self?.steps ?? [])
@@ -88,6 +91,14 @@ final class SprintDetailViewModel {
         var updated = step
         updated.completed.toggle()
         updated.completedAt = updated.completed ? Date() : nil
+
+        // Set sync status based on connectivity
+        if updated.completed && !appState.isOnline {
+            updated.syncStatus = .pendingSync
+        } else {
+            updated.syncStatus = .synced
+        }
+
         let stepToWrite = updated
 
         do {
@@ -118,9 +129,11 @@ final class SprintDetailViewModel {
             self.steps = updatedSteps
 
             if allDone {
-                // 1. Generate retro FIRST (sprint is still .active at this point)
-                if let sprint = self.sprint {
+                // 1. Generate retro (skip when offline — network required)
+                if appState.isOnline, let sprint = self.sprint {
                     await generateNarrativeRetro(for: sprint, steps: updatedSteps)
+                } else if !appState.isOnline {
+                    retroPending = true
                 }
 
                 // 2. Schedule milestone notification (fires after user navigates away)
@@ -211,8 +224,54 @@ final class SprintDetailViewModel {
                 }
             }
             self.sprint?.narrativeRetro = finalText
+            self.retroPending = false
         } catch {
             // Retro is non-critical — log error, keep placeholder
+        }
+    }
+
+    func syncOnReconnect() async {
+        // (a) Step sync: transition all pendingSync steps to synced
+        do {
+            let pendingSteps = try await databaseManager.dbPool.read { db in
+                try SprintStep.pendingSync().fetchAll(db)
+            }
+
+            guard !pendingSteps.isEmpty || (sprint?.status == .complete && sprint?.narrativeRetro == nil) else { return }
+
+            if !pendingSteps.isEmpty {
+                let syncedIds = Set(pendingSteps.map(\.id))
+                try await databaseManager.dbPool.write { db in
+                    for var step in pendingSteps {
+                        step.syncStatus = .synced
+                        try step.update(db)
+                    }
+                }
+                recentlySyncedStepIds = syncedIds
+
+                // Refresh steps to reflect synced status
+                if let sprintId = sprint?.id {
+                    self.steps = try await databaseManager.dbPool.read { db in
+                        try SprintStep.forSprint(id: sprintId).fetchAll(db)
+                    }
+                }
+
+                // Clear sync pulse after delay
+                Task { [weak self] in
+                    try? await Task.sleep(for: .milliseconds(1500))
+                    guard !Task.isCancelled else { return }
+                    self?.recentlySyncedStepIds = []
+                }
+            }
+        } catch {
+            // Step sync is DB-only — should always succeed
+        }
+
+        // (b) Retro retry: independent of step sync
+        if sprint?.status == .complete, sprint?.narrativeRetro == nil {
+            if let sprint = self.sprint {
+                await generateNarrativeRetro(for: sprint, steps: steps)
+            }
         }
     }
 

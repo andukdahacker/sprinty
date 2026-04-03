@@ -5,6 +5,7 @@ struct SprintDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.coachingTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         NavigationStack {
@@ -38,6 +39,11 @@ struct SprintDetailView: View {
             }
             .task {
                 await viewModel.load()
+            }
+            .onChange(of: appState.isOnline) { oldValue, newValue in
+                if !oldValue && newValue {
+                    Task { await viewModel.syncOnReconnect() }
+                }
             }
         }
     }
@@ -104,6 +110,7 @@ struct SprintDetailView: View {
                         }
                     }
                 )
+                .modifier(SyncPulseModifier(isActive: viewModel.recentlySyncedStepIds.contains(step.id)))
             }
         }
     }
@@ -119,17 +126,22 @@ struct SprintDetailView: View {
                     .coachVoiceStyle()
                     .foregroundStyle(theme.palette.textSecondary)
                     .accessibilityLabel("Sprint retrospective from your coach: \(retroText)")
-            } else {
+            } else if viewModel.isGeneratingRetro {
                 Text("Here's the chapter we just finished...")
                     .coachVoiceStyle()
                     .foregroundStyle(theme.palette.textSecondary)
-                    .opacity(viewModel.isGeneratingRetro ? 0.5 : 1.0)
+                    .opacity(0.5)
                     .animation(
-                        viewModel.isGeneratingRetro && !reduceMotion
+                        !reduceMotion
                             ? .easeInOut(duration: 0.8).repeatForever(autoreverses: true)
                             : .none,
                         value: viewModel.isGeneratingRetro
                     )
+            } else if viewModel.retroPending {
+                Text("Your sprint story will appear when you're back online.")
+                    .coachVoiceStyle()
+                    .italic()
+                    .foregroundStyle(theme.palette.textSecondary)
             }
         }
         .accessibilitySortPriority(1)
