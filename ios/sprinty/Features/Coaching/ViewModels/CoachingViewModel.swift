@@ -55,7 +55,10 @@ final class CoachingViewModel {
     private let safetyStateManager: SafetyStateManagerProtocol
     private let complianceLogger: ComplianceLoggerProtocol
     private let autonomySnapshotProvider: (() -> AutonomySnapshot?)?
+    private let onDeviceSafetyClassifier: OnDeviceSafetyClassifierProtocol?
     private var previousSafetyLevel: SafetyLevel?
+    private var onDeviceClassificationLevel: SafetyLevel?
+    private var syncTask: Task<Void, Never>?
 
     // MARK: - Guardrail State
     var isGuardrailActive: Bool = false
@@ -65,7 +68,7 @@ final class CoachingViewModel {
     var currentSafetyUIState: SafetyUIState = .green
     var isReturningFromCrisis: Bool = false
 
-    init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager, embeddingPipeline: EmbeddingPipelineProtocol? = nil, profileUpdateService: ProfileUpdateServiceProtocol? = nil, profileEnricher: ProfileEnricherProtocol? = nil, searchService: SearchServiceProtocol? = nil, sprintService: SprintServiceProtocol? = nil, safetyHandler: SafetyHandlerProtocol = SafetyHandler(), safetyStateManager: SafetyStateManagerProtocol = SafetyStateManager(), complianceLogger: ComplianceLoggerProtocol? = nil, autonomySnapshotProvider: (() -> AutonomySnapshot?)? = nil) {
+    init(appState: AppState, chatService: ChatServiceProtocol, databaseManager: DatabaseManager, embeddingPipeline: EmbeddingPipelineProtocol? = nil, profileUpdateService: ProfileUpdateServiceProtocol? = nil, profileEnricher: ProfileEnricherProtocol? = nil, searchService: SearchServiceProtocol? = nil, sprintService: SprintServiceProtocol? = nil, safetyHandler: SafetyHandlerProtocol = SafetyHandler(), safetyStateManager: SafetyStateManagerProtocol = SafetyStateManager(), complianceLogger: ComplianceLoggerProtocol? = nil, autonomySnapshotProvider: (() -> AutonomySnapshot?)? = nil, onDeviceSafetyClassifier: OnDeviceSafetyClassifierProtocol? = nil) {
         self.appState = appState
         self.chatService = chatService
         self.databaseManager = databaseManager
@@ -78,6 +81,7 @@ final class CoachingViewModel {
         self.safetyStateManager = safetyStateManager
         self.complianceLogger = complianceLogger ?? ComplianceLogger(databaseManager: databaseManager)
         self.autonomySnapshotProvider = autonomySnapshotProvider
+        self.onDeviceSafetyClassifier = onDeviceSafetyClassifier
     }
 
     func loadMessages() {
@@ -187,18 +191,26 @@ final class CoachingViewModel {
             let session = try await getOrCreateSession()
             currentSession = session
 
+            let isOffline = !appState.isOnline
             let userMessage = Message(
                 id: UUID(),
                 sessionId: session.id,
                 role: .user,
                 content: text,
-                timestamp: Date()
+                timestamp: Date(),
+                deliveryStatus: isOffline ? .pending : .sent
             )
 
             try await databaseManager.dbPool.write { db in
                 try userMessage.save(db)
             }
             messages.append(userMessage)
+
+            // Offline: run on-device safety classification, then return without streaming
+            if isOffline {
+                await classifyOfflineMessage(text)
+                return
+            }
 
             coachExpression = .thinking
             isStreaming = true
@@ -283,7 +295,17 @@ final class CoachingViewModel {
                             let serverLevel = SafetyLevel(rawValue: safetyLevel)
                             let classifiedLevel = self.safetyHandler.classify(serverLevel: serverLevel)
                             let source: SafetyClassificationSource = (serverLevel == nil) ? .failsafe : .genuine
-                            let processedLevel = self.safetyStateManager.processClassification(classifiedLevel, source: source)
+
+                            // Reconcile with on-device classification: more cautious wins
+                            let finalLevel: SafetyLevel
+                            if let deviceLevel = self.onDeviceClassificationLevel {
+                                finalLevel = max(classifiedLevel, deviceLevel)
+                                self.onDeviceClassificationLevel = nil
+                            } else {
+                                finalLevel = classifiedLevel
+                            }
+
+                            let processedLevel = self.safetyStateManager.processClassification(finalLevel, source: source)
                             self.currentSafetyUIState = self.safetyHandler.uiState(for: processedLevel)
                             await self.updateSessionSafetyLevel(processedLevel)
 
@@ -881,6 +903,187 @@ final class CoachingViewModel {
         }
         // Even 1 entry — return it regardless
         return formatRAGContext(trimmed, lastSessionGapHours: lastSessionGapHours)
+    }
+
+    // MARK: - Offline Support
+
+    func syncPendingMessages() async {
+        guard !isStreaming else {
+            // Queue sync behind active streaming
+            syncTask = Task { [weak self] in
+                guard let self else { return }
+                while self.isStreaming {
+                    try? await Task.sleep(for: .milliseconds(200))
+                    if Task.isCancelled { return }
+                }
+                await self.syncPendingMessages()
+            }
+            return
+        }
+
+        do {
+            let pendingMessages = try await databaseManager.dbPool.read { db in
+                try Message.pending().fetchAll(db)
+            }
+            guard !pendingMessages.isEmpty else { return }
+
+            for pendingMessage in pendingMessages {
+                guard appState.isOnline else { break }
+
+                // Build message list for this session up to and including the pending message
+                let sessionMessages = try await databaseManager.dbPool.read { db in
+                    try Message.forSession(id: pendingMessage.sessionId)
+                        .filter(Column("timestamp") <= pendingMessage.timestamp)
+                        .fetchAll(db)
+                }
+
+                let chatMessages = sessionMessages.map { msg in
+                    ChatRequestMessage(
+                        role: msg.role == .user ? "user" : "assistant",
+                        content: msg.content
+                    )
+                }
+
+                let session: ConversationSession
+                if let current = currentSession, current.id == pendingMessage.sessionId {
+                    session = current
+                } else {
+                    guard let loaded = try await databaseManager.dbPool.read({ db in
+                        try ConversationSession.fetchOne(db, key: pendingMessage.sessionId)
+                    }) else { continue }
+                    session = loaded
+                }
+
+                let profile = try await loadChatProfile()
+                let sprintCtx = await buildSprintContext()
+                let stream = chatService.streamChat(
+                    messages: chatMessages,
+                    mode: session.mode.rawValue,
+                    profile: profile,
+                    userState: nil,
+                    ragContext: nil,
+                    sprintContext: sprintCtx
+                )
+
+                // Mark user message as sent
+                var updatedMessage = pendingMessage
+                updatedMessage.deliveryStatus = .sent
+                let toSave = updatedMessage
+                try await databaseManager.dbPool.write { db in
+                    try toSave.update(db)
+                }
+
+                // Update in-memory message
+                if let index = messages.firstIndex(where: { $0.id == pendingMessage.id }) {
+                    messages[index].deliveryStatus = .sent
+                }
+
+                // Process coach response
+                do {
+                    var responseText = ""
+                    for try await event in stream {
+                        if Task.isCancelled { break }
+                        switch event {
+                        case .token(let tokenText):
+                            responseText += tokenText
+                        case .done(let safetyLevel, _, let mood, let mode, let memoryReferenced, let challengerUsed, _, let promptVersion, let profileUpdate, let guardrail):
+                            if let promptVersion, cachedPromptVersion == nil {
+                                cachedPromptVersion = promptVersion
+                            }
+
+                            let assistantMessage = Message(
+                                id: UUID(),
+                                sessionId: session.id,
+                                role: .assistant,
+                                content: responseText,
+                                timestamp: Date()
+                            )
+
+                            try await databaseManager.dbPool.write { db in
+                                try assistantMessage.save(db)
+                            }
+
+                            messages.append(assistantMessage)
+                            if memoryReferenced == true {
+                                memoryReferencedMessages[assistantMessage.id] = true
+                            }
+                            coachExpression = CoachExpression(mood: mood)
+                            if let mood {
+                                sessionMoods.append(mood)
+                                await persistMoodHistory()
+                            }
+
+                            let serverLevel = SafetyLevel(rawValue: safetyLevel)
+                            let classifiedLevel = safetyHandler.classify(serverLevel: serverLevel)
+                            let source: SafetyClassificationSource = (serverLevel == nil) ? .failsafe : .genuine
+
+                            // Reconcile with on-device classification: more cautious wins
+                            let finalLevel: SafetyLevel
+                            if let deviceLevel = onDeviceClassificationLevel {
+                                finalLevel = max(classifiedLevel, deviceLevel)
+                                onDeviceClassificationLevel = nil
+                            } else {
+                                finalLevel = classifiedLevel
+                            }
+
+                            let processedLevel = safetyStateManager.processClassification(finalLevel, source: source)
+                            currentSafetyUIState = safetyHandler.uiState(for: processedLevel)
+                            await updateSessionSafetyLevel(processedLevel)
+
+                            if let mode, let newMode = CoachingMode(rawValue: mode), newMode != coachingMode {
+                                await updateSessionMode(newMode)
+                            }
+
+                            challengerActive = challengerUsed ?? false
+
+                            if guardrail == true {
+                                isGuardrailActive = true
+                                guardrailActivatedDate = Date()
+                            }
+
+                            responseText = ""
+                        case .sprintProposal(let proposal):
+                            sprintProposal = proposal
+                        }
+                    }
+                } catch {
+                    // Sync error: stop sync, leave remaining messages as pending
+                    handleError(error)
+                    break
+                }
+            }
+        } catch {
+            handleError(error)
+        }
+    }
+
+    private func classifyOfflineMessage(_ text: String) async {
+        guard let classifier = onDeviceSafetyClassifier else { return }
+        let level = await classifier.classify(text)
+        guard let level else { return }
+
+        onDeviceClassificationLevel = level
+
+        if level >= .orange {
+            let processedLevel = safetyStateManager.processClassification(level, source: .genuine)
+            currentSafetyUIState = safetyHandler.uiState(for: processedLevel)
+            await updateSessionSafetyLevel(processedLevel)
+
+            if processedLevel >= .yellow {
+                let prevLevel = previousSafetyLevel
+                let logger = complianceLogger
+                let sessionId = currentSession?.id ?? UUID()
+                Task {
+                    await logger.logSafetyBoundary(
+                        sessionId: sessionId,
+                        level: processedLevel,
+                        source: .genuine,
+                        previousLevel: prevLevel
+                    )
+                }
+                previousSafetyLevel = processedLevel
+            }
+        }
     }
 
     private func handleError(_ error: Error) {

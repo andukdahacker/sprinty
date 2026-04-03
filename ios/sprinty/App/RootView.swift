@@ -24,13 +24,18 @@ struct RootView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        if appState.isAuthenticated, let databaseManager = appState.databaseManager {
+        if let databaseManager = appState.databaseManager {
+            // DB available: show app (authenticated or offline with prior auth)
             if !onboardingChecked {
                 Color.clear.task {
                     await checkOnboardingState(databaseManager: databaseManager)
                 }
             } else if !appState.onboardingCompleted {
-                onboardingView(databaseManager: databaseManager)
+                if appState.isAuthenticated {
+                    onboardingView(databaseManager: databaseManager)
+                } else {
+                    connectionRequiredView
+                }
             } else {
                 authenticatedView(databaseManager: databaseManager)
             }
@@ -43,19 +48,26 @@ struct RootView: View {
                     .font(.headline)
             }
         } else if !appState.isOnline {
-            VStack(spacing: 16) {
-                Image(systemName: "wifi.slash")
-                    .font(.largeTitle)
-                    .foregroundStyle(.red)
-                Text("No connection")
-                    .font(.headline)
-            }
+            connectionRequiredView
         } else {
             VStack(spacing: 16) {
                 ProgressView()
                 Text("Connecting...")
                     .font(.headline)
             }
+        }
+    }
+
+    private var connectionRequiredView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "wifi.slash")
+                .font(.largeTitle)
+                .foregroundStyle(.secondary)
+            Text("No connection")
+                .font(.headline)
+            Text("Connect to get started")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -222,6 +234,7 @@ struct RootView: View {
         let safetyHandler = SafetyHandler()
         let safetyStateManager = SafetyStateManager()
         let complianceLogger = ComplianceLogger(databaseManager: databaseManager)
+        let onDeviceSafetyClassifier = OnDeviceSafetyClassifier()
         coachingViewModel = CoachingViewModel(
             appState: appState,
             chatService: chatService,
@@ -232,7 +245,8 @@ struct RootView: View {
             safetyHandler: safetyHandler,
             safetyStateManager: safetyStateManager,
             complianceLogger: complianceLogger,
-            autonomySnapshotProvider: { autonomySnapshot }
+            autonomySnapshotProvider: { autonomySnapshot },
+            onDeviceSafetyClassifier: onDeviceSafetyClassifier
         )
     }
 

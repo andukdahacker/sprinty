@@ -2,8 +2,10 @@ import SwiftUI
 
 struct CoachingView: View {
     @Bindable var viewModel: CoachingViewModel
+    @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var colorScheme
     @State private var inputText = ""
+    @State private var offlineIndicatorState: OfflineIndicatorState = .online
 
     private var safetyThemeOverride: SafetyThemeOverride {
         switch viewModel.currentSafetyUIState.level {
@@ -44,6 +46,8 @@ struct CoachingView: View {
                         .padding(.bottom, conversationTheme.spacing.coachCharacterBottom)
                 }
 
+                OfflineIndicator(state: offlineIndicatorState)
+
                 SearchOverlayView(viewModel: viewModel)
                     .padding(.horizontal, margin)
                     .padding(.bottom, 4)
@@ -51,7 +55,9 @@ struct CoachingView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: conversationTheme.spacing.dialogueTurn) {
-                            if let greeting = viewModel.dailyGreeting, viewModel.messages.isEmpty || shouldShowDateSeparator(at: 0) {
+                            if !appState.isOnline && viewModel.messages.isEmpty {
+                                DialogueTurnView(content: "Your coach needs a connection to respond, but you can still write. Your message will be waiting.", role: .assistant)
+                            } else if let greeting = viewModel.dailyGreeting, viewModel.messages.isEmpty || shouldShowDateSeparator(at: 0) {
                                 DateSeparatorView(date: Date())
                                 DialogueTurnView(content: greeting, role: .assistant)
                             }
@@ -97,6 +103,10 @@ struct CoachingView: View {
                                 .id(message.id)
                                 .onAppear {
                                     viewModel.trackVisibleMessage(message.id)
+                                }
+
+                                if message.deliveryStatus == .pending && message.role == .user {
+                                    PendingMessageIndicator(isPending: true)
                                 }
                             }
 
@@ -152,6 +162,7 @@ struct CoachingView: View {
                 TextInputView(
                     text: $inputText,
                     isDisabled: viewModel.isStreaming,
+                    placeholder: placeholderText,
                     onSend: sendMessage
                 )
                 .padding(.horizontal, margin)
@@ -199,6 +210,18 @@ struct CoachingView: View {
             await viewModel.generateDailyGreeting()
             await viewModel.retryMissingSummaries()
             await viewModel.retryMissingEmbeddings()
+            offlineIndicatorState = appState.isOnline ? .online : .offline
+        }
+        .onChange(of: appState.isOnline) { wasOnline, isNowOnline in
+            if !wasOnline && isNowOnline {
+                offlineIndicatorState = .reconnecting
+                Task {
+                    await viewModel.syncPendingMessages()
+                    offlineIndicatorState = .reconnected
+                }
+            } else if wasOnline && !isNowOnline {
+                offlineIndicatorState = .offline
+            }
         }
         .onDisappear {
             viewModel.cancelStreaming()
@@ -219,6 +242,10 @@ struct CoachingView: View {
             .id("sprint-proposal")
             .transition(.opacity)
         }
+    }
+
+    private var placeholderText: String {
+        appState.isOnline ? "What's on your mind..." : "Write a message..."
     }
 
     private func sendMessage() {

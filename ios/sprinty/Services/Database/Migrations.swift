@@ -251,5 +251,11 @@ enum DatabaseMigrations {
                 t.add(column: "notificationsMuted", .boolean).notNull().defaults(to: false)
             }
         }
+
+        migrator.registerMigration("v18_messageDeliveryStatus") { db in
+            try db.alter(table: "Message") { t in
+                t.add(column: "deliveryStatus", .text).notNull().defaults(to: "sent")
+            }
+        }
     }
 }

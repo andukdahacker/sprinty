@@ -3,12 +3,13 @@ import SwiftUI
 struct TextInputView: View {
     @Binding var text: String
     let isDisabled: Bool
+    var placeholder: String = "What's on your mind..."
     let onSend: () -> Void
     @Environment(\.coachingTheme) private var theme
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 12) {
-            TextField("What's on your mind...", text: $text, axis: .vertical)
+            TextField(placeholder, text: $text, axis: .vertical)
                 .lineLimit(1...4)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)

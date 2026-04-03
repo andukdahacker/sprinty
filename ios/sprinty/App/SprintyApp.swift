@@ -5,6 +5,7 @@ import UserNotifications
 @main
 struct SprintyApp: App {
     @State private var appState = AppState()
+    @State private var connectivityMonitor: ConnectivityMonitor?
     @State private var notificationDelegate: NotificationDelegate?
     @State private var authService: AuthService?
     @State private var subscriptionService: SubscriptionService?
@@ -18,6 +19,10 @@ struct SprintyApp: App {
                 .environment(appState)
                 .environment(\.coachingTheme, themeFor(context: .home, colorScheme: colorScheme))
                 .task {
+                    let monitor = ConnectivityMonitor(appState: appState)
+                    connectivityMonitor = monitor
+                    appState.connectivityMonitor = monitor
+
                     let delegate = NotificationDelegate(appState: appState)
                     notificationDelegate = delegate
                     UNUserNotificationCenter.current().delegate = delegate
@@ -62,8 +67,6 @@ struct SprintyApp: App {
                 switch appError {
                 case .authExpired:
                     appState.needsReauth = true
-                case .networkUnavailable:
-                    appState.isOnline = false
                 default:
                     break
                 }

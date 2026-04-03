@@ -15,4 +15,5 @@ final class AppState {
     var pendingEngagementSource: EngagementSource?
     var activeSprint: Sprint?
     var databaseManager: DatabaseManager?
+    var connectivityMonitor: ConnectivityMonitorProtocol?
 }
