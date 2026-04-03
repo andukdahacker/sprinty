@@ -12,13 +12,16 @@ final class SettingsViewModel {
     var checkInCadence: String = "daily"
     var checkInTimeHour: Int = 9
     var checkInWeekday: Int?
+    var notificationsMuted: Bool = false
 
     let databaseManager: DatabaseManager
     private let notificationService: CheckInNotificationServiceProtocol?
+    private let notificationScheduler: NotificationSchedulerProtocol?
 
-    init(databaseManager: DatabaseManager, notificationService: CheckInNotificationServiceProtocol? = nil) {
+    init(databaseManager: DatabaseManager, notificationService: CheckInNotificationServiceProtocol? = nil, notificationScheduler: NotificationSchedulerProtocol? = nil) {
         self.databaseManager = databaseManager
         self.notificationService = notificationService
+        self.notificationScheduler = notificationScheduler
     }
 
     func loadProfile() async {
@@ -34,6 +37,7 @@ final class SettingsViewModel {
                 self.checkInCadence = profile.checkInCadence
                 self.checkInTimeHour = profile.checkInTimeHour
                 self.checkInWeekday = profile.checkInWeekday
+                self.notificationsMuted = profile.notificationsMuted
             }
         } catch {
             // Profile not found — keep defaults
@@ -83,6 +87,48 @@ final class SettingsViewModel {
             }
         }
     }
+    func updateNotificationsMuted(_ muted: Bool) {
+        notificationsMuted = muted
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await databaseManager.dbPool.write { db in
+                    if var profile = try UserProfile.fetchOne(db) {
+                        profile.notificationsMuted = muted
+                        profile.updatedAt = Date()
+                        try profile.update(db)
+                    }
+                }
+                if muted {
+                    await notificationScheduler?.removeAllScheduledNotifications()
+                } else {
+                    await notificationService?.rescheduleCheckIn(profile: nil)
+                }
+            } catch {
+                // Write failed — local state already updated for responsiveness
+            }
+        }
+    }
+
+    func updateCheckInWeekday(_ weekday: Int) {
+        checkInWeekday = weekday
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await databaseManager.dbPool.write { db in
+                    if var profile = try UserProfile.fetchOne(db) {
+                        profile.checkInWeekday = weekday
+                        profile.updatedAt = Date()
+                        try profile.update(db)
+                    }
+                }
+                await notificationService?.rescheduleCheckIn(profile: nil)
+            } catch {
+                // Write failed — local state already updated for responsiveness
+            }
+        }
+    }
+
     func updateCheckInCadence(_ newCadence: String) {
         checkInCadence = newCadence
         if newCadence == "weekly" && checkInWeekday == nil {

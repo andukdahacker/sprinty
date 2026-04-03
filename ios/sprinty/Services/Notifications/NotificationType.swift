@@ -16,6 +16,13 @@ enum NotificationType: String, Codable, Sendable {
         }
     }
 
+    var bypassesMute: Bool {
+        switch self {
+        case .checkIn, .sprintMilestone, .pauseSuggestion, .reEngagement:
+            return false
+        }
+    }
+
     var identifier: String {
         switch self {
         case .checkIn: return "com.ducdo.sprinty.checkin"

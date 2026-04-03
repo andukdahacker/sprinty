@@ -23,6 +23,8 @@ struct UserProfile: Codable, FetchableRecord, PersistableRecord, Identifiable, S
     // --- Pause (Story 7.1) ---
     var isPaused: Bool = false
     var pausedAt: Date?
+    // --- Notification preferences (Story 9.3) ---
+    var notificationsMuted: Bool = false
     // --- Timestamps ---
     var createdAt: Date
     var updatedAt: Date

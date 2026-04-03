@@ -245,5 +245,11 @@ enum DatabaseMigrations {
                 t.column("priority", .integer).notNull()
             }
         }
+
+        migrator.registerMigration("v17_notificationsMuted") { db in
+            try db.alter(table: "UserProfile") { t in
+                t.add(column: "notificationsMuted", .boolean).notNull().defaults(to: false)
+            }
+        }
     }
 }

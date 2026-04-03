@@ -5,9 +5,9 @@ struct SettingsView: View {
     @State private var viewModel: SettingsViewModel
     @Environment(\.colorScheme) private var colorScheme
 
-    init(memoryViewModel: MemoryViewModel, databaseManager: DatabaseManager, notificationService: CheckInNotificationServiceProtocol? = nil) {
+    init(memoryViewModel: MemoryViewModel, databaseManager: DatabaseManager, notificationService: CheckInNotificationServiceProtocol? = nil, notificationScheduler: NotificationSchedulerProtocol? = nil) {
         self.memoryViewModel = memoryViewModel
-        self._viewModel = State(initialValue: SettingsViewModel(databaseManager: databaseManager, notificationService: notificationService))
+        self._viewModel = State(initialValue: SettingsViewModel(databaseManager: databaseManager, notificationService: notificationService, notificationScheduler: notificationScheduler))
     }
 
     private var theme: CoachingTheme {
@@ -61,6 +61,12 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Toggle("Mute coaching notifications", isOn: Binding(
+                        get: { viewModel.notificationsMuted },
+                        set: { viewModel.updateNotificationsMuted($0) }
+                    ))
+                    .accessibilityHint("Silences all coaching notifications")
+
                     Picker("Cadence", selection: Binding(
                         get: { viewModel.checkInCadence },
                         set: { viewModel.updateCheckInCadence($0) }
@@ -68,6 +74,7 @@ struct SettingsView: View {
                         Text("Daily").tag("daily")
                         Text("Weekly").tag("weekly")
                     }
+                    .disabled(viewModel.notificationsMuted)
 
                     Picker("Time", selection: Binding(
                         get: { viewModel.checkInTimeHour },
@@ -77,8 +84,22 @@ struct SettingsView: View {
                             Text(formatHour(hour)).tag(hour)
                         }
                     }
+                    .disabled(viewModel.notificationsMuted)
+
+                    if viewModel.checkInCadence == "weekly" {
+                        Picker("Check-in day", selection: Binding(
+                            get: { viewModel.checkInWeekday ?? 1 },
+                            set: { viewModel.updateCheckInWeekday($0) }
+                        )) {
+                            ForEach(1..<8, id: \.self) { day in
+                                Text(Calendar.current.weekdaySymbols[day - 1]).tag(day)
+                            }
+                        }
+                        .accessibilityLabel("Check-in day")
+                        .disabled(viewModel.notificationsMuted)
+                    }
                 } header: {
-                    Text("Check-ins")
+                    Text("Notifications")
                         .sectionHeadingStyle()
                         .foregroundStyle(theme.palette.textPrimary)
                 }

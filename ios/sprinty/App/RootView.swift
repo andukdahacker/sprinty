@@ -111,7 +111,7 @@ struct RootView: View {
             }
             .sheet(isPresented: $showSettings) {
                 if let memoryViewModel, let databaseManager = appState.databaseManager {
-                    SettingsView(memoryViewModel: memoryViewModel, databaseManager: databaseManager, notificationService: checkInNotificationService)
+                    SettingsView(memoryViewModel: memoryViewModel, databaseManager: databaseManager, notificationService: checkInNotificationService, notificationScheduler: notificationScheduler)
                 }
             }
             .sheet(isPresented: $showSprintDetail) {

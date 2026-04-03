@@ -41,7 +41,7 @@ final class NotificationScheduler: NotificationSchedulerProtocol, @unchecked Sen
         guard await permissionChecker() else { return false }
 
         // Check suppression rules from profile
-        guard await checkProfileRules() else { return false }
+        guard await checkProfileRules(for: type) else { return false }
 
         // Check daily cap with priority ordering
         return await checkDailyCap(for: type).allowed
@@ -49,7 +49,7 @@ final class NotificationScheduler: NotificationSchedulerProtocol, @unchecked Sen
 
     func scheduleIfAllowed(type: NotificationType, trigger: UNNotificationTrigger) async {
         guard await permissionChecker() else { return }
-        guard await checkProfileRules() else { return }
+        guard await checkProfileRules(for: type) else { return }
 
         let capResult = await checkDailyCap(for: type)
         guard capResult.allowed else { return }
@@ -119,7 +119,7 @@ final class NotificationScheduler: NotificationSchedulerProtocol, @unchecked Sen
 
     // MARK: - Private
 
-    private func checkProfileRules() async -> Bool {
+    private func checkProfileRules(for type: NotificationType) async -> Bool {
         do {
             let profile = try await databaseManager.dbPool.read { db in
                 try UserProfile.current().fetchOne(db)
@@ -134,6 +134,11 @@ final class NotificationScheduler: NotificationSchedulerProtocol, @unchecked Sen
 
             // Pause Mode suppression
             guard !profile.isPaused else { return false }
+
+            // Notification mute preference (safety-related types bypass)
+            if !type.bypassesMute {
+                guard !profile.notificationsMuted else { return false }
+            }
 
             return true
         } catch {

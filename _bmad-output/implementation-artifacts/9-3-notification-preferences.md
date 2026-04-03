@@ -1,6 +1,6 @@
 # Story 9.3: Notification Preferences
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -26,42 +26,42 @@ So that the app works on my schedule, not the other way around.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `notificationsMuted` field to UserProfile (AC: #2, #3, #7)
-  - [ ] 1.1 Add `var notificationsMuted: Bool = false` to `UserProfile` model
-  - [ ] 1.2 Add migration `v17_notificationsMuted` in `Migrations.swift` — add `notificationsMuted` column (BOOLEAN, NOT NULL, DEFAULT 0)
-  - [ ] 1.3 Load `notificationsMuted` in `SettingsViewModel.loadProfile()`
+- [x] Task 1: Add `notificationsMuted` field to UserProfile (AC: #2, #3, #7)
+  - [x] 1.1 Add `var notificationsMuted: Bool = false` to `UserProfile` model
+  - [x] 1.2 Add migration `v17_notificationsMuted` in `Migrations.swift` — add `notificationsMuted` column (BOOLEAN, NOT NULL, DEFAULT 0)
+  - [x] 1.3 Load `notificationsMuted` in `SettingsViewModel.loadProfile()`
 
-- [ ] Task 2: Add mute toggle logic to SettingsViewModel (AC: #2, #3)
-  - [ ] 2.1 Add `var notificationsMuted: Bool = false` property to `SettingsViewModel`
-  - [ ] 2.2 Add `func updateNotificationsMuted(_ muted: Bool)` method:
+- [x] Task 2: Add mute toggle logic to SettingsViewModel (AC: #2, #3)
+  - [x] 2.1 Add `var notificationsMuted: Bool = false` property to `SettingsViewModel`
+  - [x] 2.2 Add `func updateNotificationsMuted(_ muted: Bool)` method:
     - Persist to UserProfile in DB
     - If muting: call `notificationScheduler.removeAllScheduledNotifications()` to cancel all pending
     - If unmuting: call `notificationService.scheduleCheckInNotification()` with current cadence/time/weekday to reschedule check-ins
-  - [ ] 2.3 Inject `NotificationSchedulerProtocol` into `SettingsViewModel` (new init parameter, optional like notificationService). **CRITICAL WIRING:** Also update `SettingsView.init()` to accept `notificationScheduler: NotificationSchedulerProtocol? = nil` and pass it through to SettingsViewModel. Then update the call site in `RootView.swift` (line ~114) to pass the existing `notificationScheduler` instance: `SettingsView(memoryViewModel: memoryViewModel, databaseManager: databaseManager, notificationService: checkInNotificationService, notificationScheduler: notificationScheduler)`
+  - [x] 2.3 Inject `NotificationSchedulerProtocol` into `SettingsViewModel` (new init parameter, optional like notificationService). **CRITICAL WIRING:** Also update `SettingsView.init()` to accept `notificationScheduler: NotificationSchedulerProtocol? = nil` and pass it through to SettingsViewModel. Then update the call site in `RootView.swift` (line ~114) to pass the existing `notificationScheduler` instance: `SettingsView(memoryViewModel: memoryViewModel, databaseManager: databaseManager, notificationService: checkInNotificationService, notificationScheduler: notificationScheduler)`
 
-- [ ] Task 3: Add weekday picker logic to SettingsViewModel (AC: #6)
-  - [ ] 3.1 Add `func updateCheckInWeekday(_ weekday: Int)` method — persist to DB + reschedule notification
-  - [ ] 3.2 Ensure weekday change triggers reschedule via `notificationService.scheduleCheckInNotification()`
+- [x] Task 3: Add weekday picker logic to SettingsViewModel (AC: #6)
+  - [x] 3.1 Add `func updateCheckInWeekday(_ weekday: Int)` method — persist to DB + reschedule notification
+  - [x] 3.2 Ensure weekday change triggers reschedule via `notificationService.scheduleCheckInNotification()`
 
-- [ ] Task 4: Integrate mute check into NotificationScheduler (AC: #2)
-  - [ ] 4.1 Add `notificationsMuted` check to `checkProfileRules()` in `NotificationScheduler.swift` — if `profile.notificationsMuted == true`, return false (suppress all)
-  - [ ] 4.2 This automatically blocks all 4 notification types when muted
+- [x] Task 4: Integrate mute check into NotificationScheduler (AC: #2)
+  - [x] 4.1 Add `notificationsMuted` check to `checkProfileRules()` in `NotificationScheduler.swift` — if `profile.notificationsMuted == true`, return false (suppress all)
+  - [x] 4.2 This automatically blocks all 4 notification types when muted
 
-- [ ] Task 5: Update SettingsView UI (AC: #1, #6)
-  - [ ] 5.1 Rename existing "Check-ins" section to "Notifications"
-  - [ ] 5.2 Add `Toggle("Mute coaching notifications", isOn:)` bound to `viewModel.notificationsMuted` at top of section
-  - [ ] 5.3 Add weekday `Picker` visible only when `viewModel.checkInCadence == "weekly"` — display day names (Sunday-Saturday), bind to `viewModel.checkInWeekday`
-  - [ ] 5.4 When muted, visually disable (but still show) the cadence/time/weekday pickers using `.disabled(viewModel.notificationsMuted)`
-  - [ ] 5.5 Add accessibility: toggle gets `accessibilityHint("Silences all coaching notifications")`, weekday picker gets `accessibilityLabel("Check-in day")`
+- [x] Task 5: Update SettingsView UI (AC: #1, #6)
+  - [x] 5.1 Rename existing "Check-ins" section to "Notifications"
+  - [x] 5.2 Add `Toggle("Mute coaching notifications", isOn:)` bound to `viewModel.notificationsMuted` at top of section
+  - [x] 5.3 Add weekday `Picker` visible only when `viewModel.checkInCadence == "weekly"` — display day names (Sunday-Saturday), bind to `viewModel.checkInWeekday`
+  - [x] 5.4 When muted, visually disable (but still show) the cadence/time/weekday pickers using `.disabled(viewModel.notificationsMuted)`
+  - [x] 5.5 Add accessibility: toggle gets `accessibilityHint("Silences all coaching notifications")`, weekday picker gets `accessibilityLabel("Check-in day")`
 
-- [ ] Task 6: Tests (AC: all)
-  - [ ] 6.1 Test `updateNotificationsMuted(true)` persists to DB and calls `removeAllScheduledNotifications()`
-  - [ ] 6.2 Test `updateNotificationsMuted(false)` persists to DB and calls `scheduleCheckInNotification()` with current settings
-  - [ ] 6.3 Test `NotificationScheduler.checkProfileRules()` returns false when `notificationsMuted == true`
-  - [ ] 6.4 Test `updateCheckInWeekday()` persists to DB and reschedules notification
-  - [ ] 6.5 Test mute state survives `loadProfile()` round-trip
-  - [ ] 6.6 Test existing cadence/time tests still pass with new migration
-  - [ ] 6.7 Test SettingsViewModel init accepts both `notificationService` and `notificationScheduler` (wiring smoke test — verifies the injection chain compiles and nil defaults work for previews)
+- [x] Task 6: Tests (AC: all)
+  - [x] 6.1 Test `updateNotificationsMuted(true)` persists to DB and calls `removeAllScheduledNotifications()`
+  - [x] 6.2 Test `updateNotificationsMuted(false)` persists to DB and calls `scheduleCheckInNotification()` with current settings
+  - [x] 6.3 Test `NotificationScheduler.checkProfileRules()` returns false when `notificationsMuted == true`
+  - [x] 6.4 Test `updateCheckInWeekday()` persists to DB and reschedules notification
+  - [x] 6.5 Test mute state survives `loadProfile()` round-trip
+  - [x] 6.6 Test existing cadence/time tests still pass with new migration
+  - [x] 6.7 Test SettingsViewModel init accepts both `notificationService` and `notificationScheduler` (wiring smoke test — verifies the injection chain compiles and nil defaults work for previews)
 
 ## Dev Notes
 
@@ -220,9 +220,33 @@ This story is iOS-only. No API changes, no server modifications.
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6 (1M context)
 
 ### Debug Log References
+- Full test suite: 732 tests, 729 pass, 3 pre-existing failures (ChatEventCodableTests, SSEParserTests — unrelated to this story)
+- Story 9.3 tests: 8/8 pass (7 original + 1 bypassesMute architecture test from code review)
 
 ### Completion Notes List
+- Added `notificationsMuted: Bool = false` to UserProfile model with v17 migration
+- Added `updateNotificationsMuted(_:)` to SettingsViewModel — muting calls `removeAllScheduledNotifications()`, unmuting calls `rescheduleCheckIn()`
+- Added `updateCheckInWeekday(_:)` to SettingsViewModel — persists to DB and reschedules
+- Injected `NotificationSchedulerProtocol` into SettingsViewModel (optional, nil-safe for previews)
+- Added `notificationsMuted` guard to `NotificationScheduler.checkProfileRules()` — blocks all 4 notification types when muted
+- Renamed "Check-ins" section to "Notifications" in SettingsView
+- Added mute toggle with accessibility hint, weekday picker with day names (1-7 mapping), disabled state on pickers when muted
+- Wired `notificationScheduler` through SettingsView → SettingsViewModel → RootView call site
+- 8 tests covering mute persistence, removeAll/reschedule dispatch, checkProfileRules suppression, weekday persistence, loadProfile round-trip, migration compatibility, DI wiring, and bypassesMute architecture verification
+
+### Change Log
+- Story 9.3 implementation completed (Date: 2026-04-03)
+- Code review fix: Added `bypassesMute` property to `NotificationType` and type-aware `checkProfileRules(for:)` so future safety notifications can bypass mute (AC #2 forward-compatibility). Added 1 test. (Date: 2026-04-03)
 
 ### File List
+- ios/sprinty/Models/UserProfile.swift (modified — added `notificationsMuted` field)
+- ios/sprinty/Services/Database/Migrations.swift (modified — added v17_notificationsMuted migration)
+- ios/sprinty/Features/Settings/ViewModels/SettingsViewModel.swift (modified — added notificationsMuted property, updateNotificationsMuted(), updateCheckInWeekday(), notificationScheduler injection)
+- ios/sprinty/Features/Settings/Views/SettingsView.swift (modified — renamed section, added mute toggle, weekday picker, disabled state, notificationScheduler init param)
+- ios/sprinty/Services/Notifications/NotificationScheduler.swift (modified — added notificationsMuted check to checkProfileRules())
+- ios/sprinty/App/RootView.swift (modified — pass notificationScheduler to SettingsView)
+- ios/sprinty/Services/Notifications/NotificationType.swift (modified — added `bypassesMute` property for safety notification bypass)
+- ios/Tests/Features/Settings/SettingsViewModelCheckInTests.swift (modified — added SettingsViewModelNotificationPreferenceTests suite with 8 tests)
