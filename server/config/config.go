@@ -22,6 +22,12 @@ type Config struct {
 	PremiumTierProvider string
 	PremiumTierModel    string
 
+	// Failover providers (optional — if set, used as fallback when primary fails)
+	FreeTierFallbackProvider    string
+	FreeTierFallbackModel       string
+	PremiumTierFallbackProvider string
+	PremiumTierFallbackModel    string
+
 	// Apple App Store Server API credentials (optional in dev, required in staging/production)
 	AppleKeyID      string
 	AppleIssuerID   string
@@ -90,6 +96,12 @@ func Load() (*Config, error) {
 		premiumTierModel = "claude-sonnet-4-6-20250514"
 	}
 
+	// Failover provider configuration (optional)
+	freeTierFallbackProvider := os.Getenv("FREE_TIER_FALLBACK_PROVIDER")
+	freeTierFallbackModel := os.Getenv("FREE_TIER_FALLBACK_MODEL")
+	premiumTierFallbackProvider := os.Getenv("PREMIUM_TIER_FALLBACK_PROVIDER")
+	premiumTierFallbackModel := os.Getenv("PREMIUM_TIER_FALLBACK_MODEL")
+
 	openaiKey := os.Getenv("OPENAI_API_KEY")
 
 	// Validate: warn if OpenAI configured as tier provider but key is missing
@@ -99,6 +111,12 @@ func Load() (*Config, error) {
 		}
 		if premiumTierProvider == "openai" {
 			slog.Warn("PREMIUM_TIER_PROVIDER is 'openai' but OPENAI_API_KEY is not set")
+		}
+		if freeTierFallbackProvider == "openai" {
+			slog.Warn("FREE_TIER_FALLBACK_PROVIDER is 'openai' but OPENAI_API_KEY is not set")
+		}
+		if premiumTierFallbackProvider == "openai" {
+			slog.Warn("PREMIUM_TIER_FALLBACK_PROVIDER is 'openai' but OPENAI_API_KEY is not set")
 		}
 	}
 
@@ -132,6 +150,10 @@ func Load() (*Config, error) {
 		FreeTierModel:                freeTierModel,
 		PremiumTierProvider:          premiumTierProvider,
 		PremiumTierModel:             premiumTierModel,
+		FreeTierFallbackProvider:     freeTierFallbackProvider,
+		FreeTierFallbackModel:        freeTierFallbackModel,
+		PremiumTierFallbackProvider:  premiumTierFallbackProvider,
+		PremiumTierFallbackModel:     premiumTierFallbackModel,
 		AppleKeyID:                   appleKeyID,
 		AppleIssuerID:                appleIssuerID,
 		AppleBundleID:                appleBundleID,
@@ -140,14 +162,21 @@ func Load() (*Config, error) {
 		PremiumTierDailySessionLimit: premiumTierDailySessionLimit,
 	}
 
-	slog.Info("config loaded",
+	logArgs := []any{
 		"environment", cfg.Environment,
 		"port", cfg.Port,
 		"hasAnthropicKey", cfg.AnthropicAPIKey != "",
 		"hasOpenAIKey", cfg.OpenAIAPIKey != "",
-		"freeTier", cfg.FreeTierProvider+"/"+cfg.FreeTierModel,
-		"premiumTier", cfg.PremiumTierProvider+"/"+cfg.PremiumTierModel,
-	)
+		"freeTier", cfg.FreeTierProvider + "/" + cfg.FreeTierModel,
+		"premiumTier", cfg.PremiumTierProvider + "/" + cfg.PremiumTierModel,
+	}
+	if cfg.FreeTierFallbackProvider != "" {
+		logArgs = append(logArgs, "freeTierFallback", cfg.FreeTierFallbackProvider+"/"+cfg.FreeTierFallbackModel)
+	}
+	if cfg.PremiumTierFallbackProvider != "" {
+		logArgs = append(logArgs, "premiumTierFallback", cfg.PremiumTierFallbackProvider+"/"+cfg.PremiumTierFallbackModel)
+	}
+	slog.Info("config loaded", logArgs...)
 
 	return cfg, nil
 }

@@ -1,11 +1,18 @@
 package providers
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 type MockProvider struct {
 	StubbedMode           string
 	StubbedChallengerUsed bool
 	StubbedSafetyLevel    string
+
+	// Error injection for failover testing
+	StubbedError     error
+	FailAfterNTokens int
 }
 
 func NewMockProvider() *MockProvider {
@@ -17,6 +24,11 @@ func (m *MockProvider) Name() string {
 }
 
 func (m *MockProvider) StreamChat(ctx context.Context, req ChatRequest) (<-chan ChatEvent, error) {
+	// Immediate error — simulates provider returning error before streaming
+	if m.StubbedError != nil && m.FailAfterNTokens <= 0 {
+		return nil, fmt.Errorf("mock.StreamChat: %w", m.StubbedError)
+	}
+
 	ch := make(chan ChatEvent)
 
 	go func() {
@@ -102,6 +114,24 @@ func (m *MockProvider) StreamChat(ctx context.Context, req ChatRequest) (<-chan 
 			"I'm here to help you figure things out, push back when you need it, and keep you moving. ",
 			"So... what's on your mind? Or if nothing specific, tell me a little about what brought you here.",
 		}
+
+		// Mid-stream error injection: send N tokens then error
+		if m.FailAfterNTokens > 0 && m.StubbedError != nil {
+			for i := 0; i < m.FailAfterNTokens && i < len(tokens); i++ {
+				select {
+				case <-ctx.Done():
+					return
+				case ch <- ChatEvent{Type: "token", Text: tokens[i]}:
+				}
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- ChatEvent{Type: "error", Err: m.StubbedError}:
+			}
+			return
+		}
+
 		for _, text := range tokens {
 			select {
 			case <-ctx.Done():

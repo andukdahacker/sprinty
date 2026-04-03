@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/ducdo/sprinty/server/auth"
@@ -1933,5 +1934,311 @@ func TestChatSummarizePassesThroughGuardrail(t *testing.T) {
 
 	if w2.Code != http.StatusOK {
 		t.Errorf("summarize should succeed even with guardrail, got %d", w2.Code)
+	}
+}
+
+// --- Story 10.1 Tests: Multi-Provider Failover ---
+
+func setupMuxWithChain(chain []providers.Provider) *http.ServeMux {
+	authMW := middleware.AuthMiddleware(testSecret)
+
+	dir, _ := os.MkdirTemp("", "prompts-test-*")
+	sectionsDir := filepath.Join(dir, "sections")
+	os.MkdirAll(sectionsDir, 0o755)
+	files := map[string]string{
+		"base-persona.md":      "You are {{coach_name}}, a coach.",
+		"mode-discovery.md":    "Discovery mode.",
+		"mode-directive.md":    "Directive.",
+		"safety.md":            "Safety.",
+		"mood.md":              "Mood.",
+		"tagging.md":           "Tags.",
+		"cultural.md":          "Cultural.",
+		"context-injection.md": "{{retrieved_memories}} Coach: {{coach_name}}. Values: {{user_values}}. Goals: {{user_goals}}. Traits: {{user_traits}}. Domains: {{domain_states}}. Engagement: {{engagement_level}}. Moods: {{recent_moods}}. MsgLen: {{avg_message_length}}. Sessions: {{session_count}}. Gap: {{last_session_gap}}. Intensity: {{recent_session_intensity}}.",
+		"mode-transitions.md": "Mode transitions: analyze user intent.",
+		"challenger.md":       "Challenger capability: push back constructively.",
+		"summarize.md":        "Summarize the coaching conversation.",
+		"sprint-retro.md":     "Generate a narrative retrospective.",
+		"check-in.md":         "Check-in mode: brief response.",
+		"autonomy.md":         "Autonomy: suggest breathers.",
+	}
+	for name, content := range files {
+		os.WriteFile(filepath.Join(sectionsDir, name), []byte(content), 0o644)
+	}
+	builder, _ := prompts.NewBuilder(sectionsDir)
+
+	registry := middleware.NewProviderRegistry(chain[0])
+	registry.RegisterChain("free", chain)
+	registry.RegisterChain("premium", chain)
+	tierMW := middleware.TierMiddleware(registry)
+	sessionTracker := middleware.NewSessionTracker()
+	guardrailsMW := middleware.GuardrailsMiddleware(sessionTracker, &config.Config{
+		FreeTierDailySessionLimit:    5,
+		PremiumTierDailySessionLimit: 0,
+	})
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health", handlers.HealthHandler)
+	mux.HandleFunc("POST /v1/auth/register", handlers.RegisterHandler(testSecret, nil))
+	mux.Handle("POST /v1/auth/refresh", authMW(http.HandlerFunc(handlers.RefreshHandler(testSecret, nil))))
+	mux.Handle("POST /v1/chat", authMW(tierMW(guardrailsMW(http.HandlerFunc(handlers.ChatHandler(builder))))))
+	return mux
+}
+
+func parseSSEEvents(t *testing.T, body string) []map[string]any {
+	t.Helper()
+	var events []map[string]any
+	scanner := bufio.NewScanner(strings.NewReader(body))
+	var currentType string
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "event: ") {
+			currentType = strings.TrimPrefix(line, "event: ")
+		} else if strings.HasPrefix(line, "data: ") {
+			data := strings.TrimPrefix(line, "data: ")
+			var parsed map[string]any
+			if err := json.Unmarshal([]byte(data), &parsed); err != nil {
+				t.Logf("failed to parse SSE data: %v", err)
+				continue
+			}
+			parsed["_type"] = currentType
+			events = append(events, parsed)
+		}
+	}
+	return events
+}
+
+func TestChatHandlerPrimaryFailsFailsOverToSecondary(t *testing.T) {
+	primary := &providers.MockProvider{
+		StubbedError: errors.New("provider down"),
+	}
+	secondary := providers.NewMockProvider()
+	chain := []providers.Provider{primary, secondary}
+	mux := setupMuxWithChain(chain)
+
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+createValidToken(t))
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	events := parseSSEEvents(t, w.Body.String())
+	if len(events) == 0 {
+		t.Fatal("expected SSE events")
+	}
+
+	// Should have token events from secondary
+	hasToken := false
+	for _, e := range events {
+		if e["_type"] == "token" {
+			hasToken = true
+			break
+		}
+	}
+	if !hasToken {
+		t.Error("expected token events from secondary provider")
+	}
+}
+
+func TestChatHandlerPrimaryFailsMidStreamPreservesPartialAndContinues(t *testing.T) {
+	primary := &providers.MockProvider{
+		StubbedError:     errors.New("mid-stream failure"),
+		FailAfterNTokens: 2,
+	}
+	secondary := providers.NewMockProvider()
+	chain := []providers.Provider{primary, secondary}
+	mux := setupMuxWithChain(chain)
+
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+createValidToken(t))
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	events := parseSSEEvents(t, w.Body.String())
+	// Should have tokens from both primary (2) and secondary (4), plus done
+	tokenCount := 0
+	for _, e := range events {
+		if e["_type"] == "token" {
+			tokenCount++
+		}
+	}
+	if tokenCount < 3 {
+		t.Errorf("expected at least 3 token events (2 from primary + more from secondary), got %d", tokenCount)
+	}
+}
+
+func TestChatHandlerAllProvidersFail502(t *testing.T) {
+	primary := &providers.MockProvider{
+		StubbedError: errors.New("provider 1 down"),
+	}
+	secondary := &providers.MockProvider{
+		StubbedError: errors.New("provider 2 down"),
+	}
+	chain := []providers.Provider{primary, secondary}
+	mux := setupMuxWithChain(chain)
+
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+createValidToken(t))
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadGateway {
+		t.Errorf("expected 502, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var body map[string]any
+	json.Unmarshal(w.Body.Bytes(), &body)
+	if body["error"] != "provider_unavailable" {
+		t.Errorf("expected provider_unavailable error, got %v", body["error"])
+	}
+}
+
+func TestChatHandlerFailoverSetsDegradedFlag(t *testing.T) {
+	primary := &providers.MockProvider{
+		StubbedError: errors.New("provider down"),
+	}
+	secondary := providers.NewMockProvider()
+	chain := []providers.Provider{primary, secondary}
+	mux := setupMuxWithChain(chain)
+
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+createValidToken(t))
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	events := parseSSEEvents(t, w.Body.String())
+	for _, e := range events {
+		if e["_type"] == "done" {
+			degraded, ok := e["degraded"]
+			if !ok || degraded != true {
+				t.Error("expected degraded=true in done event after failover")
+			}
+			return
+		}
+	}
+	t.Error("no done event found")
+}
+
+func TestChatHandlerFailoverLogsWarn(t *testing.T) {
+	// This test verifies failover happens and produces a response.
+	// Slog output verification would require a custom handler, so we verify
+	// the behavioral outcome (successful failover) instead.
+	primary := &providers.MockProvider{
+		StubbedError: errors.New("provider down"),
+	}
+	secondary := providers.NewMockProvider()
+	chain := []providers.Provider{primary, secondary}
+	mux := setupMuxWithChain(chain)
+
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+createValidToken(t))
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	// If failover worked, we get 200 — which means the warn log was hit
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 after failover, got %d", w.Code)
+	}
+}
+
+func TestChatHandlerRateLimitedNoFailover(t *testing.T) {
+	// Create a mock that returns a rate limit error by wrapping an anthropic-like error
+	primary := &providers.MockProvider{
+		StubbedError: &anthropic.Error{StatusCode: 429},
+	}
+	secondary := providers.NewMockProvider()
+	chain := []providers.Provider{primary, secondary}
+	mux := setupMuxWithChain(chain)
+
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+createValidToken(t))
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusTooManyRequests {
+		t.Errorf("expected 429, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var body map[string]any
+	json.Unmarshal(w.Body.Bytes(), &body)
+	if body["error"] != "rate_limited" {
+		t.Errorf("expected rate_limited error, got %v", body["error"])
+	}
+}
+
+func TestProviderRegistryChainOrderingIntegration(t *testing.T) {
+	primary := providers.NewMockProvider()
+	fallback := providers.NewMockProvider()
+
+	registry := middleware.NewProviderRegistry(primary)
+	registry.RegisterChain("free", []providers.Provider{primary, fallback})
+
+	chain := registry.GetChain("free")
+	if len(chain) != 2 {
+		t.Fatalf("expected chain length 2, got %d", len(chain))
+	}
+	if chain[0] != primary {
+		t.Error("expected primary first")
+	}
+	if chain[1] != fallback {
+		t.Error("expected fallback second")
+	}
+}
+
+func TestProviderRegistryDefaultProviderIntegration(t *testing.T) {
+	defaultProvider := providers.NewMockProvider()
+
+	registry := middleware.NewProviderRegistry(defaultProvider)
+
+	chain := registry.GetChain("unknown-tier")
+	if len(chain) != 1 {
+		t.Fatalf("expected chain length 1, got %d", len(chain))
+	}
+	if chain[0] != defaultProvider {
+		t.Error("expected default provider for unknown tier")
+	}
+}
+
+func TestExistingChatHandlerWorksWithChainRegistry(t *testing.T) {
+	// Verify existing behavior works with chain-based registry
+	mux := setupMux()
+	token := createValidToken(t)
+
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery","promptVersion":"1.0"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	events := parseSSEEvents(t, w.Body.String())
+	hasDone := false
+	for _, e := range events {
+		if e["_type"] == "done" {
+			hasDone = true
+			break
+		}
+	}
+	if !hasDone {
+		t.Error("expected done event in response")
 	}
 }

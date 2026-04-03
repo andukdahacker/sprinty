@@ -335,6 +335,10 @@ func (p *OpenAIProvider) StreamChat(ctx context.Context, req ChatRequest) (<-cha
 
 		if err := stream.Err(); err != nil {
 			slog.Warn("openai.StreamChat: mid-stream error", "error", err)
+			select {
+			case <-ctx.Done():
+			case ch <- ChatEvent{Type: "error", Err: fmt.Errorf("openai.StreamChat: %w", err)}:
+			}
 		}
 	}()
 

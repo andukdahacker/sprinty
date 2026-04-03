@@ -326,6 +326,10 @@ func (p *AnthropicProvider) StreamChat(ctx context.Context, req ChatRequest) (<-
 
 		if err := stream.Err(); err != nil {
 			slog.Warn("anthropic.StreamChat: mid-stream error", "error", err)
+			select {
+			case <-ctx.Done():
+			case ch <- ChatEvent{Type: "error", Err: fmt.Errorf("anthropic.StreamChat: %w", err)}:
+			}
 		}
 	}()
 

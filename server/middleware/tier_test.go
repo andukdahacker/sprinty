@@ -156,3 +156,80 @@ func TestProviderRegistryGet(t *testing.T) {
 		t.Error("expected fallback for unknown tier")
 	}
 }
+
+// --- Story 10.1 Tests ---
+
+func TestProviderRegistryChainOrdering(t *testing.T) {
+	primary := &namedMockProvider{name: "primary"}
+	fallbackProvider := &namedMockProvider{name: "fallback"}
+	defaultProvider := &namedMockProvider{name: "default"}
+
+	registry := NewProviderRegistry(defaultProvider)
+	registry.RegisterChain("free", []providers.Provider{primary, fallbackProvider})
+
+	chain := registry.GetChain("free")
+	if len(chain) != 2 {
+		t.Fatalf("expected chain length 2, got %d", len(chain))
+	}
+	if chain[0] != primary {
+		t.Error("expected primary provider first in chain")
+	}
+	if chain[1] != fallbackProvider {
+		t.Error("expected fallback provider second in chain")
+	}
+
+	// Get should return first in chain
+	if registry.Get("free") != primary {
+		t.Error("expected Get to return first provider in chain")
+	}
+}
+
+func TestProviderRegistryDefaultProviderChain(t *testing.T) {
+	defaultProvider := &namedMockProvider{name: "default"}
+
+	registry := NewProviderRegistry(defaultProvider)
+
+	chain := registry.GetChain("unknown")
+	if len(chain) != 1 {
+		t.Fatalf("expected chain length 1 for unknown tier, got %d", len(chain))
+	}
+	if chain[0] != defaultProvider {
+		t.Error("expected default provider for unknown tier")
+	}
+}
+
+func TestTierMiddlewareAttachesChainToContext(t *testing.T) {
+	primary := &namedMockProvider{name: "primary"}
+	fallbackProvider := &namedMockProvider{name: "fallback"}
+
+	registry := NewProviderRegistry(primary)
+	registry.RegisterChain("free", []providers.Provider{primary, fallbackProvider})
+	tierMW := TierMiddleware(registry)
+
+	var gotChain []providers.Provider
+	handler := tierMW(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		chain, ok := ProviderChainFromContext(r.Context())
+		if !ok {
+			t.Fatal("expected provider chain in context")
+		}
+		gotChain = chain
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	claims := &auth.Claims{DeviceID: "test-device", Tier: "free"}
+	ctx := context.WithValue(context.Background(), claimsKey, claims)
+
+	req := httptest.NewRequest("GET", "/", nil).WithContext(ctx)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if len(gotChain) != 2 {
+		t.Fatalf("expected chain length 2, got %d", len(gotChain))
+	}
+	if gotChain[0] != primary {
+		t.Error("expected primary first in chain")
+	}
+	if gotChain[1] != fallbackProvider {
+		t.Error("expected fallback second in chain")
+	}
+}

@@ -146,9 +146,20 @@ func buildProviderRegistry(cfg *config.Config) *middleware.ProviderRegistry {
 	freeProvider := makeProvider(cfg.FreeTierProvider, cfg.FreeTierModel)
 	premiumProvider := makeProvider(cfg.PremiumTierProvider, cfg.PremiumTierModel)
 
+	// Build failover chains
+	freeChain := []providers.Provider{freeProvider}
+	if cfg.FreeTierFallbackProvider != "" && cfg.FreeTierFallbackModel != "" {
+		freeChain = append(freeChain, makeProvider(cfg.FreeTierFallbackProvider, cfg.FreeTierFallbackModel))
+	}
+
+	premiumChain := []providers.Provider{premiumProvider}
+	if cfg.PremiumTierFallbackProvider != "" && cfg.PremiumTierFallbackModel != "" {
+		premiumChain = append(premiumChain, makeProvider(cfg.PremiumTierFallbackProvider, cfg.PremiumTierFallbackModel))
+	}
+
 	registry := middleware.NewProviderRegistry(freeProvider)
-	registry.Register("free", freeProvider)
-	registry.Register("premium", premiumProvider)
+	registry.RegisterChain("free", freeChain)
+	registry.RegisterChain("premium", premiumChain)
 
 	return registry
 }

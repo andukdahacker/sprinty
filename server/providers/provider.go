@@ -82,6 +82,7 @@ type Usage struct {
 type ChatEvent struct {
 	Type             string          `json:"type"`
 	Text             string          `json:"text,omitempty"`
+	Err              error           `json:"-"`
 	SafetyLevel      string          `json:"safetyLevel,omitempty"`
 	DomainTags       []string        `json:"domainTags,omitempty"`
 	Mood             string          `json:"mood,omitempty"`
