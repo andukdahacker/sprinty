@@ -11,11 +11,14 @@ import (
 	"time"
 
 	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/getsentry/sentry-go"
+	sentryhttp "github.com/getsentry/sentry-go/http"
 	"github.com/openai/openai-go"
 
 	"github.com/ducdo/sprinty/server/appstore"
 	"github.com/ducdo/sprinty/server/config"
 	"github.com/ducdo/sprinty/server/handlers"
+	"github.com/ducdo/sprinty/server/metrics"
 	"github.com/ducdo/sprinty/server/middleware"
 	"github.com/ducdo/sprinty/server/prompts"
 	"github.com/ducdo/sprinty/server/providers"
@@ -28,6 +31,26 @@ func main() {
 	if err != nil {
 		slog.Error("failed to load config", "error", err)
 		os.Exit(1)
+	}
+
+	// Initialize Sentry for error tracking and performance monitoring
+	if cfg.SentryDSN != "" {
+		err := sentry.Init(sentry.ClientOptions{
+			Dsn:              cfg.SentryDSN,
+			Environment:      cfg.Environment,
+			EnableTracing:    true,
+			TracesSampler: sentry.TracesSampler(func(ctx sentry.SamplingContext) float64 {
+				if ctx.Span.Name == "GET /health" {
+					return 0.0
+				}
+				return 0.2
+			}),
+		})
+		if err != nil {
+			slog.Warn("sentry initialization failed", "error", err)
+		} else {
+			slog.Info("sentry initialized")
+		}
 	}
 
 	// Build provider registry for tier-based routing
@@ -58,6 +81,8 @@ func main() {
 		slog.Info("appstore client not configured — subscription validation disabled (dev mode)")
 	}
 
+	collector := metrics.NewCollector(1000)
+
 	authMW := middleware.AuthMiddleware(cfg.JWTSecret)
 	tierMW := middleware.TierMiddleware(registry)
 	sessionTracker := middleware.NewSessionTracker()
@@ -74,7 +99,12 @@ func main() {
 	mux.Handle("POST /v1/auth/refresh", authMW(http.HandlerFunc(handlers.RefreshHandler(cfg.JWTSecret, appStoreClient))))
 	mux.Handle("POST /v1/chat", authMW(tierMW(guardrailsMW(http.HandlerFunc(handlers.ChatHandler(promptBuilder))))))
 
-	handler := middleware.LoggingMiddleware(mux)
+	// Debug metrics endpoint (behind auth)
+	mux.Handle("GET /debug/metrics", authMW(http.HandlerFunc(collector.Handler())))
+
+	// Middleware order: Logging (outermost) -> Sentry -> mux
+	sentryHandler := sentryhttp.New(sentryhttp.Options{Repanic: true})
+	handler := middleware.LoggingMiddleware(collector)(sentryHandler.Handle(mux))
 
 	srv := &http.Server{
 		Addr:    "0.0.0.0:" + cfg.Port,
@@ -95,6 +125,9 @@ func main() {
 
 	<-ctx.Done()
 	slog.Info("shutdown signal received, draining connections")
+
+	// Flush Sentry events before shutdown
+	sentry.Flush(2 * time.Second)
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

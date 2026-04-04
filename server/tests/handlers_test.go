@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -19,9 +20,12 @@ import (
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/golang-jwt/jwt/v5"
 
+	"github.com/getsentry/sentry-go"
+
 	"github.com/ducdo/sprinty/server/auth"
 	"github.com/ducdo/sprinty/server/config"
 	"github.com/ducdo/sprinty/server/handlers"
+	"github.com/ducdo/sprinty/server/metrics"
 	"github.com/ducdo/sprinty/server/middleware"
 	"github.com/ducdo/sprinty/server/prompts"
 	"github.com/ducdo/sprinty/server/providers"
@@ -110,6 +114,11 @@ func setupMuxWithBuilder(builder *prompts.Builder) *http.ServeMux {
 	mux.HandleFunc("POST /v1/auth/register", handlers.RegisterHandler(testSecret, nil))
 	mux.Handle("POST /v1/auth/refresh", authMW(http.HandlerFunc(handlers.RefreshHandler(testSecret, nil))))
 	mux.Handle("POST /v1/chat", authMW(tierMW(guardrailsMW(http.HandlerFunc(handlers.ChatHandler(builder))))))
+
+	// Debug metrics endpoint (behind auth)
+	collector := metrics.NewCollector(1000)
+	mux.Handle("GET /debug/metrics", authMW(http.HandlerFunc(collector.Handler())))
+
 	return mux
 }
 
@@ -2240,5 +2249,159 @@ func TestExistingChatHandlerWorksWithChainRegistry(t *testing.T) {
 	}
 	if !hasDone {
 		t.Error("expected done event in response")
+	}
+}
+
+// --- Story 10.5 Tests ---
+
+func TestDebugMetricsRequiresAuth(t *testing.T) {
+	mux := setupMux()
+
+	// No auth header
+	req := httptest.NewRequest("GET", "/debug/metrics", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestDebugMetricsReturnsJSONWithAuth(t *testing.T) {
+	mux := setupMux()
+	token := createValidToken(t)
+
+	req := httptest.NewRequest("GET", "/debug/metrics", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var result map[string]any
+	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+		t.Fatalf("failed to decode JSON: %v", err)
+	}
+
+	requiredKeys := []string{"requestCount", "errorCount", "byProvider", "byTier", "byStatus", "bySafetyLevel"}
+	for _, key := range requiredKeys {
+		if _, ok := result[key]; !ok {
+			t.Errorf("expected key %q in metrics response", key)
+		}
+	}
+}
+
+func TestHealthEndpointIncludesUptime(t *testing.T) {
+	mux := setupMux()
+	req := httptest.NewRequest("GET", "/health", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	var body map[string]any
+	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if body["status"] != "ok" {
+		t.Errorf("expected status ok, got %v", body["status"])
+	}
+	if _, ok := body["uptime"]; !ok {
+		t.Error("expected uptime field in health response")
+	}
+}
+
+func TestHealthEndpointIncludesCommitSHA(t *testing.T) {
+	t.Setenv("RAILWAY_GIT_COMMIT_SHA", "abc123def")
+
+	mux := setupMux()
+	req := httptest.NewRequest("GET", "/health", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	var body map[string]any
+	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if body["commitSha"] != "abc123def" {
+		t.Errorf("expected commitSha=abc123def, got %v", body["commitSha"])
+	}
+}
+
+func TestChatRequestAnalyticsNoPIIInMetrics(t *testing.T) {
+	// Verify metrics endpoint contains no PII fields
+	mux := setupMux()
+	token := createValidToken(t)
+
+	// Send a chat request first to populate metrics
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery"}`
+	chatReq := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	chatReq.Header.Set("Authorization", "Bearer "+token)
+	chatW := httptest.NewRecorder()
+	mux.ServeHTTP(chatW, chatReq)
+
+	// Now check metrics
+	metricsReq := httptest.NewRequest("GET", "/debug/metrics", nil)
+	metricsReq.Header.Set("Authorization", "Bearer "+token)
+	metricsW := httptest.NewRecorder()
+	mux.ServeHTTP(metricsW, metricsReq)
+
+	body := metricsW.Body.String()
+
+	// Verify no PII in metrics output
+	if strings.Contains(body, "550e8400-e29b-41d4-a716-446655440000") {
+		t.Error("metrics output contains plaintext deviceId — PII leak")
+	}
+	if strings.Contains(body, "hello") {
+		t.Error("metrics output contains message content — PII leak")
+	}
+	if strings.Contains(body, "deviceId") {
+		t.Error("metrics output contains deviceId field — PII leak")
+	}
+}
+
+func TestSentryInitWithEmptyDSN(t *testing.T) {
+	// Verify that Sentry initialization with empty DSN does not panic.
+	// sentry.Init with empty DSN is a no-op and should return nil.
+	err := sentry.Init(sentry.ClientOptions{
+		Dsn: "",
+	})
+	if err != nil {
+		t.Errorf("sentry.Init with empty DSN should not error, got: %v", err)
+	}
+}
+
+func TestChatRequestSlogAnalyticsFields(t *testing.T) {
+	// Verify slog completion log contains analytics fields when wrapped with LoggingMiddleware
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&buf, nil))
+	old := slog.Default()
+	slog.SetDefault(logger)
+	defer slog.SetDefault(old)
+
+	mux := setupMux()
+	collector := metrics.NewCollector(1000)
+	handler := middleware.LoggingMiddleware(collector)(mux)
+
+	token := createValidToken(t)
+	payload := `{"messages":[{"role":"user","content":"hello"}],"mode":"discovery"}`
+	req := httptest.NewRequest("POST", "/v1/chat", strings.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	output := buf.String()
+
+	// Verify analytics fields present in slog output
+	requiredFields := []string{"duration_ms", "status", "tier", "provider"}
+	for _, field := range requiredFields {
+		if !strings.Contains(output, `"`+field+`"`) {
+			t.Errorf("slog output missing analytics field %q\nOutput: %s", field, output)
+		}
 	}
 }

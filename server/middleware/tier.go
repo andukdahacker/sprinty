@@ -71,6 +71,9 @@ func TierMiddleware(registry *ProviderRegistry) func(http.Handler) http.Handler 
 			if !ok {
 				// No claims = no tier info; use default (free tier)
 				chain := registry.GetChain("free")
+				if logFields := LogFieldsFromContext(r.Context()); logFields != nil {
+					logFields.Provider = chain[0].Name()
+				}
 				ctx := context.WithValue(r.Context(), providerKey, chain[0])
 				ctx = context.WithValue(ctx, providerChainKey, chain)
 				next.ServeHTTP(w, r.WithContext(ctx))
@@ -85,6 +88,10 @@ func TierMiddleware(registry *ProviderRegistry) func(http.Handler) http.Handler 
 			chain := registry.GetChain(tier)
 
 			slog.Debug("tier.routing", "tier", tier, "chainLen", len(chain))
+
+			if logFields := LogFieldsFromContext(r.Context()); logFields != nil {
+				logFields.Provider = chain[0].Name()
+			}
 
 			ctx := context.WithValue(r.Context(), providerKey, chain[0])
 			ctx = context.WithValue(ctx, providerChainKey, chain)

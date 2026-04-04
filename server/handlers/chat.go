@@ -4,6 +4,8 @@ import (
 	"compress/flate"
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +16,7 @@ import (
 	"time"
 
 	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/getsentry/sentry-go"
 	"github.com/openai/openai-go"
 
 	"github.com/ducdo/sprinty/server/middleware"
@@ -23,9 +26,10 @@ import (
 
 // failoverResult holds the output from streamWithFailover.
 type failoverResult struct {
-	events   []providers.ChatEvent
-	degraded bool
-	err      error
+	events       []providers.ChatEvent
+	degraded     bool
+	err          error
+	providerUsed string
 }
 
 // streamWithFailover tries providers in chain order, handling initial and mid-stream failures.
@@ -142,10 +146,10 @@ func streamWithFailover(ctx context.Context, chain []providers.Provider, req pro
 				case eventCh <- event:
 				}
 			}
-			return failoverResult{degraded: degraded}
+			return failoverResult{degraded: degraded, providerUsed: p.Name()}
 		}
 
-		return failoverResult{events: collectedEvents, degraded: degraded}
+		return failoverResult{events: collectedEvents, degraded: degraded, providerUsed: p.Name()}
 	}
 
 	return failoverResult{err: fmt.Errorf("all providers failed")}
@@ -302,21 +306,11 @@ func ChatHandler(promptBuilder *prompts.Builder) http.HandlerFunc {
 				}
 				data, _ = json.Marshal(donePayload)
 
-				// Compliance logging: non-green safety levels
-				if event.SafetyLevel != "green" && event.SafetyLevel != "" {
-					deviceID := ""
-					tier := ""
-					if claims, ok := middleware.ClaimsFromContext(r.Context()); ok {
-						deviceID = claims.DeviceID
-						tier = claims.Tier
-					}
-					slog.Info("compliance.safety_boundary",
-						"safetyLevel", event.SafetyLevel,
-						"deviceId", deviceID,
-						"tier", tier,
-						"mode", req.Mode,
-					)
+				// Populate LogFields with safety level for analytics
+				if logFields := middleware.LogFieldsFromContext(r.Context()); logFields != nil {
+					logFields.SafetyLevel = event.SafetyLevel
 				}
+
 			default:
 				continue
 			}
@@ -329,6 +323,53 @@ func ChatHandler(promptBuilder *prompts.Builder) http.HandlerFunc {
 		result := <-resultCh
 		if result.err != nil && !headerWritten {
 			handleProviderError(w, result.err)
+		}
+
+		// Populate LogFields for analytics with actual provider used
+		if logFields := middleware.LogFieldsFromContext(r.Context()); logFields != nil {
+			logFields.Mode = req.Mode
+			logFields.FailoverOccurred = result.degraded
+			if result.providerUsed != "" {
+				logFields.Provider = result.providerUsed
+			}
+		}
+
+		// Set Sentry tags with actual provider used
+		if hub := sentry.GetHubFromContext(r.Context()); hub != nil {
+			tier := "free"
+			if claims, ok := middleware.ClaimsFromContext(r.Context()); ok {
+				tier = claims.Tier
+			}
+			hub.Scope().SetTag("tier", tier)
+			provider := chain[0].Name()
+			if result.providerUsed != "" {
+				provider = result.providerUsed
+			}
+			hub.Scope().SetTag("provider", provider)
+			hub.Scope().SetTag("mode", req.Mode)
+		}
+
+		// Compliance logging: all safety classifications with actual provider
+		if logFields := middleware.LogFieldsFromContext(r.Context()); logFields != nil && logFields.SafetyLevel != "" {
+			hashedDevice := ""
+			tier := ""
+			if claims, ok := middleware.ClaimsFromContext(r.Context()); ok {
+				hashedDevice = hashDeviceID(claims.DeviceID)
+				tier = claims.Tier
+			}
+			provider := chain[0].Name()
+			if result.providerUsed != "" {
+				provider = result.providerUsed
+			}
+			slog.Info("compliance.safety_classification",
+				slog.Group("compliance",
+					"safetyLevel", logFields.SafetyLevel,
+					"deviceId", hashedDevice,
+					"tier", tier,
+					"mode", req.Mode,
+					"provider", provider,
+				),
+			)
 		}
 	}
 }
@@ -351,6 +392,15 @@ func handleSummarize(w http.ResponseWriter, r *http.Request, req providers.ChatR
 	if result.err != nil {
 		handleProviderError(w, result.err)
 		return
+	}
+
+	// Populate LogFields for analytics
+	if logFields := middleware.LogFieldsFromContext(r.Context()); logFields != nil {
+		logFields.Mode = "summarize"
+		logFields.FailoverOccurred = result.degraded
+		if result.providerUsed != "" {
+			logFields.Provider = result.providerUsed
+		}
 	}
 
 	// Find the done event with summary data
@@ -458,6 +508,15 @@ func handleSprintRetro(w http.ResponseWriter, r *http.Request, req providers.Cha
 	if result.err != nil && !headerWritten {
 		handleProviderError(w, result.err)
 	}
+
+	// Populate LogFields for analytics
+	if logFields := middleware.LogFieldsFromContext(r.Context()); logFields != nil {
+		logFields.Mode = "sprint_retro"
+		logFields.FailoverOccurred = result.degraded
+		if result.providerUsed != "" {
+			logFields.Provider = result.providerUsed
+		}
+	}
 }
 
 // handleProviderError translates provider errors into warm user-facing JSON responses.
@@ -467,6 +526,21 @@ func handleProviderError(w http.ResponseWriter, err error) {
 		Message    string `json:"message"`
 		RetryAfter int    `json:"retryAfter,omitempty"`
 	}
+
+	// Capture provider errors in Sentry
+	sentry.WithScope(func(scope *sentry.Scope) {
+		scope.SetTag("error_source", "provider")
+		var anthropicErr *anthropic.Error
+		var openaiErr *openai.Error
+		if errors.As(err, &anthropicErr) {
+			scope.SetTag("provider", "anthropic")
+			scope.SetExtra("status_code", anthropicErr.StatusCode)
+		} else if errors.As(err, &openaiErr) {
+			scope.SetTag("provider", "openai")
+			scope.SetExtra("status_code", openaiErr.StatusCode)
+		}
+		sentry.CaptureException(err)
+	})
 
 	// Check for Anthropic errors
 	var anthropicErr *anthropic.Error
@@ -518,6 +592,15 @@ func handleProviderError(w http.ResponseWriter, err error) {
 		Message:    "Your coach needs a moment. Try again shortly.",
 		RetryAfter: 10,
 	})
+}
+
+// hashDeviceID returns a truncated SHA-256 hash of the device ID for compliance logging.
+func hashDeviceID(deviceID string) string {
+	if deviceID == "" {
+		return ""
+	}
+	h := sha256.Sum256([]byte(deviceID))
+	return hex.EncodeToString(h[:8])
 }
 
 // Ensure body is an io.ReadCloser for flate reader compatibility.

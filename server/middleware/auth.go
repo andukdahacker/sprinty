@@ -47,6 +47,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 			// Populate logging fields for the outer logging middleware
 			if logFields := LogFieldsFromContext(r.Context()); logFields != nil {
 				logFields.DeviceID = claims.DeviceID
+				logFields.Tier = claims.Tier
 			}
 
 			ctx := context.WithValue(r.Context(), claimsKey, claims)
