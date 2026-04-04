@@ -48,6 +48,7 @@ struct SettingsView: View {
                     Text("Appearance")
                         .sectionHeadingStyle()
                         .foregroundStyle(theme.palette.textPrimary)
+                        .accessibilityAddTraits(.isHeader)
                 }
 
                 Section {
@@ -58,6 +59,7 @@ struct SettingsView: View {
                     Text("Your Coach")
                         .sectionHeadingStyle()
                         .foregroundStyle(theme.palette.textPrimary)
+                        .accessibilityAddTraits(.isHeader)
                 }
 
                 Section {
@@ -102,16 +104,74 @@ struct SettingsView: View {
                     Text("Notifications")
                         .sectionHeadingStyle()
                         .foregroundStyle(theme.palette.textPrimary)
+                        .accessibilityAddTraits(.isHeader)
                 }
 
                 Section {
                     Text("Your data stays on your phone. You can export or delete everything anytime.")
                         .font(theme.typography.insightTextFont)
                         .foregroundStyle(theme.palette.textSecondary)
+
+                    NavigationLink("Coaching Disclaimer") {
+                        CoachingDisclaimerView()
+                    }
+                    .accessibilityLabel("View coaching disclaimer")
+
+                    NavigationLink("Privacy Information") {
+                        PrivacyInformationView()
+                    }
+                    .accessibilityLabel("View privacy information")
+
+                    NavigationLink("Terms of Service") {
+                        TermsOfServiceView()
+                    }
+                    .accessibilityLabel("View terms of service")
+
+                    NavigationLink("Export Conversations") {
+                        ExportConversationsPlaceholderView()
+                    }
+                    .accessibilityLabel("Export your conversations")
+
+                    NavigationLink("Delete All Data") {
+                        DeleteAllDataPlaceholderView()
+                    }
+                    .accessibilityLabel("Delete all your data")
                 } header: {
                     Text("Privacy")
                         .sectionHeadingStyle()
                         .foregroundStyle(theme.palette.textPrimary)
+                        .accessibilityAddTraits(.isHeader)
+                }
+
+                Section {
+                    HStack {
+                        Text("Version")
+                        Spacer()
+                        Text("\(viewModel.appVersion) (\(viewModel.buildNumber))")
+                            .foregroundStyle(theme.palette.textSecondary)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("App version \(viewModel.appVersion), build \(viewModel.buildNumber)")
+
+                    NavigationLink("Acknowledgments") {
+                        AcknowledgmentsView()
+                    }
+                    .accessibilityLabel("View acknowledgments")
+
+                    NavigationLink("Terms of Service") {
+                        TermsOfServiceView()
+                    }
+                    .accessibilityLabel("View terms of service")
+
+                    NavigationLink("Privacy Policy") {
+                        PrivacyInformationView()
+                    }
+                    .accessibilityLabel("View privacy policy")
+                } header: {
+                    Text("About")
+                        .sectionHeadingStyle()
+                        .foregroundStyle(theme.palette.textPrimary)
+                        .accessibilityAddTraits(.isHeader)
                 }
             }
             .navigationTitle("Settings")

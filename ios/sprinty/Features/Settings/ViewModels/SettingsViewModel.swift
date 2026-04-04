@@ -14,6 +14,14 @@ final class SettingsViewModel {
     var checkInWeekday: Int?
     var notificationsMuted: Bool = false
 
+    var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
+
+    var buildNumber: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+    }
+
     let databaseManager: DatabaseManager
     private let notificationService: CheckInNotificationServiceProtocol?
     private let notificationScheduler: NotificationSchedulerProtocol?
