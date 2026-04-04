@@ -36,6 +36,10 @@
 
 generated: 2026-03-17
 last_updated: 2026-04-04
+# Story 11.2 code review completed: 2026-04-04
+# Story 11.2 dev completed: 2026-04-04
+# Story 11.2 dev started: 2026-04-04
+# Story 11.2 context created: 2026-04-04
 # Story 11.1 code review completed: 2026-04-04
 # Story 11.1 dev completed: 2026-04-04
 # Story 11.1 dev started: 2026-04-04
@@ -278,7 +282,7 @@ development_status:
   # Epic 11: Privacy, Settings & Data Control
   epic-11: in-progress
   11-1-settings-view: done
-  11-2-conversation-history-export: backlog
+  11-2-conversation-history-export: done
   11-3-data-deletion: backlog
   11-4-apple-privacy-manifest-and-icloud-backup: backlog
   epic-11-retrospective: optional

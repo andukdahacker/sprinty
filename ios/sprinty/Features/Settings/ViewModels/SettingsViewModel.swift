@@ -13,6 +13,11 @@ final class SettingsViewModel {
     var checkInTimeHour: Int = 9
     var checkInWeekday: Int?
     var notificationsMuted: Bool = false
+    var isExporting: Bool = false
+    var exportError: AppError?
+    var hasConversations: Bool = false
+    var exportFileURL: URL?
+    var exportSuccessMessage: String?
 
     var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -25,11 +30,13 @@ final class SettingsViewModel {
     let databaseManager: DatabaseManager
     private let notificationService: CheckInNotificationServiceProtocol?
     private let notificationScheduler: NotificationSchedulerProtocol?
+    private let exportService: ConversationExportServiceProtocol?
 
-    init(databaseManager: DatabaseManager, notificationService: CheckInNotificationServiceProtocol? = nil, notificationScheduler: NotificationSchedulerProtocol? = nil) {
+    init(databaseManager: DatabaseManager, notificationService: CheckInNotificationServiceProtocol? = nil, notificationScheduler: NotificationSchedulerProtocol? = nil, exportService: ConversationExportServiceProtocol? = nil) {
         self.databaseManager = databaseManager
         self.notificationService = notificationService
         self.notificationScheduler = notificationScheduler
+        self.exportService = exportService
     }
 
     func loadProfile() async {
@@ -179,6 +186,37 @@ final class SettingsViewModel {
                 // Write failed — local state already updated for responsiveness
             }
         }
+    }
+    // MARK: - Export
+
+    func checkHasConversations() async {
+        guard let exportService else { return }
+        do {
+            let result = try await exportService.hasConversations()
+            guard !Task.isCancelled else { return }
+            hasConversations = result
+        } catch {
+            hasConversations = false
+        }
+    }
+
+    func exportConversations() async {
+        guard let exportService else { return }
+        isExporting = true
+        exportError = nil
+        defer { isExporting = false }
+        do {
+            let url = try await exportService.exportConversations()
+            guard !Task.isCancelled else { return }
+            exportFileURL = url
+        } catch {
+            guard !Task.isCancelled else { return }
+            exportError = .databaseError(underlying: error)
+        }
+    }
+
+    func dismissExportSuccess() {
+        exportSuccessMessage = nil
     }
 }
 

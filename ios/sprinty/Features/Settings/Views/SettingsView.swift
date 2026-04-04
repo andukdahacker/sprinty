@@ -7,7 +7,8 @@ struct SettingsView: View {
 
     init(memoryViewModel: MemoryViewModel, databaseManager: DatabaseManager, notificationService: CheckInNotificationServiceProtocol? = nil, notificationScheduler: NotificationSchedulerProtocol? = nil) {
         self.memoryViewModel = memoryViewModel
-        self._viewModel = State(initialValue: SettingsViewModel(databaseManager: databaseManager, notificationService: notificationService, notificationScheduler: notificationScheduler))
+        let exportService = ConversationExportService(dbPool: databaseManager.dbPool)
+        self._viewModel = State(initialValue: SettingsViewModel(databaseManager: databaseManager, notificationService: notificationService, notificationScheduler: notificationScheduler, exportService: exportService))
     }
 
     private var theme: CoachingTheme {
@@ -128,7 +129,7 @@ struct SettingsView: View {
                     .accessibilityLabel("View terms of service")
 
                     NavigationLink("Export Conversations") {
-                        ExportConversationsPlaceholderView()
+                        ExportConversationsView(viewModel: viewModel)
                     }
                     .accessibilityLabel("Export your conversations")
 
