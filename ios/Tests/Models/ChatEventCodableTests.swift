@@ -27,7 +27,9 @@ struct ChatEventCodableTests {
         let fixtureContent = try loadFixture("sse-done-event.txt")
         let events = parseSSEFixture(fixtureContent)
 
-        #expect(events.count == 1)
+        // Fixture contains two done events (baseline + guardrail variant
+        // added in Story 8.3); this test decodes the first one.
+        #expect(events.count == 2)
         let chatEvent = try ChatEvent.from(sseEvent: events[0])
 
         if case .done(let safetyLevel, let domainTags, let mood, let mode, _, let challengerUsed, let usage, let promptVersion, _, _) = chatEvent {

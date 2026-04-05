@@ -5,10 +5,21 @@ struct SettingsView: View {
     @State private var viewModel: SettingsViewModel
     @Environment(\.colorScheme) private var colorScheme
 
-    init(memoryViewModel: MemoryViewModel, databaseManager: DatabaseManager, notificationService: CheckInNotificationServiceProtocol? = nil, notificationScheduler: NotificationSchedulerProtocol? = nil) {
+    init(memoryViewModel: MemoryViewModel, databaseManager: DatabaseManager, appState: AppState, notificationService: CheckInNotificationServiceProtocol? = nil, notificationScheduler: NotificationSchedulerProtocol? = nil) {
         self.memoryViewModel = memoryViewModel
         let exportService = ConversationExportService(dbPool: databaseManager.dbPool)
-        self._viewModel = State(initialValue: SettingsViewModel(databaseManager: databaseManager, notificationService: notificationService, notificationScheduler: notificationScheduler, exportService: exportService))
+        let dataDeletionService = DataDeletionService(
+            dbPool: databaseManager.dbPool,
+            notificationScheduler: notificationScheduler
+        )
+        self._viewModel = State(initialValue: SettingsViewModel(
+            databaseManager: databaseManager,
+            notificationService: notificationService,
+            notificationScheduler: notificationScheduler,
+            exportService: exportService,
+            dataDeletionService: dataDeletionService,
+            appState: appState
+        ))
     }
 
     private var theme: CoachingTheme {
@@ -134,7 +145,7 @@ struct SettingsView: View {
                     .accessibilityLabel("Export your conversations")
 
                     NavigationLink("Delete All Data") {
-                        DeleteAllDataPlaceholderView()
+                        DeleteAllDataView(viewModel: viewModel)
                     }
                     .accessibilityLabel("Delete all your data")
                 } header: {
@@ -195,12 +206,12 @@ struct SettingsView: View {
 
 #if DEBUG
 #Preview("Light") {
-    SettingsView(memoryViewModel: .preview(), databaseManager: SettingsViewModel.previewDB())
+    SettingsView(memoryViewModel: .preview(), databaseManager: SettingsViewModel.previewDB(), appState: AppState())
         .environment(AppState())
 }
 
 #Preview("Dark") {
-    SettingsView(memoryViewModel: .preview(), databaseManager: SettingsViewModel.previewDB())
+    SettingsView(memoryViewModel: .preview(), databaseManager: SettingsViewModel.previewDB(), appState: AppState())
         .environment(AppState())
         .preferredColorScheme(.dark)
 }

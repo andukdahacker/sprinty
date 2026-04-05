@@ -35,7 +35,10 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-17
-last_updated: 2026-04-04
+last_updated: 2026-04-05
+# Story 11.3 dev completed: 2026-04-05
+# Story 11.3 dev started: 2026-04-05
+# Story 11.3 context created: 2026-04-04
 # Story 11.2 code review completed: 2026-04-04
 # Story 11.2 dev completed: 2026-04-04
 # Story 11.2 dev started: 2026-04-04
@@ -283,6 +286,6 @@ development_status:
   epic-11: in-progress
   11-1-settings-view: done
   11-2-conversation-history-export: done
-  11-3-data-deletion: backlog
+  11-3-data-deletion: done
   11-4-apple-privacy-manifest-and-icloud-backup: backlog
   epic-11-retrospective: optional

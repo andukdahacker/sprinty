@@ -18,6 +18,11 @@ final class SettingsViewModel {
     var hasConversations: Bool = false
     var exportFileURL: URL?
     var exportSuccessMessage: String?
+    var isDeletingData: Bool = false
+    var deletionError: AppError?
+    var showDeletionConfirmation: Bool = false
+    var deletionConfirmationText: String = ""
+    var dataDeletionCompleted: Bool = false
 
     var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -31,12 +36,16 @@ final class SettingsViewModel {
     private let notificationService: CheckInNotificationServiceProtocol?
     private let notificationScheduler: NotificationSchedulerProtocol?
     private let exportService: ConversationExportServiceProtocol?
+    private let dataDeletionService: DataDeletionServiceProtocol?
+    private weak var appState: AppState?
 
-    init(databaseManager: DatabaseManager, notificationService: CheckInNotificationServiceProtocol? = nil, notificationScheduler: NotificationSchedulerProtocol? = nil, exportService: ConversationExportServiceProtocol? = nil) {
+    init(databaseManager: DatabaseManager, notificationService: CheckInNotificationServiceProtocol? = nil, notificationScheduler: NotificationSchedulerProtocol? = nil, exportService: ConversationExportServiceProtocol? = nil, dataDeletionService: DataDeletionServiceProtocol? = nil, appState: AppState? = nil) {
         self.databaseManager = databaseManager
         self.notificationService = notificationService
         self.notificationScheduler = notificationScheduler
         self.exportService = exportService
+        self.dataDeletionService = dataDeletionService
+        self.appState = appState
     }
 
     func loadProfile() async {
@@ -217,6 +226,51 @@ final class SettingsViewModel {
 
     func dismissExportSuccess() {
         exportSuccessMessage = nil
+    }
+
+    // MARK: - Data Deletion
+
+    func requestDataDeletion() {
+        deletionError = nil
+        deletionConfirmationText = ""
+        showDeletionConfirmation = true
+    }
+
+    func cancelDeletion() {
+        showDeletionConfirmation = false
+        deletionConfirmationText = ""
+    }
+
+    func confirmDataDeletion() async {
+        guard deletionConfirmationText == "DELETE" else { return }
+        guard let dataDeletionService else { return }
+        isDeletingData = true
+        deletionError = nil
+        defer { isDeletingData = false }
+        do {
+            try await dataDeletionService.deleteAllData()
+            guard !Task.isCancelled else { return }
+            dataDeletionCompleted = true
+            resetAppStateToOnboarding()
+        } catch {
+            guard !Task.isCancelled else { return }
+            deletionError = .databaseError(underlying: error)
+        }
+    }
+
+    func resetAppStateToOnboarding() {
+        guard let appState else { return }
+        appState.isAuthenticated = false
+        appState.needsReauth = false
+        appState.onboardingCompleted = false
+        appState.tier = .free
+        appState.avatarState = .active
+        appState.isPaused = false
+        appState.pendingCheckIn = false
+        appState.pendingEngagementSource = nil
+        appState.showConversation = false
+        appState.activeSprint = nil
+        // Intentionally do NOT reset: isOnline, databaseManager, connectivityMonitor
     }
 }
 

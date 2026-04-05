@@ -19,14 +19,18 @@ struct SSEParserTests {
         #expect(events[1].data == "{\"text\": \"Let's explore that together.\"}")
     }
 
-    @Test("Parses done event with mood field from fixture file")
+    @Test("Parses done events with mood field from fixture file")
     func test_parse_doneEvent_fromFixture() async throws {
         let input = try loadFixture("sse-done-event.txt")
         let events = try await parseSSE(input)
 
-        #expect(events.count == 1)
+        // Fixture contains two done events: the baseline "welcoming" event
+        // and a guardrail "gentle" variant (added in Story 8.3).
+        #expect(events.count == 2)
         #expect(events[0].type == "done")
         #expect(events[0].data.contains("\"mood\": \"welcoming\""))
+        #expect(events[1].type == "done")
+        #expect(events[1].data.contains("\"guardrail\": true"))
     }
 
     @Test("Parses complete stream with token and done events")
@@ -37,10 +41,12 @@ struct SSEParserTests {
 
         let events = try await parseSSE(combined)
 
-        #expect(events.count == 3)
+        // 2 token events + 2 done events (baseline + guardrail variant).
+        #expect(events.count == 4)
         #expect(events[0].type == "token")
         #expect(events[1].type == "token")
         #expect(events[2].type == "done")
+        #expect(events[3].type == "done")
     }
 
     @Test("Handles empty stream gracefully")

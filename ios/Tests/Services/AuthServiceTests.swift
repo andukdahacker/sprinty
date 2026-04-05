@@ -24,25 +24,6 @@ final class MockAPIClient: APIClientProtocol, @unchecked Sendable {
     }
 }
 
-final class MockKeychainHelper: KeychainHelperProtocol, @unchecked Sendable {
-    var store: [String: String] = [:]
-
-    func read(key: String) throws -> String {
-        guard let value = store[key] else {
-            throw AppError.authExpired
-        }
-        return value
-    }
-
-    func save(key: String, value: String) throws {
-        store[key] = value
-    }
-
-    func delete(key: String) {
-        store.removeValue(forKey: key)
-    }
-}
-
 @Suite("AuthService Tests")
 struct AuthServiceTests {
     private func createValidJWT(expiringIn seconds: TimeInterval = 86400 * 30) -> String {
