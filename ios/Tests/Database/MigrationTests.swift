@@ -885,6 +885,64 @@ struct MigrationTests {
         #expect(fetched?.pausedAt != nil)
     }
 
+    // --- Story 11.4 Tests ---
+
+    @Test("v20 migration adds excludeFromICloudBackup column to UserProfile")
+    func v20ExcludeFromICloudBackupColumnExists() throws {
+        let db = try createInMemoryDatabase()
+        try db.read { db in
+            let columns = try db.columns(in: "UserProfile")
+            let columnNames = columns.map(\.name)
+            #expect(columnNames.contains("excludeFromICloudBackup"))
+        }
+    }
+
+    @Test("UserProfile excludeFromICloudBackup defaults to false")
+    func v20ExcludeFromICloudBackupDefaultsFalse() throws {
+        let db = try createInMemoryDatabase()
+        let profile = UserProfile(
+            id: UUID(),
+            avatarId: "avatar_classic",
+            coachAppearanceId: "coach_sage",
+            coachName: "Sage",
+            onboardingStep: 3,
+            onboardingCompleted: true,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        try db.write { db in
+            try profile.insert(db)
+        }
+        let fetched = try db.read { db in
+            try UserProfile.fetchOne(db, key: profile.id)
+        }
+        #expect(fetched != nil)
+        #expect(fetched?.excludeFromICloudBackup == false)
+    }
+
+    @Test("UserProfile excludeFromICloudBackup roundtrips when set to true")
+    func v20ExcludeFromICloudBackupRoundTrip() throws {
+        let db = try createInMemoryDatabase()
+        var profile = UserProfile(
+            id: UUID(),
+            avatarId: "avatar_classic",
+            coachAppearanceId: "coach_sage",
+            coachName: "Sage",
+            onboardingStep: 3,
+            onboardingCompleted: true,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        profile.excludeFromICloudBackup = true
+        try db.write { db in
+            try profile.insert(db)
+        }
+        let fetched = try db.read { db in
+            try UserProfile.fetchOne(db, key: profile.id)
+        }
+        #expect(fetched?.excludeFromICloudBackup == true)
+    }
+
     @Test("SprintStep.forSprint returns ordered steps")
     func sprintStepForSprintQuery() throws {
         let db = try createInMemoryDatabase()

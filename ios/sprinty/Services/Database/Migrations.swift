@@ -263,5 +263,11 @@ enum DatabaseMigrations {
                 t.add(column: "syncStatus", .text).notNull().defaults(to: "synced")
             }
         }
+
+        migrator.registerMigration("v20_backupExclusionPreference") { db in
+            try db.alter(table: "UserProfile") { t in
+                t.add(column: "excludeFromICloudBackup", .boolean).notNull().defaults(to: false)
+            }
+        }
     }
 }

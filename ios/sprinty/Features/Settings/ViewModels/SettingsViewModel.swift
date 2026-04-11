@@ -13,6 +13,7 @@ final class SettingsViewModel {
     var checkInTimeHour: Int = 9
     var checkInWeekday: Int?
     var notificationsMuted: Bool = false
+    var excludeFromICloudBackup: Bool = false
     var isExporting: Bool = false
     var exportError: AppError?
     var hasConversations: Bool = false
@@ -37,14 +38,16 @@ final class SettingsViewModel {
     private let notificationScheduler: NotificationSchedulerProtocol?
     private let exportService: ConversationExportServiceProtocol?
     private let dataDeletionService: DataDeletionServiceProtocol?
+    private let backupPreferenceService: (any BackupPreferenceServiceProtocol)?
     private weak var appState: AppState?
 
-    init(databaseManager: DatabaseManager, notificationService: CheckInNotificationServiceProtocol? = nil, notificationScheduler: NotificationSchedulerProtocol? = nil, exportService: ConversationExportServiceProtocol? = nil, dataDeletionService: DataDeletionServiceProtocol? = nil, appState: AppState? = nil) {
+    init(databaseManager: DatabaseManager, notificationService: CheckInNotificationServiceProtocol? = nil, notificationScheduler: NotificationSchedulerProtocol? = nil, exportService: ConversationExportServiceProtocol? = nil, dataDeletionService: DataDeletionServiceProtocol? = nil, backupPreferenceService: (any BackupPreferenceServiceProtocol)? = nil, appState: AppState? = nil) {
         self.databaseManager = databaseManager
         self.notificationService = notificationService
         self.notificationScheduler = notificationScheduler
         self.exportService = exportService
         self.dataDeletionService = dataDeletionService
+        self.backupPreferenceService = backupPreferenceService
         self.appState = appState
     }
 
@@ -62,6 +65,7 @@ final class SettingsViewModel {
                 self.checkInTimeHour = profile.checkInTimeHour
                 self.checkInWeekday = profile.checkInWeekday
                 self.notificationsMuted = profile.notificationsMuted
+                self.excludeFromICloudBackup = profile.excludeFromICloudBackup
             }
         } catch {
             // Profile not found — keep defaults
@@ -130,6 +134,26 @@ final class SettingsViewModel {
                 }
             } catch {
                 // Write failed — local state already updated for responsiveness
+            }
+        }
+    }
+
+    @discardableResult
+    func updateExcludeFromICloudBackup(_ excluded: Bool) -> Task<Void, Never> {
+        excludeFromICloudBackup = excluded
+        return Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await databaseManager.dbPool.write { db in
+                    if var profile = try UserProfile.fetchOne(db) {
+                        profile.excludeFromICloudBackup = excluded
+                        profile.updatedAt = Date()
+                        try profile.update(db)
+                    }
+                }
+                try backupPreferenceService?.setExcludedFromBackup(excluded)
+            } catch {
+                // Write/file flag failed — local state already updated; next launch will retry
             }
         }
     }

@@ -25,6 +25,8 @@ struct UserProfile: Codable, FetchableRecord, PersistableRecord, Identifiable, S
     var pausedAt: Date?
     // --- Notification preferences (Story 9.3) ---
     var notificationsMuted: Bool = false
+    // --- Privacy preferences (Story 11.4) ---
+    var excludeFromICloudBackup: Bool = false
     // --- Timestamps ---
     var createdAt: Date
     var updatedAt: Date

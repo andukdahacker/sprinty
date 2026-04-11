@@ -12,12 +12,14 @@ struct SettingsView: View {
             dbPool: databaseManager.dbPool,
             notificationScheduler: notificationScheduler
         )
+        let backupPreferenceService = BackupPreferenceService.forAppGroupContainer()
         self._viewModel = State(initialValue: SettingsViewModel(
             databaseManager: databaseManager,
             notificationService: notificationService,
             notificationScheduler: notificationScheduler,
             exportService: exportService,
             dataDeletionService: dataDeletionService,
+            backupPreferenceService: backupPreferenceService,
             appState: appState
         ))
     }
@@ -123,6 +125,18 @@ struct SettingsView: View {
                     Text("Your data stays on your phone. You can export or delete everything anytime.")
                         .font(theme.typography.insightTextFont)
                         .foregroundStyle(theme.palette.textSecondary)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Toggle("Exclude from iCloud Backup", isOn: Binding(
+                            get: { viewModel.excludeFromICloudBackup },
+                            set: { viewModel.updateExcludeFromICloudBackup($0) }
+                        ))
+                        .accessibilityHint("When enabled, your coaching data will not be included in iCloud device backups")
+
+                        Text("iCloud backup keeps a copy of your coaching data so you can restore it on a new device. Turn this off if you'd rather keep it only on this phone.")
+                            .font(theme.typography.insightTextFont)
+                            .foregroundStyle(theme.palette.textSecondary)
+                    }
 
                     NavigationLink("Coaching Disclaimer") {
                         CoachingDisclaimerView()

@@ -85,6 +85,8 @@ targets:
       - path: sprinty/Core/Errors/AppError.swift
       - path: sprinty/Models/DomainState.swift
       - path: sprinty/Features/Widgets/WidgetDataProvider.swift
+      - path: sprinty/Services/Backup/BackupPreferenceServiceProtocol.swift
+      - path: sprinty/Services/Backup/BackupPreferenceService.swift
     resources:
       - path: sprinty/Resources/Assets.xcassets
     settings:
